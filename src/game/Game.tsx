@@ -1,8 +1,9 @@
 import { Canvas } from "@react-three/fiber";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Dressing } from "./dressing";
 import { Overlay } from "./overlay";
+import { CINE_LEN } from "./layout";
 import { CameraRig, Crates, FogTune, Lights, Puffs, Simulator, StudioEnv, Vectors } from "./runtime";
 import {
   held,
@@ -18,6 +19,25 @@ import { Tigrao } from "./Tigrao";
 import { World } from "./World";
 
 export function Game() {
+  const cineOnce = useRef(false);
+  useEffect(() => {
+    let frame = 0;
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      if (cineOnce.current) return;
+      if (sim.phase !== "title") {
+        cineOnce.current = true;
+        return;
+      }
+      if (sim.shotTime >= CINE_LEN) {
+        cineOnce.current = true;
+        startMission();
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   useEffect(() => {
     sim.reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let looking = false;

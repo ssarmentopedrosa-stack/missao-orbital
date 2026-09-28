@@ -69,9 +69,22 @@ export const BLOCKS: Block[] = [
   { minX: 7.15, maxX: 8.85, minZ: -12.4, maxZ: -10.3, h: 1.05, kind: "prop" },
 ];
 
-export function shotIndex(shotTime: number): 0 | 1 | 2 {
-  const u = shotTime % 21;
-  if (u < 8) return 0;
-  if (u < 14) return 1;
-  return 2;
+export const CINE_LEN = 64;
+
+/** Title beats. 0–1 are exterior; 2–8 move inside the station. */
+export function shotIndex(shotTime: number): number {
+  const u = shotTime % CINE_LEN;
+  if (u < 9) return 0;
+  if (u < 16) return 1;
+  if (u < 23) return 2;
+  if (u < 29) return 3;
+  if (u < 37) return 4;
+  if (u < 45) return 5;
+  if (u < 52) return 6;
+  if (u < 58) return 7;
+  return 8;
+}
+
+export function exteriorShot(shot: number): boolean {
+  return shot <= 1;
 }

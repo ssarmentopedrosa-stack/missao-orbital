@@ -95,6 +95,18 @@ export function Dressing() {
         <boxGeometry args={[2.2, 0.05, 0.06]} />
       </mesh>
 
+      <mesh position={[2.2, 0.012, 6.4]} rotation={[-Math.PI / 2, 0, 0.2]} material={M.hullDark} dispose={null}>
+        <planeGeometry args={[0.9, 0.35]} />
+      </mesh>
+      <mesh position={[-3.1, 0.012, 2.2]} rotation={[-Math.PI / 2, 0, -0.4]} material={M.dark} dispose={null}>
+        <planeGeometry args={[0.7, 0.22]} />
+      </mesh>
+      <mesh position={[4.6, 1.15, 8.8]} material={M.pipe} dispose={null}>
+        <boxGeometry args={[0.04, 1.6, 0.04]} />
+      </mesh>
+      <mesh position={[-4.2, 0.9, 9.6]} material={M.pipe} dispose={null}>
+        <boxGeometry args={[0.04, 1.2, 0.04]} />
+      </mesh>
       <points geometry={dust}>
         <pointsMaterial color="#c5d6e4" size={0.025} transparent opacity={0.45} depthWrite={false} sizeAttenuation />
       </points>

@@ -45,6 +45,18 @@ export function unlockAudio(): void {
   g.connect(master!);
   o1.start();
   o2.start();
+  const bed = context.createBufferSource();
+  bed.buffer = noise;
+  bed.loop = true;
+  const bedFilter = context.createBiquadFilter();
+  bedFilter.type = "lowpass";
+  bedFilter.frequency.value = 240;
+  const bedGain = context.createGain();
+  bedGain.gain.value = 0.01;
+  bed.connect(bedFilter);
+  bedFilter.connect(bedGain);
+  bedGain.connect(master!);
+  bed.start();
   nextNote = context.currentTime + 0.4;
   nextAlarm = context.currentTime + 1;
 }
@@ -125,6 +137,11 @@ export const sfx = {
   },
   land() {
     burst(64, 0.09, 0.05, 240);
+  },
+  fail() {
+    if (!ctx) return;
+    tone(196, ctx.currentTime, 0.028, 0.14, "triangle");
+    tone(146, ctx.currentTime + 0.08, 0.02, 0.18, "triangle");
   },
   hit() {
     burst(50, 0.2, 0.08, 180);

@@ -47,14 +47,20 @@ export function Overlay() {
 function Title({ best }: { best: number | null }) {
   const beat = useBeat();
   const lines = [
-    "Newton-1 em órbita. Alerta no sistema de navegação.",
-    "Falha no sistema de navegação. O módulo N-1 está solto no laboratório.",
-    "Cadete Tigrão — a força pode ser a mesma. A aceleração, não.",
+    "Newton-1 em órbita.",
+    "Aproximação da estação.",
+    "Interior. O laboratório ainda responde.",
+    "Luzes de emergência no corredor.",
+    "O módulo N-1, 20 kg, está fora da plataforma.",
+    "Cadete Tigrão.",
+    "O scanner mostra peso e normal. A força ainda é zero.",
+    "Objetivo: reposicionar o módulo N-1.",
+    "Postura de ação. O controle passa para você.",
   ];
   return (
     <section className="panel title-card" data-ui>
       <p className="kicker">Programa Orbital · Cadete Tigrão</p>
-      <p className="beat">{lines[beat]}</p>
+      <p className="beat">{lines[beat] ?? lines[0]}</p>
       <h1>
         MISSÃO NEWTON
         <span>RESGATE DA ESTAÇÃO ORBITAL</span>
@@ -64,7 +70,7 @@ function Title({ best }: { best: number | null }) {
         <button className="btn" type="button" onClick={() => startMission()}>
           COMEÇAR
         </button>
-        <span className="chip">Recorte jogável</span>
+        <span className="chip">Pular abertura</span>
       </div>
       {best != null ? <p className="best">Melhor tempo {clock(best)}</p> : null}
       <p className="hints">WASD mover · mouse olhar · Shift correr · Espaço saltar · E interagir · Q scanner · Tab mapa · Esc pausa</p>
@@ -72,8 +78,8 @@ function Title({ best }: { best: number | null }) {
   );
 }
 
-function useBeat(): 0 | 1 | 2 {
-  const [beat, setBeat] = useState<0 | 1 | 2>(0);
+function useBeat(): number {
+  const [beat, setBeat] = useState(0);
   useEffect(() => {
     let frame = 0;
     const tick = () => {

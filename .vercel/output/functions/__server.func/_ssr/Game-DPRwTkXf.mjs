@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-B3GGCkUZ.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-DPRwTkXf.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -353,6 +353,64 @@ function Dressing() {
 				.06
 			] })
 		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				2.2,
+				.012,
+				6.4
+			],
+			rotation: [
+				-Math.PI / 2,
+				0,
+				.2
+			],
+			material: M.hullDark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.9, .35] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-3.1,
+				.012,
+				2.2
+			],
+			rotation: [
+				-Math.PI / 2,
+				0,
+				-.4
+			],
+			material: M.dark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.7, .22] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				4.6,
+				1.15,
+				8.8
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.04,
+				1.6,
+				.04
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-4.2,
+				.9,
+				9.6
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.04,
+				1.2,
+				.04
+			] })
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("points", {
 			geometry: dust,
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointsMaterial", {
@@ -493,6 +551,18 @@ function unlockAudio() {
 	g.connect(master);
 	o1.start();
 	o2.start();
+	const bed = context.createBufferSource();
+	bed.buffer = noise;
+	bed.loop = true;
+	const bedFilter = context.createBiquadFilter();
+	bedFilter.type = "lowpass";
+	bedFilter.frequency.value = 240;
+	const bedGain = context.createGain();
+	bedGain.gain.value = .01;
+	bed.connect(bedFilter);
+	bedFilter.connect(bedGain);
+	bedGain.connect(master);
+	bed.start();
 	nextNote = context.currentTime + .4;
 	nextAlarm = context.currentTime + 1;
 }
@@ -569,6 +639,11 @@ var sfx = {
 	},
 	land() {
 		burst(64, .09, .05, 240);
+	},
+	fail() {
+		if (!ctx) return;
+		tone(196, ctx.currentTime, .028, .14, "triangle");
+		tone(146, ctx.currentTime + .08, .02, .18, "triangle");
 	},
 	hit() {
 		burst(50, .2, .08, 180);
@@ -804,11 +879,21 @@ var BLOCKS = [
 		kind: "prop"
 	}
 ];
+/** Title beats. 0–1 are exterior; 2–8 move inside the station. */
 function shotIndex(shotTime) {
-	const u = shotTime % 21;
-	if (u < 8) return 0;
-	if (u < 14) return 1;
-	return 2;
+	const u = shotTime % 64;
+	if (u < 9) return 0;
+	if (u < 16) return 1;
+	if (u < 23) return 2;
+	if (u < 29) return 3;
+	if (u < 37) return 4;
+	if (u < 45) return 5;
+	if (u < 52) return 6;
+	if (u < 58) return 7;
+	return 8;
+}
+function exteriorShot(shot) {
+	return shot <= 1;
 }
 var KEY = "missao-newton-3d-v1";
 var held = /* @__PURE__ */ new Set();
@@ -1646,6 +1731,17 @@ function Overlay() {
 }
 function Title({ best }) {
 	const beat = useBeat();
+	const lines = [
+		"Newton-1 em órbita.",
+		"Aproximação da estação.",
+		"Interior. O laboratório ainda responde.",
+		"Luzes de emergência no corredor.",
+		"O módulo N-1, 20 kg, está fora da plataforma.",
+		"Cadete Tigrão.",
+		"O scanner mostra peso e normal. A força ainda é zero.",
+		"Objetivo: reposicionar o módulo N-1.",
+		"Postura de ação. O controle passa para você."
+	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		className: "panel title-card",
 		"data-ui": true,
@@ -1656,11 +1752,7 @@ function Title({ best }) {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "beat",
-				children: [
-					"Newton-1 em órbita. Alerta no sistema de navegação.",
-					"Falha no sistema de navegação. O módulo N-1 está solto no laboratório.",
-					"Cadete Tigrão — a força pode ser a mesma. A aceleração, não."
-				][beat]
+				children: lines[beat] ?? lines[0]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { children: ["MISSÃO NEWTON", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "RESGATE DA ESTAÇÃO ORBITAL" })] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -1676,7 +1768,7 @@ function Title({ best }) {
 					children: "COMEÇAR"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: "chip",
-					children: "Recorte jogável"
+					children: "Pular abertura"
 				})]
 			}),
 			best != null ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
@@ -2306,23 +2398,6 @@ function plateTexture(label) {
 	g.fillText(label, 256, 68);
 	return texOf(c);
 }
-function flagTexture() {
-	const [c, g] = canvas(96, 64);
-	g.fillStyle = "#1f8a3b";
-	g.fillRect(0, 0, 96, 64);
-	g.fillStyle = "#f2c230";
-	g.beginPath();
-	g.moveTo(48, 6);
-	g.lineTo(88, 32);
-	g.lineTo(48, 58);
-	g.lineTo(8, 32);
-	g.fill();
-	g.fillStyle = "#23408e";
-	g.beginPath();
-	g.arc(48, 32, 12, 0, Math.PI * 2);
-	g.fill();
-	return texOf(c);
-}
 var labels = /* @__PURE__ */ new Map();
 function labelSprite(text, color) {
 	const key = `${color}|${text}`;
@@ -2428,7 +2503,7 @@ function FogTune() {
 	useFrame(() => {
 		const fog = scene.fog;
 		if (!(fog instanceof Fog)) return;
-		const ext = sim.phase === "title" && shotIndex(sim.shotTime) === 0;
+		const ext = sim.phase === "title" && exteriorShot(shotIndex(sim.shotTime));
 		fog.near = ext ? 18 : 9;
 		fog.far = ext ? 80 : 40;
 	});
@@ -2448,7 +2523,7 @@ function Sun() {
 	useFrame(() => {
 		const l = light.current;
 		if (!l) return;
-		const ext = sim.phase === "title" && shotIndex(sim.shotTime) === 0;
+		const ext = sim.phase === "title" && exteriorShot(shotIndex(sim.shotTime));
 		const x = ext ? 0 : sim.x;
 		const y = ext ? 200 : 0;
 		const z = ext ? 0 : sim.z;
@@ -2556,18 +2631,39 @@ function Lights() {
 function scripted(dt, camera) {
 	if (sim.phase === "title") {
 		const shot = shotIndex(sim.shotTime);
+		const u = sim.shotTime % 64;
 		if (shot === 0) {
-			const a = sim.shotTime * .13;
-			desired.set(Math.sin(a) * 13.5, 204.2, Math.cos(a) * 13.5);
-			look.set(.6, 201.1, 0);
+			const a = u * .07;
+			desired.set(Math.sin(a) * 16, 205.4, Math.cos(a) * 16);
+			look.set(.4, 201.15, 0);
 		} else if (shot === 1) {
-			const u = sim.shotTime % 21 - 8;
-			desired.set(5.4 - u * .08, 2.35, 10.2);
-			look.set(.2, 1.25, 3.2);
+			const a = .65 + (u - 9) * .05;
+			desired.set(Math.sin(a) * 8.2, 202.35, Math.cos(a) * 8.2);
+			look.set(.15, 200.7, .3);
+		} else if (shot === 2) {
+			const t = (u - 16) / 7;
+			desired.set(6.1 - t * 1.4, 2.5, 10.3);
+			look.set(.1, 1.25, 3.4);
+		} else if (shot === 3) {
+			desired.set(.15, 2.05, -2.6);
+			look.set(0, 1.35, -8.2);
+		} else if (shot === 4) {
+			const t = (u - 29) / 8;
+			desired.set(3.2 - t * .5, 1.85, -11.4);
+			look.set(0, .55, -15.3);
+		} else if (shot === 5) {
+			desired.set(1.2, 1.82, 9.35);
+			look.set(0, 1.28, 7.15);
+		} else if (shot === 6) {
+			desired.set(.85, 1.68, 6.35);
+			look.set(0, .85, -4);
+		} else if (shot === 7) {
+			desired.set(2.35, 1.42, -13.05);
+			look.set(0, .48, -15.25);
 		} else {
-			const u = Math.min(1, (sim.shotTime % 21 - 14) / 6);
-			desired.set(.12, 1.58, 5.85 + u * .42);
-			look.set(0, 1.55, 7.15);
+			const t = Math.min(1, (u - 58) / 5);
+			desired.set(.12, 1.52, 5.65 + t * .25);
+			look.set(0, 1.42, 7.18);
 		}
 		return true;
 	}
@@ -2591,7 +2687,8 @@ function CameraRig() {
 		if (!scripted(capped, camera)) {
 			const pushing = sim.pushing;
 			const scanning = sim.scanner && sim.speed < .45;
-			const dist = pushing ? 4.75 : scanning ? 4.65 : sim.sprinting && sim.speed > 4 ? 6.05 : 5.55;
+			const talking = Boolean(sim.line);
+			const dist = pushing ? 4.7 : talking ? 4.45 : scanning ? 4.55 : sim.sprinting && sim.speed > 4 ? 6.15 : 5.5;
 			const pitch = sim.camPitch;
 			const yaw = sim.camYaw;
 			const horiz = Math.cos(pitch) * dist;
@@ -2630,7 +2727,8 @@ function CameraRig() {
 			}
 		}
 		const jump = smooth.distanceTo(desired) > 24;
-		const k = sim.reduce || jump ? 1 : 1 - Math.exp(-5.4 * capped);
+		const follow = sim.sprinting && sim.speed > 3 ? 7.4 : sim.pushing ? 6.2 : 4.5;
+		const k = sim.reduce || jump ? 1 : 1 - Math.exp(-follow * capped);
 		smooth.lerp(desired, k);
 		smoothLook.lerp(look, k);
 		camera.position.copy(smooth);
@@ -2886,7 +2984,18 @@ function Vectors() {
 			sprite.visible = false;
 		});
 		pack.ring.visible = false;
-		if (!sim.scanner || sim.phase === "title") return;
+		if (sim.phase === "title" && (shotIndex(sim.shotTime) === 6 || shotIndex(sim.shotTime) === 7)) {
+			const crate = sim.crates.find((item) => item.kind === "module");
+			if (crate) {
+				show(crate.x + crate.hx + .15, crate.h * .7, crate.z, 0, -1, 0, .55, 9085109, 4);
+				show(crate.x + crate.hx + .15, .15, crate.z, 0, 1, 0, .55, 14017775, 5);
+				pack.ring.visible = true;
+				pack.ring.position.set(crate.x, .05, crate.z);
+				pack.ring.scale.set(crate.hx * 2.6, crate.hx * 2.6, 1);
+			}
+			return;
+		}
+		if (!sim.scanner || sim.phase !== "play") return;
 		let focus = -1;
 		let focusD = 6.5;
 		sim.crates.forEach((crate, index) => {
@@ -2925,7 +3034,19 @@ function Vectors() {
 }
 function Puffs() {
 	const refs = (0, import_react.useRef)([]);
+	const celebrated = (0, import_react.useRef)(false);
 	useFrame((_, dt) => {
+		if (sim.solved && !celebrated.current) {
+			celebrated.current = true;
+			sim.shake = Math.max(sim.shake, .1);
+			sim.puffs.forEach((puff, i) => {
+				const ang = i / sim.puffs.length * Math.PI * 2;
+				puff.x = sim.x + Math.cos(ang) * .45;
+				puff.z = sim.z + Math.sin(ang) * .45;
+				puff.life = 1;
+			});
+		}
+		if (!sim.solved) celebrated.current = false;
 		if (sim.phase === "play") for (const crate of sim.crates) {
 			if (crate.speed < 1.4) continue;
 			if (Math.random() > dt * 5) continue;
@@ -3006,11 +3127,13 @@ function Tigrao() {
 	const lamp = (0, import_react.useRef)(null);
 	const wasAir = (0, import_react.useRef)(false);
 	const land = (0, import_react.useRef)(0);
+	const react = (0, import_react.useRef)(0);
+	const seenBlocked = (0, import_react.useRef)(sim.blocked);
 	const prevYaw = (0, import_react.useRef)(sim.yaw);
 	const turn = (0, import_react.useRef)(0);
 	const badge = (0, import_react.useMemo)(() => badgeTexture(), []);
-	const flag = (0, import_react.useMemo)(() => flagTexture(), []);
 	const nexus = (0, import_react.useMemo)(() => plateTexture("NEXUS"), []);
+	const newton = (0, import_react.useMemo)(() => plateTexture("NEWTON-1"), []);
 	useFrame((_, raw) => {
 		const g = root.current;
 		if (!g) return;
@@ -3031,9 +3154,21 @@ function Tigrao() {
 		else if (wasAir.current) {
 			wasAir.current = false;
 			land.current = .18;
-			if (sim.phase === "play") sfx.land();
+			if (sim.phase === "play") {
+				sfx.land();
+				sim.shake = Math.max(sim.shake, .07);
+			}
 		}
 		if (land.current > 0) land.current = Math.max(0, land.current - dt);
+		if (sim.blocked !== seenBlocked.current) {
+			seenBlocked.current = sim.blocked;
+			if (sim.phase === "play") {
+				react.current = .34;
+				sim.shake = Math.max(sim.shake, .05);
+				sfx.fail();
+			}
+		}
+		if (react.current > 0) react.current = Math.max(0, react.current - dt);
 		let hipY = .8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? .045 : .028) : 0);
 		if (land.current > 0) hipY -= land.current * .22;
 		if (sim.anim === "celebrate") hipY = .8 + Math.abs(Math.sin(t * 8)) * .07;
@@ -3048,7 +3183,7 @@ function Tigrao() {
 		let lKnee = Math.max(0, -swing) * .85;
 		let rKnee = Math.max(0, swing) * .85;
 		let headX = Math.sin(t * .45) * .04;
-		let headY = Math.sin(t * .6) * .1;
+		let headY = Math.sin(t * (moving ? .6 : .32)) * (moving ? .08 : .2);
 		const headZ = moving ? -Math.sin(t * freq) * .035 : 0;
 		let tailX = .62;
 		let tailY = Math.sin(t * 2.4) * .28;
@@ -3084,14 +3219,17 @@ function Tigrao() {
 			const rel = Math.atan2(Math.sin(face - sim.yaw), Math.cos(face - sim.yaw));
 			headY = Math.max(-.7, Math.min(.7, rel));
 		} else if (sim.anim === "jump") {
-			const up = sim.vy > .2;
-			lLeg = up ? -.5 : .32;
-			rLeg = up ? -.38 : .4;
-			lArm = -.85;
-			rArm = -.7;
-			lKnee = up ? .2 : .45;
-			rKnee = up ? .15 : .4;
-			torsoX = up ? -.08 : .12;
+			const up = sim.vy > .15;
+			lLeg = up ? -.55 : .28;
+			rLeg = up ? -.42 : .22;
+			lArm = up ? -1.05 : -.2;
+			rArm = up ? -.9 : .45;
+			lZ = up ? .05 : .28;
+			rZ = up ? -.05 : -.28;
+			lKnee = up ? .15 : .35;
+			rKnee = up ? .1 : .3;
+			torsoX = up ? -.12 : .16;
+			headX = up ? -.08 : .12;
 		} else if (sim.anim === "celebrate") {
 			lArm = -2.4;
 			rArm = -2.4;
@@ -3100,6 +3238,27 @@ function Tigrao() {
 			headX = -.18;
 			tailY = Math.sin(t * 9) * .7;
 			tailX = .4;
+		}
+		if (sim.phase === "title") {
+			const shot = shotIndex(sim.shotTime);
+			if (shot === 5 || shot === 6) {
+				headX = .22;
+				headY = .04;
+				tailX = .45;
+			} else if (shot >= 8) {
+				torsoX = .24;
+				lArm = -.58;
+				rArm = -.48;
+				headX = .1;
+				headY = 0;
+			}
+		}
+		if (react.current > 0) {
+			headX = -.28;
+			torsoX = -.08;
+			tailX = .15;
+			lZ = .22;
+			rZ = -.22;
 		}
 		if (hips.current) hips.current.position.y = approach(hips.current.position.y, hipY, dt, 10);
 		setX(torso.current, torsoX, dt, sim.anim === "push" ? 8 : 6);
@@ -3131,8 +3290,9 @@ function Tigrao() {
 			const mat = wrist.current.material;
 			if (!Array.isArray(mat)) mat.emissiveIntensity = sim.scanner ? 1.8 + Math.sin(t * 8) * .45 : .08;
 		}
-		if (beam.current) beam.current.visible = sim.scanner && sim.phase === "play";
-		if (lamp.current) lamp.current.intensity = sim.scanner && sim.phase === "play" ? 1.8 : 0;
+		const cineScan = sim.phase === "title" && shotIndex(sim.shotTime) === 6;
+		if (beam.current) beam.current.visible = cineScan || sim.scanner && sim.phase === "play";
+		if (lamp.current) lamp.current.intensity = beam.current?.visible ? 1.8 : 0;
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
 		ref: root,
@@ -3429,8 +3589,8 @@ function Tigrao() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 							position: [
 								.28,
-								.22,
-								0
+								.2,
+								-.02
 							],
 							rotation: [
 								0,
@@ -3438,8 +3598,8 @@ function Tigrao() {
 								0
 							],
 							dispose: null,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.11, .07] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
-								map: flag,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.12, .045] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+								map: newton,
 								toneMapped: false
 							})]
 						}),
@@ -5272,6 +5432,24 @@ function World() {
 	] });
 }
 function Game() {
+	const cineOnce = (0, import_react.useRef)(false);
+	(0, import_react.useEffect)(() => {
+		let frame = 0;
+		const tick = () => {
+			frame = requestAnimationFrame(tick);
+			if (cineOnce.current) return;
+			if (sim.phase !== "title") {
+				cineOnce.current = true;
+				return;
+			}
+			if (sim.shotTime >= 64) {
+				cineOnce.current = true;
+				startMission();
+			}
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, []);
 	(0, import_react.useEffect)(() => {
 		sim.reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 		let looking = false;

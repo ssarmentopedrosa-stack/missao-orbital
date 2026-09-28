@@ -2,7 +2,8 @@ import { useMemo, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh, MeshStandardMaterial, PointLight } from "three";
 import { sfx } from "./audio";
-import { badgeTexture, flagTexture, plateTexture } from "./draw";
+import { badgeTexture, plateTexture } from "./draw";
+import { shotIndex } from "./layout";
 import { M } from "./materials";
 import { sim } from "./sim";
 
@@ -47,11 +48,13 @@ export function Tigrao() {
   const lamp = useRef<PointLight>(null);
   const wasAir = useRef(false);
   const land = useRef(0);
+  const react = useRef(0);
+  const seenBlocked = useRef(sim.blocked);
   const prevYaw = useRef(sim.yaw);
   const turn = useRef(0);
   const badge = useMemo(() => badgeTexture(), []);
-  const flag = useMemo(() => flagTexture(), []);
   const nexus = useMemo(() => plateTexture("NEXUS"), []);
+  const newton = useMemo(() => plateTexture("NEWTON-1"), []);
 
   useFrame((_, raw) => {
     const g = root.current;
@@ -74,9 +77,21 @@ export function Tigrao() {
     else if (wasAir.current) {
       wasAir.current = false;
       land.current = 0.18;
-      if (sim.phase === "play") sfx.land();
+      if (sim.phase === "play") {
+        sfx.land();
+        sim.shake = Math.max(sim.shake, 0.07);
+      }
     }
     if (land.current > 0) land.current = Math.max(0, land.current - dt);
+    if (sim.blocked !== seenBlocked.current) {
+      seenBlocked.current = sim.blocked;
+      if (sim.phase === "play") {
+        react.current = 0.34;
+        sim.shake = Math.max(sim.shake, 0.05);
+        sfx.fail();
+      }
+    }
+    if (react.current > 0) react.current = Math.max(0, react.current - dt);
 
     let hipY = 0.8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? 0.045 : 0.028) : 0);
     if (land.current > 0) hipY -= land.current * 0.22;
@@ -93,7 +108,7 @@ export function Tigrao() {
     let lKnee = Math.max(0, -swing) * 0.85;
     let rKnee = Math.max(0, swing) * 0.85;
     let headX = Math.sin(t * 0.45) * 0.04;
-    let headY = Math.sin(t * 0.6) * 0.1;
+    let headY = Math.sin(t * (moving ? 0.6 : 0.32)) * (moving ? 0.08 : 0.2);
     const headZ = moving ? -Math.sin(t * freq) * 0.035 : 0;
     let tailX = 0.62;
     let tailY = Math.sin(t * 2.4) * 0.28;
@@ -130,14 +145,17 @@ export function Tigrao() {
       const rel = Math.atan2(Math.sin(face - sim.yaw), Math.cos(face - sim.yaw));
       headY = Math.max(-0.7, Math.min(0.7, rel));
     } else if (sim.anim === "jump") {
-      const up = sim.vy > 0.2;
-      lLeg = up ? -0.5 : 0.32;
-      rLeg = up ? -0.38 : 0.4;
-      lArm = -0.85;
-      rArm = -0.7;
-      lKnee = up ? 0.2 : 0.45;
-      rKnee = up ? 0.15 : 0.4;
-      torsoX = up ? -0.08 : 0.12;
+      const up = sim.vy > 0.15;
+      lLeg = up ? -0.55 : 0.28;
+      rLeg = up ? -0.42 : 0.22;
+      lArm = up ? -1.05 : -0.2;
+      rArm = up ? -0.9 : 0.45;
+      lZ = up ? 0.05 : 0.28;
+      rZ = up ? -0.05 : -0.28;
+      lKnee = up ? 0.15 : 0.35;
+      rKnee = up ? 0.1 : 0.3;
+      torsoX = up ? -0.12 : 0.16;
+      headX = up ? -0.08 : 0.12;
     } else if (sim.anim === "celebrate") {
       lArm = -2.4;
       rArm = -2.4;
@@ -146,6 +164,28 @@ export function Tigrao() {
       headX = -0.18;
       tailY = Math.sin(t * 9) * 0.7;
       tailX = 0.4;
+    }
+
+    if (sim.phase === "title") {
+      const shot = shotIndex(sim.shotTime);
+      if (shot === 5 || shot === 6) {
+        headX = 0.22;
+        headY = 0.04;
+        tailX = 0.45;
+      } else if (shot >= 8) {
+        torsoX = 0.24;
+        lArm = -0.58;
+        rArm = -0.48;
+        headX = 0.1;
+        headY = 0;
+      }
+    }
+    if (react.current > 0) {
+      headX = -0.28;
+      torsoX = -0.08;
+      tailX = 0.15;
+      lZ = 0.22;
+      rZ = -0.22;
     }
 
     if (hips.current) hips.current.position.y = approach(hips.current.position.y, hipY, dt, 10);
@@ -181,8 +221,9 @@ export function Tigrao() {
         (mat as MeshStandardMaterial).emissiveIntensity = sim.scanner ? 1.8 + Math.sin(t * 8) * 0.45 : 0.08;
       }
     }
-    if (beam.current) beam.current.visible = sim.scanner && sim.phase === "play";
-    if (lamp.current) lamp.current.intensity = sim.scanner && sim.phase === "play" ? 1.8 : 0;
+    const cineScan = sim.phase === "title" && shotIndex(sim.shotTime) === 6;
+    if (beam.current) beam.current.visible = cineScan || (sim.scanner && sim.phase === "play");
+    if (lamp.current) lamp.current.intensity = beam.current?.visible ? 1.8 : 0;
   });
 
   return (
@@ -250,9 +291,9 @@ export function Tigrao() {
             <sphereGeometry args={[0.028, 8, 8]} />
           </mesh>
 
-          <mesh position={[0.28, 0.22, 0]} rotation={[0, Math.PI / 2, 0]} dispose={null}>
-            <planeGeometry args={[0.11, 0.07]} />
-            <meshBasicMaterial map={flag} toneMapped={false} />
+          <mesh position={[0.28, 0.2, -0.02]} rotation={[0, Math.PI / 2, 0]} dispose={null}>
+            <planeGeometry args={[0.12, 0.045]} />
+            <meshBasicMaterial map={newton} toneMapped={false} />
           </mesh>
 
           <Arm side={-1} arm={armL} wrist={wrist} beam={beam} lamp={lamp} />

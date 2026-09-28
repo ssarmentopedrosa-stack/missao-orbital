@@ -6,7 +6,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { HoloLabel } from "./bits";
 import { labelSprite } from "./draw";
 import { pump } from "./audio";
-import { BLOCKS, CRATE_SPECS, DOCK, G, shotIndex } from "./layout";
+import { BLOCKS, CINE_LEN, CRATE_SPECS, DOCK, G, exteriorShot, shotIndex } from "./layout";
 import { M } from "./materials";
 import { installProbe, sim, step } from "./sim";
 
@@ -69,7 +69,7 @@ export function FogTune() {
   useFrame(() => {
     const fog = scene.fog;
     if (!(fog instanceof THREE.Fog)) return;
-    const ext = sim.phase === "title" && shotIndex(sim.shotTime) === 0;
+    const ext = sim.phase === "title" && exteriorShot(shotIndex(sim.shotTime));
     fog.near = ext ? 18 : 9;
     fog.far = ext ? 80 : 40;
   });
@@ -90,7 +90,7 @@ function Sun() {
   useFrame(() => {
     const l = light.current;
     if (!l) return;
-    const ext = sim.phase === "title" && shotIndex(sim.shotTime) === 0;
+    const ext = sim.phase === "title" && exteriorShot(shotIndex(sim.shotTime));
     const x = ext ? 0 : sim.x;
     const y = ext ? 200 : 0;
     const z = ext ? 0 : sim.z;
@@ -141,18 +141,39 @@ export function Lights() {
 function scripted(dt: number, camera: THREE.PerspectiveCamera): boolean {
   if (sim.phase === "title") {
     const shot = shotIndex(sim.shotTime);
+    const u = sim.shotTime % CINE_LEN;
     if (shot === 0) {
-      const a = sim.shotTime * 0.13;
-      desired.set(Math.sin(a) * 13.5, 204.2, Math.cos(a) * 13.5);
-      look.set(0.6, 201.1, 0);
+      const a = u * 0.07;
+      desired.set(Math.sin(a) * 16, 205.4, Math.cos(a) * 16);
+      look.set(0.4, 201.15, 0);
     } else if (shot === 1) {
-      const u = (sim.shotTime % 21) - 8;
-      desired.set(5.4 - u * 0.08, 2.35, 10.2);
-      look.set(0.2, 1.25, 3.2);
+      const a = 0.65 + (u - 9) * 0.05;
+      desired.set(Math.sin(a) * 8.2, 202.35, Math.cos(a) * 8.2);
+      look.set(0.15, 200.7, 0.3);
+    } else if (shot === 2) {
+      const t = (u - 16) / 7;
+      desired.set(6.1 - t * 1.4, 2.5, 10.3);
+      look.set(0.1, 1.25, 3.4);
+    } else if (shot === 3) {
+      desired.set(0.15, 2.05, -2.6);
+      look.set(0, 1.35, -8.2);
+    } else if (shot === 4) {
+      const t = (u - 29) / 8;
+      desired.set(3.2 - t * 0.5, 1.85, -11.4);
+      look.set(0, 0.55, -15.3);
+    } else if (shot === 5) {
+      desired.set(1.2, 1.82, 9.35);
+      look.set(0, 1.28, 7.15);
+    } else if (shot === 6) {
+      desired.set(0.85, 1.68, 6.35);
+      look.set(0, 0.85, -4);
+    } else if (shot === 7) {
+      desired.set(2.35, 1.42, -13.05);
+      look.set(0, 0.48, -15.25);
     } else {
-      const u = Math.min(1, ((sim.shotTime % 21) - 14) / 6);
-      desired.set(0.12, 1.58, 5.85 + u * 0.42);
-      look.set(0, 1.55, 7.15);
+      const t = Math.min(1, (u - 58) / 5);
+      desired.set(0.12, 1.52, 5.65 + t * 0.25);
+      look.set(0, 1.42, 7.18);
     }
     return true;
   }
@@ -180,7 +201,8 @@ export function CameraRig() {
     if (!script) {
       const pushing = sim.pushing;
       const scanning = sim.scanner && sim.speed < 0.45;
-      const dist = pushing ? 4.75 : scanning ? 4.65 : sim.sprinting && sim.speed > 4 ? 6.05 : 5.55;
+      const talking = Boolean(sim.line);
+      const dist = pushing ? 4.7 : talking ? 4.45 : scanning ? 4.55 : sim.sprinting && sim.speed > 4 ? 6.15 : 5.5;
       const pitch = sim.camPitch;
       const yaw = sim.camYaw;
       const horiz = Math.cos(pitch) * dist;
@@ -219,7 +241,8 @@ export function CameraRig() {
       }
     }
     const jump = smooth.distanceTo(desired) > 24;
-    const k = sim.reduce || jump ? 1 : 1 - Math.exp(-5.4 * capped);
+    const follow = sim.sprinting && sim.speed > 3 ? 7.4 : sim.pushing ? 6.2 : 4.5;
+    const k = sim.reduce || jump ? 1 : 1 - Math.exp(-follow * capped);
     smooth.lerp(desired, k);
     smoothLook.lerp(look, k);
     camera.position.copy(smooth);
@@ -377,7 +400,19 @@ export function Vectors() {
       sprite.visible = false;
     });
     pack.ring.visible = false;
-    if (!sim.scanner || sim.phase === "title") return;
+    const cineScan = sim.phase === "title" && (shotIndex(sim.shotTime) === 6 || shotIndex(sim.shotTime) === 7);
+    if (cineScan) {
+      const crate = sim.crates.find((item) => item.kind === "module");
+      if (crate) {
+        show(crate.x + crate.hx + 0.15, crate.h * 0.7, crate.z, 0, -1, 0, 0.55, 0x8aa0b5, 4);
+        show(crate.x + crate.hx + 0.15, 0.15, crate.z, 0, 1, 0, 0.55, 0xd5e4ef, 5);
+        pack.ring.visible = true;
+        pack.ring.position.set(crate.x, 0.05, crate.z);
+        pack.ring.scale.set(crate.hx * 2.6, crate.hx * 2.6, 1);
+      }
+      return;
+    }
+    if (!sim.scanner || sim.phase !== "play") return;
     let focus = -1;
     let focusD = 6.5;
     sim.crates.forEach((crate, index) => {
@@ -425,7 +460,19 @@ export function Vectors() {
 
 export function Puffs() {
   const refs = useRef<(Mesh | null)[]>([]);
+  const celebrated = useRef(false);
   useFrame((_, dt) => {
+    if (sim.solved && !celebrated.current) {
+      celebrated.current = true;
+      sim.shake = Math.max(sim.shake, 0.1);
+      sim.puffs.forEach((puff, i) => {
+        const ang = (i / sim.puffs.length) * Math.PI * 2;
+        puff.x = sim.x + Math.cos(ang) * 0.45;
+        puff.z = sim.z + Math.sin(ang) * 0.45;
+        puff.life = 1;
+      });
+    }
+    if (!sim.solved) celebrated.current = false;
     if (sim.phase === "play") {
       for (const crate of sim.crates) {
         if (crate.speed < 1.4) continue;
