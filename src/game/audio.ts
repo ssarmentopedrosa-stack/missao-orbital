@@ -131,6 +131,10 @@ export const sfx = {
     tone(660, ctx.currentTime, 0.03, 0.12);
     tone(880, ctx.currentTime + 0.08, 0.025, 0.16);
   },
+  scanTick() {
+    if (!ctx) return;
+    tone(820, ctx.currentTime, 0.01, 0.05);
+  },
   jump() {
     if (!ctx) return;
     tone(220, ctx.currentTime, 0.02, 0.12);

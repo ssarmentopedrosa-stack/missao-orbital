@@ -202,7 +202,8 @@ export function CameraRig() {
       const pushing = sim.pushing;
       const scanning = sim.scanner && sim.speed < 0.45;
       const talking = Boolean(sim.line);
-      const dist = pushing ? 4.7 : talking ? 4.45 : scanning ? 4.55 : sim.sprinting && sim.speed > 4 ? 6.15 : 5.5;
+      const cruise = 5.25 + Math.min(sim.speed / 4.2, 1) * 0.45;
+      const dist = pushing ? 4.45 : talking ? 4.4 : scanning ? 4.5 : sim.sprinting && sim.speed > 4 ? 6.2 : cruise;
       const pitch = sim.camPitch;
       const yaw = sim.camYaw;
       const horiz = Math.cos(pitch) * dist;

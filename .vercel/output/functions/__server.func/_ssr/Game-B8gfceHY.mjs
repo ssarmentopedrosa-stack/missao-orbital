@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-DPRwTkXf.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-B8gfceHY.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -632,6 +632,10 @@ var sfx = {
 		if (!ctx) return;
 		tone(660, ctx.currentTime, .03, .12);
 		tone(880, ctx.currentTime + .08, .025, .16);
+	},
+	scanTick() {
+		if (!ctx) return;
+		tone(820, ctx.currentTime, .01, .05);
 	},
 	jump() {
 		if (!ctx) return;
@@ -2688,7 +2692,8 @@ function CameraRig() {
 			const pushing = sim.pushing;
 			const scanning = sim.scanner && sim.speed < .45;
 			const talking = Boolean(sim.line);
-			const dist = pushing ? 4.7 : talking ? 4.45 : scanning ? 4.55 : sim.sprinting && sim.speed > 4 ? 6.15 : 5.5;
+			const cruise = 5.25 + Math.min(sim.speed / 4.2, 1) * .45;
+			const dist = pushing ? 4.45 : talking ? 4.4 : scanning ? 4.5 : sim.sprinting && sim.speed > 4 ? 6.2 : cruise;
 			const pitch = sim.camPitch;
 			const yaw = sim.camYaw;
 			const horiz = Math.cos(pitch) * dist;
@@ -3105,6 +3110,13 @@ function setZ(group, target, dt, rate = 11) {
 	if (!group) return;
 	group.rotation.z = approach(group.rotation.z, target, dt, rate);
 }
+function clamp(v, a, b) {
+	return Math.max(a, Math.min(b, v));
+}
+function lookYaw(x, z) {
+	const face = Math.atan2(-(x - sim.x), -(z - sim.z));
+	return Math.atan2(Math.sin(face - sim.yaw), Math.cos(face - sim.yaw));
+}
 function Tigrao() {
 	const root = (0, import_react.useRef)(null);
 	const hips = (0, import_react.useRef)(null);
@@ -3117,20 +3129,29 @@ function Tigrao() {
 	const kneeL = (0, import_react.useRef)(null);
 	const kneeR = (0, import_react.useRef)(null);
 	const tail = (0, import_react.useRef)(null);
+	const tailMid = (0, import_react.useRef)(null);
 	const earL = (0, import_react.useRef)(null);
 	const earR = (0, import_react.useRef)(null);
+	const eyeL = (0, import_react.useRef)(null);
+	const eyeR = (0, import_react.useRef)(null);
 	const lidL = (0, import_react.useRef)(null);
 	const lidR = (0, import_react.useRef)(null);
 	const tongue = (0, import_react.useRef)(null);
+	const brow = (0, import_react.useRef)(null);
 	const wrist = (0, import_react.useRef)(null);
 	const beam = (0, import_react.useRef)(null);
 	const lamp = (0, import_react.useRef)(null);
 	const wasAir = (0, import_react.useRef)(false);
+	const airT = (0, import_react.useRef)(0);
 	const land = (0, import_react.useRef)(0);
 	const react = (0, import_react.useRef)(0);
+	const confuse = (0, import_react.useRef)(0);
 	const seenBlocked = (0, import_react.useRef)(sim.blocked);
 	const prevYaw = (0, import_react.useRef)(sim.yaw);
+	const prevSpeed = (0, import_react.useRef)(0);
 	const turn = (0, import_react.useRef)(0);
+	const settle = (0, import_react.useRef)(0);
+	const scanAt = (0, import_react.useRef)(0);
 	const badge = (0, import_react.useMemo)(() => badgeTexture(), []);
 	const nexus = (0, import_react.useMemo)(() => plateTexture("NEXUS"), []);
 	const newton = (0, import_react.useMemo)(() => plateTexture("NEWTON-1"), []);
@@ -3143,156 +3164,301 @@ function Tigrao() {
 		const t = sim.time;
 		const run = sim.anim === "run";
 		const moving = sim.anim === "walk" || run;
-		const freq = run ? 11.4 : 7.1;
-		const amp = moving ? run ? .72 : .52 : .035;
+		const freq = moving ? (run ? 9.6 : 7.2) * (.82 + .22 * Math.min(1, sim.speed / (run ? 6.4 : 4))) : 1.1;
+		const amp = moving ? Math.min(.62, .16 + sim.speed * .07) * (run ? 1.12 : 1) : .025;
 		const swing = Math.sin(t * freq) * amp;
-		const breathe = Math.sin(t * 1.7);
+		const breathe = Math.sin(t * 1.55);
 		const yawDelta = Math.atan2(Math.sin(sim.yaw - prevYaw.current), Math.cos(sim.yaw - prevYaw.current));
 		prevYaw.current = sim.yaw;
-		turn.current = approach(turn.current, Math.max(-.28, Math.min(.28, -yawDelta * 8)), dt, 8);
-		if (!sim.grounded) wasAir.current = true;
-		else if (wasAir.current) {
+		turn.current = approach(turn.current, clamp(-yawDelta * 9, -.32, .32), dt, 8);
+		if (sim.grounded && prevSpeed.current > 1.5 && sim.speed < .4) settle.current = .24;
+		prevSpeed.current = sim.speed;
+		if (!sim.grounded) {
+			if (!wasAir.current) airT.current = 0;
+			wasAir.current = true;
+			airT.current += dt;
+		} else if (wasAir.current) {
 			wasAir.current = false;
-			land.current = .18;
+			land.current = .2;
+			airT.current = 0;
 			if (sim.phase === "play") {
 				sfx.land();
 				sim.shake = Math.max(sim.shake, .07);
 			}
-		}
+		} else airT.current = 0;
 		if (land.current > 0) land.current = Math.max(0, land.current - dt);
 		if (sim.blocked !== seenBlocked.current) {
 			seenBlocked.current = sim.blocked;
 			if (sim.phase === "play") {
-				react.current = .34;
+				react.current = .38;
+				confuse.current = 1.1;
 				sim.shake = Math.max(sim.shake, .05);
 				sfx.fail();
 			}
 		}
 		if (react.current > 0) react.current = Math.max(0, react.current - dt);
-		let hipY = .8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? .045 : .028) : 0);
-		if (land.current > 0) hipY -= land.current * .22;
-		if (sim.anim === "celebrate") hipY = .8 + Math.abs(Math.sin(t * 8)) * .07;
-		let torsoX = breathe * .018;
-		const torsoZ = (moving ? Math.sin(t * freq) * .035 : 0) + turn.current;
+		if (confuse.current > 0) confuse.current = Math.max(0, confuse.current - dt);
+		if (settle.current > 0) settle.current = Math.max(0, settle.current - dt);
+		let near = null;
+		for (const crate of sim.crates) {
+			const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
+			if (!near || d < near.d) near = {
+				x: crate.x,
+				z: crate.z,
+				d
+			};
+		}
+		const shot = sim.phase === "title" ? shotIndex(sim.shotTime) : -1;
+		let mood = "normal";
+		if (sim.anim === "celebrate" || sim.solved && sim.phase !== "play") mood = "success";
+		else if (react.current > .16) mood = "surprise";
+		else if (react.current > 0) mood = "fail";
+		else if (confuse.current > .15 && sim.anim === "idle") mood = "confused";
+		else if (sim.anim === "push") mood = "effort";
+		else if (sim.anim === "scan" || sim.scanner && sim.speed < .45 || shot === 6) mood = "curious";
+		else if (shot === 3 || shot >= 8) mood = "alert";
+		else if (shot === 4 || shot === 5 || shot === 7) mood = "curious";
+		else if (near && near.d < 2.6 && sim.anim === "idle") mood = "curious";
+		else if (!sim.grounded && sim.vy < 0) mood = "alert";
+		const stride = moving ? Math.abs(Math.sin(t * freq)) : 0;
+		let hipY = .7 + (moving ? stride * (run ? .045 : .028) - Math.abs(swing) * .04 : breathe * .01);
+		if (mood === "success") hipY = .7 + Math.abs(Math.sin(t * 7.5)) * .055;
+		let torsoX = breathe * .02 + (run ? -.18 : moving ? -.05 : 0);
+		let torsoY = 0;
+		const torsoZ = (moving ? Math.sin(t * freq) * (run ? .055 : .032) : Math.sin(t * .55) * .02) + turn.current;
 		let lLeg = swing;
 		let rLeg = -swing;
-		let lArm = -swing * .75;
-		let rArm = swing * .75;
-		let lZ = .1;
-		let rZ = -.1;
-		let lKnee = Math.max(0, -swing) * .85;
-		let rKnee = Math.max(0, swing) * .85;
-		let headX = Math.sin(t * .45) * .04;
-		let headY = Math.sin(t * (moving ? .6 : .32)) * (moving ? .08 : .2);
-		const headZ = moving ? -Math.sin(t * freq) * .035 : 0;
-		let tailX = .62;
-		let tailY = Math.sin(t * 2.4) * .28;
+		let lArm = -swing * (run ? 1.05 : .78);
+		let rArm = swing * (run ? 1.05 : .78);
+		let lZ = .16;
+		let rZ = -.16;
+		let lKnee = Math.max(0, -swing) * (run ? 1.15 : .95);
+		let rKnee = Math.max(0, swing) * (run ? 1.15 : .95);
+		let headX = moving ? -.02 : Math.sin(t * .37) * .06;
+		let headY = moving ? -Math.sin(t * freq) * .035 : Math.sin(t * .31) * .18;
+		const headZ = moving ? -Math.sin(t * freq) * .025 : Math.sin(t * .47) * .03;
+		let tailX = moving ? -.15 : -.42;
+		let tailY = Math.sin(t * (run ? 8.2 : moving ? 4.6 : 1.55) + Math.sin(t * .4)) * (mood === "success" ? .7 : run ? .48 : moving ? .3 : .2);
+		tailY += Math.sin(t * .63) * .07;
 		if (sim.anim === "push") {
-			torsoX = .48;
-			lArm = -1.2;
-			rArm = -1.2;
-			lZ = .18;
-			rZ = -.18;
+			torsoX = -.58;
+			lArm = 1.22;
+			rArm = 1.22;
+			lZ = .04;
+			rZ = -.04;
 			lLeg = -.28;
 			rLeg = .42;
-			lKnee = .35;
-			rKnee = .15;
-			headX = .22;
-			headY = 0;
-			tailX = .3;
-		} else if (sim.anim === "scan" || sim.scanner && sim.speed < .4) {
-			lArm = -1.25;
-			lZ = .42;
-			headX = .12;
-			let bestX = sim.x;
-			let bestZ = sim.z - 1;
-			let bestD = 6.5;
-			for (const crate of sim.crates) {
-				const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
-				if (d < bestD) {
-					bestD = d;
-					bestX = crate.x;
-					bestZ = crate.z;
-				}
-			}
-			const face = Math.atan2(-(bestX - sim.x), -(bestZ - sim.z));
-			const rel = Math.atan2(Math.sin(face - sim.yaw), Math.cos(face - sim.yaw));
-			headY = Math.max(-.7, Math.min(.7, rel));
+			lKnee = .55;
+			rKnee = .22;
+			headX = -.16;
+			tailX = .15;
+			tailY *= .3;
+		} else if (mood === "curious" && (sim.anim === "scan" || sim.scanner || shot === 6)) {
+			lArm = 1.05;
+			lZ = .34;
+			rArm = .15;
+			headX = .08;
 		} else if (sim.anim === "jump") {
-			const up = sim.vy > .15;
-			lLeg = up ? -.55 : .28;
-			rLeg = up ? -.42 : .22;
-			lArm = up ? -1.05 : -.2;
-			rArm = up ? -.9 : .45;
-			lZ = up ? .05 : .28;
-			rZ = up ? -.05 : -.28;
-			lKnee = up ? .15 : .35;
-			rKnee = up ? .1 : .3;
-			torsoX = up ? -.12 : .16;
-			headX = up ? -.08 : .12;
-		} else if (sim.anim === "celebrate") {
-			lArm = -2.4;
-			rArm = -2.4;
+			const launch = airT.current < .09 && sim.vy > 0;
+			const up = sim.vy > .2;
+			if (launch) {
+				lKnee = .9;
+				rKnee = .85;
+				lLeg = .32;
+				rLeg = .28;
+				torsoX = -.22;
+				lArm = -.45;
+				rArm = -.4;
+				hipY -= .04;
+			} else if (up) {
+				lLeg = -.35;
+				rLeg = -.28;
+				lArm = 2.15;
+				rArm = 2.05;
+				lKnee = .15;
+				rKnee = .12;
+				torsoX = .1;
+				headX = .14;
+			} else {
+				lLeg = .18;
+				rLeg = .12;
+				lArm = -.25;
+				rArm = .35;
+				lZ = .42;
+				rZ = -.42;
+				lKnee = .25;
+				rKnee = .2;
+				torsoX = -.08;
+				headX = .12;
+			}
+		} else if (mood === "success") {
+			lArm = 2.45;
+			rArm = 2.45;
 			lZ = .28;
 			rZ = -.28;
-			headX = -.18;
-			tailY = Math.sin(t * 9) * .7;
-			tailX = .4;
+			headX = .22;
+			tailX = -.7;
 		}
-		if (sim.phase === "title") {
-			const shot = shotIndex(sim.shotTime);
-			if (shot === 5 || shot === 6) {
-				headX = .22;
-				headY = .04;
-				tailX = .45;
-			} else if (shot >= 8) {
-				torsoX = .24;
-				lArm = -.58;
-				rArm = -.48;
-				headX = .1;
-				headY = 0;
+		if (near && near.d < 4.2 && (sim.anim === "idle" || sim.anim === "push" || sim.anim === "scan" || sim.scanner)) {
+			const aim = lookYaw(near.x, near.z);
+			if (Math.abs(aim) < 1.45) {
+				headY = clamp(aim, -.7, .7);
+				torsoY = clamp(headY * .28, -.22, .22);
+			}
+			if (sim.anim === "push") headX = -.12;
+		}
+		if (sim.line && sim.phase === "play" && sim.anim !== "push" && sim.anim !== "jump") {
+			const spk = sim.line.speaker;
+			const aim = spk === "NEWTON" ? lookYaw(NEWTON.x, NEWTON.z) : spk === "NEXUS" ? 0 : lookYaw(FICHA.x, FICHA.z);
+			if (spk === "NEXUS") headX = -.12;
+			else if (Math.abs(aim) < 1.45) headY = clamp(aim, -.6, .6);
+			if (sim.anim === "idle") {
+				rArm = .72;
+				rZ = -.22;
 			}
 		}
-		if (react.current > 0) {
-			headX = -.28;
-			torsoX = -.08;
-			tailX = .15;
-			lZ = .22;
-			rZ = -.22;
+		if (shot === 3) {
+			headY = Math.sin(t * 1.4) * .42;
+			headX = -.05;
+		} else if (shot === 4 || shot === 7) {
+			headX = -.22;
+			headY = .04;
+		} else if (shot === 5) {
+			headX = .08;
+			headY = Math.sin(t * .8) * .28;
+		} else if (shot === 6) {
+			lArm = 1.02;
+			lZ = .32;
+			headX = .12;
+			headY = .08;
+		} else if (shot >= 8) {
+			torsoX = -.18;
+			lArm = .55;
+			rArm = .42;
+			headX = .06;
+			headY = 0;
 		}
+		if (react.current > 0) {
+			const hit = react.current / .38;
+			headX = react.current > .16 ? .32 : -.06;
+			headY = Math.sin(t * 18) * react.current * .45;
+			torsoX = .16 * hit;
+			torsoY = Math.sin(t * 14) * .08;
+			tailX = .25;
+			lZ = .36;
+			rZ = -.36;
+			lArm = -.5;
+			rArm = -.35;
+		}
+		if (land.current > 0 && sim.anim !== "jump") {
+			const k = land.current / .2;
+			lKnee += .6 * k;
+			rKnee += .6 * k;
+			lLeg += .18 * k;
+			rLeg += .18 * k;
+			torsoX -= .12 * k;
+			hipY -= .025 * k;
+		}
+		if (settle.current > 0 && sim.anim === "idle") {
+			const k = settle.current / .24;
+			lKnee += .35 * k;
+			rKnee += .35 * k;
+			torsoX -= .08 * k;
+			hipY -= .02 * k;
+		}
+		let earLZ = 1.15;
+		let earRZ = -1.15;
+		let earLX = .42;
+		if (mood === "alert") {
+			earLZ = .42;
+			earRZ = -.42;
+			earLX = .05;
+		} else if (mood === "curious") {
+			earLZ = .55;
+			earRZ = -1.2;
+			earLX = .12;
+		} else if (mood === "surprise") {
+			earLZ = .18 + Math.sin(t * 22) * .14;
+			earRZ = -.18 - Math.sin(t * 22) * .14;
+			earLX = -.08;
+		} else if (mood === "fail" || mood === "confused") {
+			earLZ = 1.45;
+			earRZ = -1.38;
+			earLX = .62;
+		} else if (mood === "effort") {
+			earLZ = 1.32;
+			earRZ = -1.32;
+			earLX = .55;
+		} else if (mood === "success") {
+			earLZ = .95;
+			earRZ = -.9;
+			earLX = .22;
+		}
+		const twitch = Math.sin(t * 2.7) * Math.max(0, Math.sin(t * .55));
+		earLZ += twitch * .07;
+		earRZ -= Math.sin(t * 1.6) * .035;
 		if (hips.current) hips.current.position.y = approach(hips.current.position.y, hipY, dt, 10);
-		setX(torso.current, torsoX, dt, sim.anim === "push" ? 8 : 6);
+		setX(torso.current, torsoX, dt, sim.anim === "push" ? 8 : run ? 9 : 6);
+		setY(torso.current, torsoY, dt, 7);
 		setZ(torso.current, torsoZ, dt, 8);
-		if (torso.current) torso.current.position.y = approach(torso.current.position.y, .28 + breathe * .01, dt, 6);
-		setX(legL.current, lLeg, dt, 14);
-		setX(legR.current, rLeg, dt, 14);
-		setX(kneeL.current, lKnee, dt, 14);
-		setX(kneeR.current, rKnee, dt, 14);
+		setX(legL.current, lLeg, dt, 16);
+		setX(legR.current, rLeg, dt, 16);
+		setX(kneeL.current, lKnee, dt, 16);
+		setX(kneeR.current, rKnee, dt, 16);
 		setX(armL.current, lArm, dt, 12);
 		setX(armR.current, rArm, dt, 12);
 		setZ(armL.current, lZ, dt, 12);
 		setZ(armR.current, rZ, dt, 12);
-		setX(head.current, headX, dt, 8);
-		setY(head.current, headY, dt, 8);
+		setX(head.current, headX, dt, 9);
+		setY(head.current, headY, dt, 9);
 		setZ(head.current, headZ, dt, 8);
-		if (earL.current) earL.current.rotation.z = approach(earL.current.rotation.z, 1.15 + Math.sin(t * 2.1) * .06, dt, 6);
-		if (earR.current) earR.current.rotation.z = approach(earR.current.rotation.z, -1.15 - Math.sin(t * 2.1) * .06, dt, 6);
-		setX(tail.current, tailX, dt, 6);
-		setY(tail.current, tailY, dt, 8);
-		const blink = Math.pow(Math.max(0, Math.sin(t * 1.2)), 48);
-		if (lidL.current) lidL.current.scale.y = .35 + blink * 6;
-		if (lidR.current) lidR.current.scale.y = .35 + blink * 6;
+		if (earL.current) {
+			earL.current.rotation.z = approach(earL.current.rotation.z, earLZ, dt, mood === "surprise" ? 16 : 6);
+			earL.current.rotation.x = approach(earL.current.rotation.x, earLX, dt, 6);
+		}
+		if (earR.current) {
+			earR.current.rotation.z = approach(earR.current.rotation.z, earRZ, dt, mood === "surprise" ? 16 : 6);
+			earR.current.rotation.x = approach(earR.current.rotation.x, earLX, dt, 6);
+		}
+		setX(tail.current, tailX, dt, 5);
+		setY(tail.current, tailY, dt, 7);
+		if (tailMid.current) {
+			tailMid.current.rotation.y = approach(tailMid.current.rotation.y, Math.sin(t * (run ? 9 : 2.8) + .8) * (mood === "success" ? .55 : .28), dt, 8);
+			tailMid.current.rotation.x = approach(tailMid.current.rotation.x, Math.sin(t * 1.3) * .12, dt, 6);
+		}
+		if (brow.current) {
+			const furrow = mood === "effort" || mood === "confused" ? .35 : mood === "alert" ? .15 : 0;
+			brow.current.rotation.x = approach(brow.current.rotation.x, furrow, dt, 8);
+		}
+		const gaze = clamp(-headY, -.7, .7) * .02;
+		const gazeY = clamp(-headX, -.4, .4) * .012;
+		if (eyeL.current) {
+			eyeL.current.position.x = approach(eyeL.current.position.x, -.07 + gaze, dt, 12);
+			eyeL.current.position.y = approach(eyeL.current.position.y, .045 + gazeY, dt, 12);
+		}
+		if (eyeR.current) {
+			eyeR.current.position.x = approach(eyeR.current.position.x, .07 + gaze, dt, 12);
+			eyeR.current.position.y = approach(eyeR.current.position.y, .045 + gazeY, dt, 12);
+		}
+		const blink = Math.pow(Math.max(0, Math.sin(t * 1.15 + (mood === "alert" ? 1 : 0))), 46);
+		if (lidL.current) lidL.current.scale.y = .28 + blink * 7;
+		if (lidR.current) lidR.current.scale.y = .28 + blink * 7;
 		if (tongue.current) {
-			const out = sim.anim === "celebrate" ? 1.5 : .65 + Math.sin(t * 2) * .08;
-			tongue.current.scale.y = approach(tongue.current.scale.y, out, dt, 8);
+			const out = mood === "success" ? 1.15 : mood === "effort" ? .45 : .12 + Math.sin(t * 1.6) * .05;
+			tongue.current.scale.z = approach(tongue.current.scale.z, .85 + out, dt, 8);
+			tongue.current.position.z = approach(tongue.current.position.z, -.2 - out * .035, dt, 8);
 		}
 		if (wrist.current) {
 			const mat = wrist.current.material;
-			if (!Array.isArray(mat)) mat.emissiveIntensity = sim.scanner ? 1.8 + Math.sin(t * 8) * .45 : .08;
+			if (!Array.isArray(mat)) mat.emissiveIntensity = sim.scanner || shot === 6 ? 1.9 + Math.sin(t * 8) * .4 : .08;
 		}
-		const cineScan = sim.phase === "title" && shotIndex(sim.shotTime) === 6;
-		if (beam.current) beam.current.visible = cineScan || sim.scanner && sim.phase === "play";
-		if (lamp.current) lamp.current.intensity = beam.current?.visible ? 1.8 : 0;
+		const beamOn = shot === 6 || sim.scanner && sim.phase === "play";
+		if (beam.current) beam.current.visible = beamOn;
+		if (lamp.current) lamp.current.intensity = beamOn ? 1.8 : 0;
+		if (beamOn && t > scanAt.current) {
+			scanAt.current = t + .85;
+			sfx.scanTick();
+		}
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
 		ref: root,
@@ -3300,62 +3466,93 @@ function Tigrao() {
 			ref: hips,
 			position: [
 				0,
-				.8,
+				.7,
 				0
 			],
 			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.suit,
+					dispose: null,
+					castShadow: true,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.16,
+						16,
+						12
+					] })
+				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 					ref: tail,
 					position: [
 						0,
-						.04,
-						.18
+						.02,
+						.14
 					],
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								0,
-								.02,
-								.1
-							],
-							material: M.fur,
-							dispose: null,
-							castShadow: true,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.07,
-								12,
-								10
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								.015,
-								.05,
-								.2
-							],
-							material: M.muzzle,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.055,
-								10,
-								8
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								.02,
-								.08,
-								.3
-							],
-							material: M.fur,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.042,
-								10,
-								8
-							] })
-						})
-					]
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							.02,
+							.07
+						],
+						material: M.fur,
+						dispose: null,
+						castShadow: true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+							.055,
+							12,
+							10
+						] })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+						ref: tailMid,
+						position: [
+							0,
+							.03,
+							.12
+						],
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+								position: [
+									0,
+									.02,
+									.07
+								],
+								material: M.muzzle,
+								dispose: null,
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+									.042,
+									10,
+									8
+								] })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+								position: [
+									.01,
+									.05,
+									.14
+								],
+								material: M.fur,
+								dispose: null,
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+									.032,
+									10,
+									8
+								] })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+								position: [
+									.015,
+									.07,
+									.2
+								],
+								material: M.muzzle,
+								dispose: null,
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+									.022,
+									8,
+									8
+								] })
+							})
+						]
+					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Leg, {
 					side: -1,
@@ -3371,37 +3568,47 @@ function Tigrao() {
 					ref: torso,
 					position: [
 						0,
-						.28,
+						.2,
 						0
 					],
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								.12,
+								.16,
 								0
+							],
+							scale: [
+								1,
+								1.05,
+								.82
 							],
 							material: M.suit,
 							dispose: null,
 							castShadow: true,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.46,
-								.44,
-								.28
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.24,
+								22,
+								16
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								.3,
-								0
+								.02,
+								.02
+							],
+							scale: [
+								.9,
+								.7,
+								.75
 							],
 							material: M.suitDark,
 							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.48,
-								.1,
-								.3
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.18,
+								16,
+								12
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
@@ -3412,10 +3619,10 @@ function Tigrao() {
 							],
 							material: M.suitBlue,
 							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.12,
-								.18,
-								.26
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.09,
+								12,
+								10
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
@@ -3426,31 +3633,36 @@ function Tigrao() {
 							],
 							material: M.suitBlue,
 							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.12,
-								.18,
-								.26
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.09,
+								12,
+								10
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								.08,
-								-.15
+								.12,
+								-.16
+							],
+							scale: [
+								1.15,
+								.85,
+								.35
 							],
 							material: M.suitBlue,
 							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.3,
-								.22,
-								.03
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.12,
+								14,
+								10
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 							position: [
 								0,
-								.08,
-								-.175
+								.12,
+								-.22
 							],
 							rotation: [
 								0,
@@ -3458,7 +3670,7 @@ function Tigrao() {
 								0
 							],
 							dispose: null,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.28, .16] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.22, .12] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 								map: badge,
 								toneMapped: false
 							})]
@@ -3466,130 +3678,190 @@ function Tigrao() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								-.12,
-								0
+								.32,
+								-.02
 							],
-							material: M.hullDark,
+							material: M.muzzle,
 							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.4,
-								.07,
-								.24
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								-.12,
-								-.12,
-								-.1
-							],
-							material: M.gold,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.07,
-								.07,
-								.05
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								.12,
-								-.12,
-								-.1
-							],
-							material: M.gold,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.07,
-								.07,
-								.05
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.075,
+								12,
+								10
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								.14,
-								.22
+								.36,
+								.02
+							],
+							material: M.fur,
+							dispose: null,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+								.055,
+								.05,
+								4,
+								8
+							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+							position: [
+								0,
+								.4,
+								0
+							],
+							rotation: [
+								Math.PI / 2,
+								0,
+								0
+							],
+							material: M.hull,
+							dispose: null,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
+								.09,
+								.016,
+								6,
+								12
+							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+							position: [
+								-.11,
+								-.02,
+								-.08
+							],
+							material: M.gold,
+							dispose: null,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+								.05,
+								.05,
+								.04
+							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+							position: [
+								.11,
+								-.02,
+								-.08
+							],
+							material: M.gold,
+							dispose: null,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+								.05,
+								.05,
+								.04
+							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+							position: [
+								0,
+								.16,
+								.2
+							],
+							scale: [
+								.85,
+								1.05,
+								.55
 							],
 							material: M.suit,
 							dispose: null,
 							castShadow: true,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.3,
-								.36,
-								.14
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+								.16,
+								16,
+								12
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								-.08,
-								.16,
-								.3
+								-.06,
+								.18,
+								.28
 							],
 							rotation: [
-								.1,
+								.15,
 								0,
-								0
+								.1
 							],
 							material: M.hull,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
-								.05,
-								.05,
-								.28,
-								10
+								.035,
+								.035,
+								.26,
+								8
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								.08,
-								.16,
-								.3
+								.06,
+								.18,
+								.28
 							],
 							rotation: [
-								.1,
+								.15,
 								0,
-								0
+								-.1
 							],
 							material: M.hull,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
-								.05,
-								.05,
+								.035,
+								.035,
+								.26,
+								8
+							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+							position: [
+								-.14,
+								.34,
+								.1
+							],
+							rotation: [
+								1.05,
+								0,
+								.55
+							],
+							material: M.pipe,
+							dispose: null,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+								.011,
+								.011,
 								.28,
-								10
+								6
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 							position: [
 								0,
 								.02,
-								.3
+								.28
 							],
 							dispose: null,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.2, .06] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.16, .05] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 								map: nexus,
 								toneMapped: false
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								.1,
-								.34,
-								.22
+								.08,
+								.3,
+								.18
 							],
-							material: M.visorLight,
+							material: M.emit,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.028,
+								.02,
 								8,
 								8
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 							position: [
-								.28,
-								.2,
+								.26,
+								.18,
 								-.02
 							],
 							rotation: [
@@ -3598,7 +3870,7 @@ function Tigrao() {
 								0
 							],
 							dispose: null,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.12, .045] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.1, .04] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 								map: newton,
 								toneMapped: false
 							})]
@@ -3619,7 +3891,7 @@ function Tigrao() {
 							position: [
 								0,
 								.52,
-								-.04
+								-.03
 							],
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
@@ -3627,8 +3899,8 @@ function Tigrao() {
 									dispose: null,
 									castShadow: true,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.19,
-										22,
+										.2,
+										24,
 										18
 									] })
 								}),
@@ -3636,26 +3908,83 @@ function Tigrao() {
 									position: [
 										0,
 										-.02,
-										-.14
+										-.13
 									],
 									scale: [
-										.95,
-										.62,
-										1.15
+										1.08,
+										.78,
+										1.45
 									],
 									material: M.muzzle,
 									dispose: null,
 									castShadow: true,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.12,
-										16,
-										12
+										.115,
+										18,
+										14
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
-										-.01,
+										.04,
+										-.185
+									],
+									scale: [
+										.7,
+										.45,
+										.22
+									],
+									material: M.muzzle,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.07,
+										10,
+										8
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										-.075,
+										.035,
+										-.15
+									],
+									scale: [
+										1.15,
+										.72,
+										.45
+									],
+									material: M.furDark,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.055,
+										10,
+										8
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										.075,
+										.035,
+										-.15
+									],
+									scale: [
+										1.15,
+										.72,
+										.45
+									],
+									material: M.furDark,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.055,
+										10,
+										8
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										0,
+										.012,
 										-.28
 									],
 									material: M.nose,
@@ -3669,23 +3998,33 @@ function Tigrao() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
-										-.055,
-										-.2
+										-.05,
+										-.22
+									],
+									rotation: [
+										.35,
+										0,
+										0
 									],
 									material: M.furDark,
 									dispose: null,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.06,
-										.012,
-										.04
+										.075,
+										.01,
+										.02
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									ref: tongue,
 									position: [
 										0,
-										-.075,
+										-.072,
 										-.2
+									],
+									scale: [
+										1,
+										.62,
+										1
 									],
 									material: M.tongue,
 									dispose: null,
@@ -3695,34 +4034,82 @@ function Tigrao() {
 										8
 									] })
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, {
-									x: -.07,
-									lid: lidL
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+									ref: brow,
+									position: [
+										0,
+										.09,
+										-.17
+									],
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+										position: [
+											-.055,
+											0,
+											0
+										],
+										rotation: [
+											0,
+											0,
+											.35
+										],
+										material: M.furDark,
+										dispose: null,
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+											.055,
+											.012,
+											.016
+										] })
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+										position: [
+											.055,
+											0,
+											0
+										],
+										rotation: [
+											0,
+											0,
+											-.35
+										],
+										material: M.furDark,
+										dispose: null,
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+											.055,
+											.012,
+											.016
+										] })
+									})]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, {
-									x: .07,
-									lid: lidR
+									x: -.072,
+									lid: lidL,
+									look: eyeL
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, {
+									x: .072,
+									lid: lidR,
+									look: eyeR
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 									ref: earL,
 									position: [
-										-.16,
+										-.18,
 										.12,
-										-.02
-									],
-									rotation: [
-										.4,
-										.2,
-										1.15
+										.02
 									],
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+										rotation: [
+											.35,
+											.2,
+											0
+										],
 										scale: [
-											.45,
-											1.35,
-											.28
+											.38,
+											1.7,
+											.18
 										],
 										material: M.fur,
 										dispose: null,
+										castShadow: true,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 											.11,
 											12,
@@ -3730,19 +4117,24 @@ function Tigrao() {
 										] })
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 										position: [
-											.01,
+											.012,
 											-.02,
-											-.02
+											-.012
+										],
+										rotation: [
+											.35,
+											.2,
+											0
 										],
 										scale: [
-											.28,
-											.8,
-											.16
+											.2,
+											1.05,
+											.1
 										],
 										material: M.furDark,
 										dispose: null,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-											.11,
+											.1,
 											10,
 											8
 										] })
@@ -3751,23 +4143,24 @@ function Tigrao() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 									ref: earR,
 									position: [
-										.16,
+										.18,
 										.12,
-										-.02
-									],
-									rotation: [
-										.4,
-										-.2,
-										-1.15
+										.02
 									],
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+										rotation: [
+											.35,
+											-.2,
+											0
+										],
 										scale: [
-											.45,
-											1.35,
-											.28
+											.38,
+											1.7,
+											.18
 										],
 										material: M.fur,
 										dispose: null,
+										castShadow: true,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 											.11,
 											12,
@@ -3775,19 +4168,24 @@ function Tigrao() {
 										] })
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 										position: [
-											-.01,
+											-.012,
 											-.02,
-											-.02
+											-.012
+										],
+										rotation: [
+											.35,
+											-.2,
+											0
 										],
 										scale: [
-											.28,
-											.8,
-											.16
+											.2,
+											1.05,
+											.1
 										],
 										material: M.furDark,
 										dispose: null,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-											.11,
+											.1,
 											10,
 											8
 										] })
@@ -3796,86 +4194,115 @@ function Tigrao() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
-										.02,
-										-.06
+										.05,
+										.11
+									],
+									scale: [
+										1.08,
+										1,
+										.68
+									],
+									material: M.suit,
+									dispose: null,
+									castShadow: true,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.22,
+										20,
+										16
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										0,
+										.07,
+										-.175
+									],
+									scale: [
+										1.45,
+										.38,
+										.32
 									],
 									material: M.glass,
 									dispose: null,
 									renderOrder: 3,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.24,
-										28,
-										20
+										.1,
+										14,
+										10
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										0,
+										-.02,
+										.08
+									],
 									rotation: [
-										Math.PI / 2,
+										1.2,
 										0,
 										0
 									],
-									material: M.suit,
+									material: M.suitDark,
 									dispose: null,
-									castShadow: true,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
-										.23,
-										.038,
-										10,
-										24
+										.2,
+										.018,
+										6,
+										16
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
-										-.22,
-										.01,
-										0
+										-.2,
+										0,
+										.08
 									],
-									material: M.suit,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.07,
-										.1,
-										.09
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										.22,
-										.01,
-										0
-									],
-									material: M.suit,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.07,
-										.1,
-										.09
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										-.26,
-										.02,
-										-.02
-									],
-									material: M.emit,
+									material: M.suitBlue,
 									dispose: null,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.026,
+										.038,
 										8,
 										8
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
-										.26,
-										.02,
-										-.02
+										.2,
+										0,
+										.08
+									],
+									material: M.suitBlue,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.038,
+										8,
+										8
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										-.22,
+										.06,
+										.04
 									],
 									material: M.emit,
 									dispose: null,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.026,
+										.015,
+										8,
+										8
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										.22,
+										.06,
+										.04
+									],
+									material: M.emit,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.015,
 										8,
 										8
 									] })
@@ -3892,105 +4319,8 @@ function Leg({ side, leg, knee }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 		ref: leg,
 		position: [
-			side * .13,
-			0,
-			0
-		],
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-				position: [
-					0,
-					-.2,
-					0
-				],
-				material: M.suit,
-				dispose: null,
-				castShadow: true,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-					.072,
-					.18,
-					4,
-					8
-				] })
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-				position: [
-					0,
-					-.28,
-					.04
-				],
-				material: M.suitBlue,
-				dispose: null,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-					.13,
-					.1,
-					.12
-				] })
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-				ref: knee,
-				position: [
-					0,
-					-.38,
-					0
-				],
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-						position: [
-							0,
-							-.16,
-							0
-						],
-						material: M.suit,
-						dispose: null,
-						castShadow: true,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-							.06,
-							.14,
-							3,
-							8
-						] })
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-						position: [
-							0,
-							-.32,
-							.03
-						],
-						material: M.boot,
-						dispose: null,
-						castShadow: true,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-							.13,
-							.09,
-							.2
-						] })
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-						position: [
-							0,
-							-.34,
-							-.06
-						],
-						material: M.glove,
-						dispose: null,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-							.1,
-							.04,
-							.06
-						] })
-					})
-				]
-			})
-		]
-	});
-}
-function Arm({ side, arm, wrist, beam, lamp }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-		ref: arm,
-		position: [
-			side * .3,
-			.22,
+			side * .12,
+			-.02,
 			0
 		],
 		children: [
@@ -4004,8 +4334,130 @@ function Arm({ side, arm, wrist, beam, lamp }) {
 				dispose: null,
 				castShadow: true,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-					.052,
+					.07,
 					.14,
+					4,
+					8
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.22,
+					.02
+				],
+				rotation: [
+					Math.PI / 2,
+					0,
+					0
+				],
+				material: M.suitBlue,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
+					.075,
+					.016,
+					6,
+					10
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+				ref: knee,
+				position: [
+					0,
+					-.32,
+					0
+				],
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.14,
+							0
+						],
+						material: M.suit,
+						dispose: null,
+						castShadow: true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+							.055,
+							.12,
+							3,
+							8
+						] })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.28,
+							.02
+						],
+						material: M.boot,
+						dispose: null,
+						castShadow: true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+							.08,
+							12,
+							10
+						] })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.3,
+							-.05
+						],
+						scale: [
+							1,
+							.45,
+							1.15
+						],
+						material: M.glove,
+						dispose: null,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+							.055,
+							10,
+							8
+						] })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.312,
+							-.09
+						],
+						material: M.dark,
+						dispose: null,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+							.016,
+							6,
+							6
+						] })
+					})
+				]
+			})
+		]
+	});
+}
+function Arm({ side, arm, wrist, beam, lamp }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+		ref: arm,
+		position: [
+			side * .28,
+			.24,
+			0
+		],
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.14,
+					0
+				],
+				material: M.suit,
+				dispose: null,
+				castShadow: true,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+					.05,
+					.12,
 					3,
 					8
 				] })
@@ -4013,29 +4465,35 @@ function Arm({ side, arm, wrist, beam, lamp }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 				position: [
 					0,
-					-.18,
+					-.22,
 					0
 				],
-				material: M.suitBlue,
+				rotation: [
+					Math.PI / 2,
+					0,
+					0
+				],
+				material: M.hull,
 				dispose: null,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-					.09,
-					.05,
-					.09
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
+					.055,
+					.012,
+					6,
+					10
 				] })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 				position: [
 					0,
-					-.34,
+					-.32,
 					0
 				],
 				material: M.suitDark,
 				dispose: null,
 				castShadow: true,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-					.046,
-					.14,
+					.042,
+					.12,
 					3,
 					8
 				] })
@@ -4043,16 +4501,30 @@ function Arm({ side, arm, wrist, beam, lamp }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 				position: [
 					0,
-					-.48,
+					-.46,
 					-.02
 				],
 				material: M.glove,
 				dispose: null,
 				castShadow: true,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.065,
+					.06,
 					12,
 					10
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					side * .015,
+					-.49,
+					-.065
+				],
+				material: M.dark,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.014,
+					6,
+					6
 				] })
 			}),
 			side < 0 && wrist && beam && lamp ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
@@ -4061,43 +4533,45 @@ function Arm({ side, arm, wrist, beam, lamp }) {
 					position: [
 						0,
 						-.4,
-						-.06
+						-.08
 					],
 					dispose: null,
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.045,
 						.03,
-						8,
-						8
+						.06
 					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshStandardMaterial", {
 						color: "#7eb8cc",
 						emissive: "#7eb8cc",
-						emissiveIntensity: .08
+						emissiveIntensity: .08,
+						roughness: .35,
+						metalness: .4
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 					ref: beam,
 					position: [
 						0,
-						-.55,
-						-.55
+						-.5,
+						-.34
 					],
 					rotation: [
-						Math.PI / 2.4,
+						-1.05,
 						0,
 						0
 					],
 					visible: false,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
 						.01,
-						.08,
-						.7,
+						.055,
+						.55,
 						8,
 						1,
 						true
 					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 						color: "#9fd8ea",
 						transparent: true,
-						opacity: .28,
+						opacity: .32,
 						depthWrite: false
 					})]
 				}),
@@ -4105,11 +4579,11 @@ function Arm({ side, arm, wrist, beam, lamp }) {
 					ref: lamp,
 					position: [
 						0,
-						-.45,
+						-.46,
 						-.2
 					],
 					color: "#9fd4e6",
-					distance: 4.5,
+					distance: 4.2,
 					decay: 2,
 					intensity: 0
 				})
@@ -4117,8 +4591,9 @@ function Arm({ side, arm, wrist, beam, lamp }) {
 		]
 	});
 }
-function Eye({ x, lid }) {
+function Eye({ x, lid, look }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+		ref: look,
 		position: [
 			x,
 			.045,
@@ -4129,7 +4604,7 @@ function Eye({ x, lid }) {
 				material: M.eye,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.048,
+					.046,
 					14,
 					12
 				] })
@@ -4138,12 +4613,12 @@ function Eye({ x, lid }) {
 				position: [
 					0,
 					0,
-					-.024
+					-.022
 				],
 				material: M.iris,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.03,
+					.028,
 					12,
 					10
 				] })
@@ -4152,42 +4627,42 @@ function Eye({ x, lid }) {
 				position: [
 					0,
 					0,
-					-.04
+					-.038
 				],
 				material: M.pupil,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.014,
+					.013,
 					8,
 					8
 				] })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 				position: [
-					.01,
 					.012,
-					-.046
+					.012,
+					-.044
 				],
 				dispose: null,
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 					.006,
 					6,
 					6
-				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", { color: "#f7fbff" })]
+				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", { color: "#ffffff" })]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 				ref: lid,
 				position: [
 					0,
-					.028,
+					.03,
 					-.02
 				],
 				material: M.fur,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
 					.07,
-					.012,
-					.03
+					.01,
+					.025
 				] })
 			})
 		]

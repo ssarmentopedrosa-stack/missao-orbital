@@ -968,6 +968,20 @@ export function installProbe(): void {
   window.__controlsTest = {
     getYaw: () => sim.yaw,
     getSpeed: () => Math.hypot(sim.vx, sim.vz),
+    getHeld: () => [...held],
+    getState: () => ({
+      phase: sim.phase,
+      x: sim.x,
+      y: sim.y,
+      z: sim.z,
+      yaw: sim.yaw,
+      vy: sim.vy,
+      speed: Math.hypot(sim.vx, sim.vz),
+      paused: sim.paused,
+      mapOpen: sim.mapOpen,
+      scanner: sim.scanner,
+      pushes: sim.pushes,
+    }),
     setKeys: (codes: string[]) => {
       held.clear();
       for (const code of codes) held.add(code);
@@ -983,6 +997,20 @@ declare global {
     __controlsTest?: {
       getYaw: () => number;
       getSpeed: () => number;
+      getHeld?: () => string[];
+      getState?: () => {
+        phase: string;
+        x: number;
+        y: number;
+        z: number;
+        yaw: number;
+        vy: number;
+        speed: number;
+        paused: boolean;
+        mapOpen: boolean;
+        scanner: boolean;
+        pushes: number;
+      };
       setKeys?: (codes: string[]) => void;
       advanceTitle?: (t: number) => void;
     };
