@@ -1,0 +1,40 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Missão Newton 3D",
+      "hasCanvas": false,
+      "bodyTextLen": 83,
+      "bodyTextHash": "60cb39a8b3ffc95c3f038ab62a4b9dd05b13408980390879347a6ca03e2b1cc3",
+      "bodyTextPrefix": "PROGRAMA ORBITAL Missão Newton Resgate da Estação Orbital Calibr",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Missão Newton 3D",
+      "hasCanvas": false,
+      "bodyTextLen": 83,
+      "bodyTextHash": "60cb39a8b3ffc95c3f038ab62a4b9dd05b13408980390879347a6ca03e2b1cc3",
+      "bodyTextPrefix": "PROGRAMA ORBITAL Missão Newton Resgate da Estação Orbital Calibr",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "baseline unreadable: invalid JSON"
+  ]
+}

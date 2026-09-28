@@ -1,0 +1,77 @@
+export type Block = {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  h: number;
+  kind: "wall" | "prop" | "hidden";
+};
+
+const t = 0.42;
+
+export const SPAWN = { x: 0, z: 7.2, yaw: 0 };
+export const DOCK = { x: 0, z: -25, r: 1.2 };
+export const NEWTON = { x: -5.3, z: 5.15 };
+export const FICHA = { x: 8, z: -11.35 };
+
+export const G = 9.81;
+export const PLAYER_MASS = 80;
+export const WALK_F = 180;
+export const SPRINT_F = 340;
+export const SHOVE_J = 80;
+
+export type CrateKind = "light" | "module" | "heavy";
+
+export type CrateSpec = {
+  id: string;
+  name: string;
+  kind: CrateKind;
+  x: number;
+  z: number;
+  mass: number;
+  hx: number;
+  hz: number;
+  h: number;
+};
+
+export const CRATE_SPECS: CrateSpec[] = [
+  { id: "light", name: "Caixa leve", kind: "light", x: -5.2, z: -15.2, mass: 6, hx: 0.34, hz: 0.34, h: 0.46 },
+  { id: "module", name: "Módulo N-1", kind: "module", x: 0, z: -15.2, mass: 20, hx: 0.5, hz: 0.42, h: 0.64 },
+  { id: "heavy", name: "Bateria", kind: "heavy", x: 5.2, z: -15.2, mass: 40, hx: 0.62, hz: 0.5, h: 0.8 },
+];
+
+export function surfaceAt(x: number, z: number): { name: string; mu: number; muS: number } {
+  if (z < -12.6 && z > -28.2) {
+    if (x > -7.6 && x < -3.05) return { name: "Gelo", mu: 0.05, muS: 0.07 };
+    if (x > 3.05 && x < 7.6) return { name: "Borracha", mu: 0.62, muS: 0.78 };
+    if (x > -2.5 && x < 2.5) return { name: "Metal", mu: 0.3, muS: 0.4 };
+  }
+  return { name: "Compósito", mu: 0.42, muS: 0.52 };
+}
+
+export const BLOCKS: Block[] = [
+  { minX: -7.6 - t, maxX: -7.6, minZ: -1.7, maxZ: 11.65, h: 3.5, kind: "wall" },
+  { minX: 7.6, maxX: 7.6 + t, minZ: -1.7, maxZ: 11.65, h: 3.5, kind: "hidden" },
+  { minX: -8.05, maxX: 8.05, minZ: 11.2, maxZ: 11.2 + t, h: 3.5, kind: "wall" },
+  { minX: -8.05, maxX: -1.55, minZ: -1.2 - t, maxZ: -1.2, h: 3.5, kind: "wall" },
+  { minX: 1.55, maxX: 8.05, minZ: -1.2 - t, maxZ: -1.2, h: 3.5, kind: "wall" },
+  { minX: -1.7 - t, maxX: -1.7, minZ: -9.6, maxZ: -1.15, h: 3.05, kind: "wall" },
+  { minX: 1.7, maxX: 1.7 + t, minZ: -9.6, maxZ: -1.15, h: 3.05, kind: "wall" },
+  { minX: -9.45, maxX: -1.55, minZ: -9.62, maxZ: -9.2, h: 4.1, kind: "wall" },
+  { minX: 1.55, maxX: 9.45, minZ: -9.62, maxZ: -9.2, h: 4.1, kind: "wall" },
+  { minX: -9 - t, maxX: -9, minZ: -30.85, maxZ: -9.15, h: 4.1, kind: "wall" },
+  { minX: 9, maxX: 9 + t, minZ: -30.85, maxZ: -9.15, h: 4.1, kind: "wall" },
+  { minX: -9.45, maxX: 9.45, minZ: -30.4 - t, maxZ: -30.4, h: 4.1, kind: "hidden" },
+  { minX: 2.35, maxX: 4.75, minZ: 2.9, maxZ: 5.05, h: 0.92, kind: "prop" },
+  { minX: -6.15, maxX: -4.45, minZ: 4.15, maxZ: 6.15, h: 1.12, kind: "prop" },
+  { minX: -6.2, maxX: -3.85, minZ: -0.35, maxZ: 1.45, h: 0.55, kind: "prop" },
+  { minX: 4.45, maxX: 6.7, minZ: -0.55, maxZ: 1.55, h: 0.88, kind: "prop" },
+  { minX: 7.15, maxX: 8.85, minZ: -12.4, maxZ: -10.3, h: 1.05, kind: "prop" },
+];
+
+export function shotIndex(shotTime: number): 0 | 1 | 2 {
+  const u = shotTime % 21;
+  if (u < 8) return 0;
+  if (u < 14) return 1;
+  return 2;
+}

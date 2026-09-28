@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Missão Newton 3D",
+      "hasCanvas": true,
+      "bodyTextLen": 269,
+      "bodyTextHash": "b844613dd545428b41f294b91fee31efa278b9bf63fc714104e5d85e1248befb",
+      "bodyTextPrefix": "PROGRAMA ORBITAL · CADETE TIGRÃO MISSÃO NEWTON RESGATE DA ESTAÇÃ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Missão Newton 3D",
+      "hasCanvas": true,
+      "bodyTextLen": 164,
+      "bodyTextHash": "e518beee2b8b3399d48a4bbe5644dd5a786a403ad493dd1673d1931699b0ee12",
+      "bodyTextPrefix": "PROGRAMA ORBITAL · CADETE TIGRÃO MISSÃO NEWTON RESGATE DA ESTAÇÃ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
