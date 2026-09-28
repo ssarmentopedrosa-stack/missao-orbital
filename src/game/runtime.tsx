@@ -4,6 +4,7 @@ import type { DirectionalLight, Group, Mesh, MeshBasicMaterial } from "three";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { HoloLabel } from "./bits";
+import { labelSprite } from "./draw";
 import { pump } from "./audio";
 import { BLOCKS, CRATE_SPECS, DOCK, G, shotIndex } from "./layout";
 import { M } from "./materials";
@@ -124,13 +125,15 @@ export function Lights() {
   });
   return (
     <>
-      <hemisphereLight args={["#d5e4ef", "#2a211c", 0.58]} />
-      <ambientLight intensity={0.14} />
+      <hemisphereLight args={["#d5e4ef", "#241c18", 0.46]} />
+      <ambientLight intensity={0.1} />
       <Sun />
-      <pointLight position={[0, 2.5, 5]} color="#e7eef6" distance={11} decay={2} intensity={1.1} />
+      <directionalLight position={[-8, 6, -6]} intensity={0.42} color="#7eb8cc" />
+      <pointLight position={[0, 2.5, 5]} color="#e7eef6" distance={12} decay={2} intensity={1.35} />
       <pointLight ref={dock} position={[DOCK.x, 2.4, DOCK.z]} color="#7eb8cc" distance={9} decay={2} intensity={2.2} />
-      <pointLight position={[0, 2.5, 7.2]} color="#e0a23a" distance={6} decay={2} intensity={0.35} />
-      <pointLight position={[0, 2.6, -18]} color="#9fd0e4" distance={12} decay={2} intensity={0.7} />
+      <pointLight position={[0, 2.5, 7.2]} color="#e0a23a" distance={7} decay={2} intensity={0.55} />
+      <pointLight position={[0, 2.6, -18]} color="#9fd0e4" distance={14} decay={2} intensity={0.85} />
+      <pointLight position={[-5.2, 2.2, 5]} color="#9fd4e6" distance={6} decay={2} intensity={0.45} />
     </>
   );
 }
@@ -175,7 +178,9 @@ export function CameraRig() {
     const capped = Math.min(dt, 0.05);
     const script = scripted(capped, camera);
     if (!script) {
-      const dist = sim.sprinting && sim.speed > 4 ? 5.85 : 5.45;
+      const pushing = sim.pushing;
+      const scanning = sim.scanner && sim.speed < 0.45;
+      const dist = pushing ? 4.75 : scanning ? 4.65 : sim.sprinting && sim.speed > 4 ? 6.05 : 5.55;
       const pitch = sim.camPitch;
       const yaw = sim.camYaw;
       const horiz = Math.cos(pitch) * dist;
@@ -195,10 +200,26 @@ export function CameraRig() {
         sz = z;
       }
       desired.set(sx, Math.max(0.45, sy), sz);
-      look.set(sim.x + sim.vx * 0.1, sim.y + 1.28, sim.z + sim.vz * 0.1);
+      look.set(sim.x + sim.vx * 0.16, sim.y + 1.22, sim.z + sim.vz * 0.16);
+      if (sim.scanner) {
+        let best: (typeof sim.crates)[number] | null = null;
+        let bestD = 6.5;
+        for (const crate of sim.crates) {
+          const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
+          if (d < bestD) {
+            bestD = d;
+            best = crate;
+          }
+        }
+        if (best) {
+          look.x += (best.x - look.x) * 0.18;
+          look.y += (best.h * 0.55 - look.y) * 0.08;
+          look.z += (best.z - look.z) * 0.18;
+        }
+      }
     }
     const jump = smooth.distanceTo(desired) > 24;
-    const k = sim.reduce || jump ? 1 : 1 - Math.exp(-6.2 * capped);
+    const k = sim.reduce || jump ? 1 : 1 - Math.exp(-5.4 * capped);
     smooth.lerp(desired, k);
     smoothLook.lerp(look, k);
     camera.position.copy(smooth);
@@ -224,11 +245,17 @@ function CrateBody({ kind, hx, hz, h }: { kind: string; hx: number; hz: number; 
         <mesh material={M.suit} castShadow dispose={null}>
           <boxGeometry args={[hx * 2, h, hz * 2]} />
         </mesh>
-        <mesh position={[0, 0, hz + 0.01]} material={M.suitBlue} dispose={null}>
-          <boxGeometry args={[hx * 1.4, h * 0.45, 0.04]} />
+        <mesh position={[0, 0.02, hz + 0.02]} material={M.suitBlue} dispose={null}>
+          <boxGeometry args={[hx * 1.5, h * 0.28, 0.04]} />
         </mesh>
-        <mesh position={[0, h * 0.18, hz + 0.04]} material={M.gold} dispose={null}>
-          <sphereGeometry args={[0.06, 10, 8]} />
+        <mesh position={[0, h * 0.2, hz + 0.05]} material={M.gold} dispose={null}>
+          <sphereGeometry args={[0.055, 10, 8]} />
+        </mesh>
+        <mesh position={[0, h * 0.55, 0]} material={M.hull} dispose={null}>
+          <cylinderGeometry args={[0.04, 0.04, 0.16, 8]} />
+        </mesh>
+        <mesh position={[0, h * 0.55 + 0.1, 0]} rotation={[Math.PI / 2, 0, 0]} material={M.suitBlue} dispose={null}>
+          <torusGeometry args={[0.09, 0.015, 6, 12]} />
         </mesh>
       </group>
     );
@@ -286,18 +313,44 @@ export function Vectors() {
   const pack = useMemo(() => {
     const group = new THREE.Group();
     const arrows: THREE.ArrowHelper[] = [];
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 16; i++) {
       const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(), 0.4, 0xffffff, 0.16, 0.08);
       arrow.visible = false;
       group.add(arrow);
       arrows.push(arrow);
     }
-    return { group, arrows };
+    const tags = ["F", "v", "a", "f", "P", "N"].map((text, i) => {
+      const color = ["#f4f7fb", "#7eb8cc", "#c7c3ef", "#e0a23a", "#8aa0b5", "#d5e4ef"][i] ?? "#fff";
+      const { tex } = labelSprite(text, color);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+      sprite.visible = false;
+      sprite.scale.set(0.42, 0.16, 1);
+      group.add(sprite);
+      return sprite;
+    });
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.45, 0.52, 28),
+      new THREE.MeshBasicMaterial({ color: "#7eb8cc", transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.visible = false;
+    group.add(ring);
+    return { group, arrows, tags, ring };
   }, []);
 
   useFrame(() => {
     let n = 0;
-    const show = (x: number, y: number, z: number, dx: number, dy: number, dz: number, len: number, color: number) => {
+    const show = (
+      x: number,
+      y: number,
+      z: number,
+      dx: number,
+      dy: number,
+      dz: number,
+      len: number,
+      color: number,
+      label?: number,
+    ) => {
       const arrow = pack.arrows[n];
       if (!arrow || len < 0.12) return;
       n += 1;
@@ -311,12 +364,21 @@ export function Vectors() {
       arrow.setDirection(dir);
       const L = Math.min(len, 2.2);
       arrow.setLength(L, Math.min(0.2, L * 0.32), Math.min(0.1, L * 0.16));
+      if (label != null && pack.tags[label]) {
+        const sprite = pack.tags[label];
+        sprite.visible = true;
+        sprite.position.set(x + dir.x * (L + 0.18), y + dir.y * (L + 0.18) + 0.08, z + dir.z * (L + 0.18));
+      }
     };
     pack.arrows.forEach((arrow) => {
       arrow.visible = false;
     });
+    pack.tags.forEach((sprite) => {
+      sprite.visible = false;
+    });
+    pack.ring.visible = false;
     if (!sim.scanner || sim.phase === "title") return;
-    let focus = 99;
+    let focus = -1;
     let focusD = 6.5;
     sim.crates.forEach((crate, index) => {
       const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
@@ -327,17 +389,33 @@ export function Vectors() {
     });
     sim.crates.forEach((crate, index) => {
       const y = crate.h + 0.2;
+      const accel =
+        crate.blocked || crate.force < 1
+          ? crate.speed > 0.08
+            ? (-crate.mu * G) / 4
+            : 0
+          : (crate.force - crate.mu * crate.mass * G) / crate.mass;
       if (crate.speed > 0.15) {
-        show(crate.x, y, crate.z, crate.vx, 0, crate.vz, crate.speed * 0.55, 0x7eb8cc);
+        show(crate.x, y, crate.z, crate.vx, 0, crate.vz, crate.speed * 0.55, 0x7eb8cc, index === focus ? 1 : undefined);
         const f = (crate.mu * crate.mass * G) / 150;
-        show(crate.x, y + 0.02, crate.z, -crate.vx, 0, -crate.vz, f, 0xe0a23a);
+        show(crate.x, y + 0.02, crate.z, -crate.vx, 0, -crate.vz, f, 0xe0a23a, index === focus ? 3 : undefined);
       } else if (crate.blocked && crate.force > 10) {
-        show(crate.x, y, crate.z, -crate.dirX, 0, -crate.dirZ, (crate.muS * crate.mass * G) / 160, 0xe0a23a);
+        show(crate.x, y, crate.z, -crate.dirX, 0, -crate.dirZ, (crate.muS * crate.mass * G) / 160, 0xe0a23a, index === focus ? 3 : undefined);
       }
-      if (crate.force > 20) show(crate.x, y + 0.05, crate.z, crate.dirX, 0, crate.dirZ, crate.force / 170, 0xf4f7fb);
+      if (crate.force > 20) show(crate.x, y + 0.05, crate.z, crate.dirX, 0, crate.dirZ, crate.force / 170, 0xf4f7fb, index === focus ? 0 : undefined);
+      if (Math.abs(accel) > 0.15 && crate.speed > 0.05) {
+        const sign = accel >= 0 ? 1 : -1;
+        const ax = crate.speed > 0.12 ? crate.vx * sign : crate.dirX;
+        const az = crate.speed > 0.12 ? crate.vz * sign : crate.dirZ;
+        show(crate.x, y + 0.12, crate.z, ax, 0, az, Math.min(1.4, Math.abs(accel) * 0.18), 0xc7c3ef, index === focus ? 2 : undefined);
+      }
       if (index === focus) {
-        show(crate.x + crate.hx + 0.15, crate.h * 0.7, crate.z, 0, -1, 0, 0.55, 0x8aa0b5);
-        show(crate.x + crate.hx + 0.15, 0.15, crate.z, 0, 1, 0, 0.55, 0xd5e4ef);
+        show(crate.x + crate.hx + 0.15, crate.h * 0.7, crate.z, 0, -1, 0, 0.55, 0x8aa0b5, 4);
+        show(crate.x + crate.hx + 0.15, 0.15, crate.z, 0, 1, 0, 0.55, 0xd5e4ef, 5);
+        pack.ring.visible = true;
+        pack.ring.position.set(crate.x, 0.05, crate.z);
+        const pulse = 1 + Math.sin(sim.time * 4) * 0.06;
+        pack.ring.scale.set(Math.max(crate.hx, crate.hz) * 2.4 * pulse, Math.max(crate.hx, crate.hz) * 2.4 * pulse, 1);
       }
     });
   });
@@ -347,7 +425,18 @@ export function Vectors() {
 
 export function Puffs() {
   const refs = useRef<(Mesh | null)[]>([]);
-  useFrame(() => {
+  useFrame((_, dt) => {
+    if (sim.phase === "play") {
+      for (const crate of sim.crates) {
+        if (crate.speed < 1.4) continue;
+        if (Math.random() > dt * 5) continue;
+        const slot = sim.puffs.find((item) => item.life <= 0);
+        if (!slot) break;
+        slot.x = crate.x;
+        slot.z = crate.z;
+        slot.life = 0.55;
+      }
+    }
     sim.puffs.forEach((puff, i) => {
       const mesh = refs.current[i];
       if (!mesh) return;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ScanLine } from "lucide-react";
 import {
   continueLab,
@@ -15,6 +15,7 @@ import {
   toggleMap,
   togglePause,
 } from "./sim";
+import { shotIndex } from "./layout";
 
 function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -44,9 +45,16 @@ export function Overlay() {
 }
 
 function Title({ best }: { best: number | null }) {
+  const beat = useBeat();
+  const lines = [
+    "Newton-1 em órbita. Alerta no sistema de navegação.",
+    "Falha no sistema de navegação. O módulo N-1 está solto no laboratório.",
+    "Cadete Tigrão — a força pode ser a mesma. A aceleração, não.",
+  ];
   return (
     <section className="panel title-card" data-ui>
       <p className="kicker">Programa Orbital · Cadete Tigrão</p>
+      <p className="beat">{lines[beat]}</p>
       <h1>
         MISSÃO NEWTON
         <span>RESGATE DA ESTAÇÃO ORBITAL</span>
@@ -64,6 +72,21 @@ function Title({ best }: { best: number | null }) {
   );
 }
 
+function useBeat(): 0 | 1 | 2 {
+  const [beat, setBeat] = useState<0 | 1 | 2>(0);
+  useEffect(() => {
+    let frame = 0;
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      const next = shotIndex(sim.shotTime);
+      setBeat((current) => (current === next ? current : next));
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  return beat;
+}
+
 function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
   return (
     <>
@@ -75,6 +98,14 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
         {snap.line ? (
           <div className="panel line" style={{ position: "static", transform: "none", width: "auto" }}>
             <b>{snap.line.speaker}</b>
+            {snap.line.speaker === "NEWTON" ? <span className="role">IA de controle da estação</span> : null}
+            <span className="wave" aria-hidden>
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
             <p>{snap.line.text}</p>
           </div>
         ) : null}
@@ -110,10 +141,10 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
 function ReadoutCard({ readout }: { readout: NonNullable<ReturnType<typeof getSnap>["readout"]> }) {
   return (
     <div className="panel readout">
-      <p className="kicker">Nexus Scanner</p>
-      <h2>
-        {readout.name} · {readout.surface}
-      </h2>
+      <p className="kicker">
+        {readout.surface} · μ {n(readout.mu, 2)} · μs {n(readout.muS, 2)}
+      </p>
+      <h2>{readout.name}</h2>
       <div className="eq">
         <em>F</em>
         <span>{n(readout.force, 0)} N</span>
@@ -133,6 +164,7 @@ function ReadoutCard({ readout }: { readout: NonNullable<ReturnType<typeof getSn
         <span>{n(readout.staticFriction, 0)} N</span>
       </div>
       <p className="note">
+        F força · v velocidade · a aceleração · f atrito.{" "}
         {readout.blocked
           ? "Parado. A força não vence o atrito estático."
           : readout.speed > 0.08

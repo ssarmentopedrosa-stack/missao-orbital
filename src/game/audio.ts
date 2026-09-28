@@ -123,6 +123,9 @@ export const sfx = {
     if (!ctx) return;
     tone(220, ctx.currentTime, 0.02, 0.12);
   },
+  land() {
+    burst(64, 0.09, 0.05, 240);
+  },
   hit() {
     burst(50, 0.2, 0.08, 180);
   },

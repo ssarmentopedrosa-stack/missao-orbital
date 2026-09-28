@@ -193,12 +193,44 @@
   font-size: 0.78rem;
   line-height: 1.45;
 }
-.best {
-  margin: 0.45rem 0 0;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
+.beat {
+  margin: 0.45rem 0 0.15rem;
+  color: var(--color-fg);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.role {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.68rem;
   letter-spacing: 0.08em;
-  color: var(--color-amber);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.wave {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin: 0.35rem 0 0.2rem;
+  align-items: flex-end;
+}
+.wave i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  background: var(--color-ice);
+  transform-origin: bottom;
+  animation: wave 0.9s ease-in-out infinite;
+}
+.wave i:nth-child(2) { animation-delay: 0.12s; }
+.wave i:nth-child(3) { animation-delay: 0.22s; }
+.wave i:nth-child(4) { animation-delay: 0.08s; }
+.wave i:nth-child(5) { animation-delay: 0.18s; }
+@keyframes wave {
+  50% { transform: scaleY(0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave i { animation: none; }
 }
 
 .hud-left,

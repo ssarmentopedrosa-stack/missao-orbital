@@ -21,31 +21,59 @@ function texOf(c: HTMLCanvasElement, repeat = false): THREE.CanvasTexture {
 }
 
 export function earthTexture(): THREE.CanvasTexture {
-  const [c, g] = canvas(512, 256);
-  g.fillStyle = "#163e78";
-  g.fillRect(0, 0, 512, 256);
-  g.fillStyle = "#1f6b45";
-  for (let i = 0; i < 18; i++) {
+  const [c, g] = canvas(1024, 512);
+  const ocean = g.createLinearGradient(0, 0, 0, 512);
+  ocean.addColorStop(0, "#1c4f8a");
+  ocean.addColorStop(0.45, "#0f315c");
+  ocean.addColorStop(1, "#1a4a82");
+  g.fillStyle = ocean;
+  g.fillRect(0, 0, 1024, 512);
+  g.fillStyle = "#e8eef3";
+  g.fillRect(0, 0, 1024, 28);
+  g.fillRect(0, 484, 1024, 28);
+  g.fillStyle = "#2d7a48";
+  g.beginPath();
+  g.moveTo(250, 230);
+  g.bezierCurveTo(300, 170, 360, 190, 372, 250);
+  g.bezierCurveTo(390, 320, 360, 390, 320, 430);
+  g.bezierCurveTo(280, 455, 255, 400, 248, 340);
+  g.bezierCurveTo(230, 280, 220, 250, 250, 230);
+  g.fill();
+  g.fillStyle = "#3c8f52";
+  g.beginPath();
+  g.moveTo(500, 150);
+  g.bezierCurveTo(560, 130, 590, 180, 575, 240);
+  g.bezierCurveTo(610, 280, 590, 360, 540, 400);
+  g.bezierCurveTo(500, 370, 490, 300, 500, 240);
+  g.bezierCurveTo(470, 190, 470, 160, 500, 150);
+  g.fill();
+  g.fillStyle = "#d8c48a";
+  g.beginPath();
+  g.ellipse(430, 210, 50, 22, 0.4, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(255,255,255,0.16)";
+  for (let i = 0; i < 14; i++) {
     g.beginPath();
-    g.ellipse(40 + ((i * 97) % 460), 30 + ((i * 53) % 190), 30 + (i % 5) * 14, 16 + (i % 4) * 8, i, 0, Math.PI * 2);
+    g.ellipse(80 + ((i * 137) % 900), 70 + ((i * 61) % 360), 70 + (i % 4) * 18, 16 + (i % 3) * 6, i * 0.3, 0, Math.PI * 2);
     g.fill();
   }
-  g.fillStyle = "#8d7a45";
-  for (let i = 0; i < 8; i++) {
+  const night = g.createLinearGradient(760, 0, 1024, 0);
+  night.addColorStop(0, "rgba(0,0,0,0)");
+  night.addColorStop(1, "rgba(0,8,18,0.5)");
+  g.fillStyle = night;
+  g.fillRect(760, 0, 264, 512);
+  return texOf(c);
+}
+
+export function cloudTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(1024, 512);
+  g.clearRect(0, 0, 1024, 512);
+  for (let i = 0; i < 22; i++) {
+    g.fillStyle = `rgba(255,255,255,${0.25 + (i % 5) * 0.08})`;
     g.beginPath();
-    g.ellipse(80 + i * 50, 140, 22, 10, 0.4, 0, Math.PI * 2);
+    g.ellipse((i * 97) % 1000, 40 + ((i * 53) % 420), 90 + (i % 6) * 16, 18 + (i % 4) * 5, i * 0.2, 0, Math.PI * 2);
     g.fill();
   }
-  g.strokeStyle = "rgba(255,255,255,0.35)";
-  g.lineWidth = 6;
-  for (let i = 0; i < 7; i++) {
-    g.beginPath();
-    g.moveTo(0, 20 + i * 34);
-    g.bezierCurveTo(120, 10 + i * 30, 280, 50 + i * 20, 512, 16 + i * 28);
-    g.stroke();
-  }
-  g.fillStyle = "rgba(0,0,0,0.18)";
-  g.fillRect(360, 0, 152, 256);
   return texOf(c);
 }
 
@@ -134,13 +162,30 @@ export function paintScreen(
 
 export function badgeTexture(): THREE.CanvasTexture {
   const [c, g] = canvas(512, 256);
-  g.clearRect(0, 0, 512, 256);
-  g.fillStyle = "#1e4d96";
-  g.font = "700 86px sans-serif";
+  g.fillStyle = "#14386e";
+  g.fillRect(0, 0, 512, 256);
+  g.fillStyle = "#f4f7fb";
+  g.font = "700 92px sans-serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText("ECIT", 256, 88);
+  g.font = "700 64px sans-serif";
   g.fillText("BAYEUX", 256, 176);
+  return texOf(c);
+}
+
+export function plateTexture(label: string): THREE.CanvasTexture {
+  const [c, g] = canvas(512, 128);
+  g.fillStyle = "#102033";
+  g.fillRect(0, 0, 512, 128);
+  g.strokeStyle = "#7eb8cc";
+  g.lineWidth = 6;
+  g.strokeRect(8, 8, 496, 112);
+  g.fillStyle = "#d5eef6";
+  g.font = "700 64px sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(label, 256, 68);
   return texOf(c);
 }
 

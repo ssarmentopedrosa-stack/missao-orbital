@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect } from "react";
 import * as THREE from "three";
+import { Dressing } from "./dressing";
 import { Overlay } from "./overlay";
 import { CameraRig, Crates, FogTune, Lights, Puffs, Simulator, StudioEnv, Vectors } from "./runtime";
 import {
@@ -119,6 +120,7 @@ export function Game() {
         <FogTune />
         <Lights />
         <World />
+        <Dressing />
         <Crates />
         <Vectors />
         <Puffs />

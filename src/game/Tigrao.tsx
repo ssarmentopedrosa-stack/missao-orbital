@@ -1,9 +1,29 @@
 import { useMemo, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, Mesh, MeshStandardMaterial } from "three";
-import { badgeTexture, flagTexture } from "./draw";
+import type { Group, Mesh, MeshStandardMaterial, PointLight } from "three";
+import { sfx } from "./audio";
+import { badgeTexture, flagTexture, plateTexture } from "./draw";
 import { M } from "./materials";
 import { sim } from "./sim";
+
+function approach(current: number, target: number, dt: number, rate = 11): number {
+  return current + (target - current) * (1 - Math.exp(-rate * dt));
+}
+
+function setX(group: Group | null, target: number, dt: number, rate = 11): void {
+  if (!group) return;
+  group.rotation.x = approach(group.rotation.x, target, dt, rate);
+}
+
+function setY(group: Group | null, target: number, dt: number, rate = 11): void {
+  if (!group) return;
+  group.rotation.y = approach(group.rotation.y, target, dt, rate);
+}
+
+function setZ(group: Group | null, target: number, dt: number, rate = 11): void {
+  if (!group) return;
+  group.rotation.z = approach(group.rotation.z, target, dt, rate);
+}
 
 export function Tigrao() {
   const root = useRef<Group>(null);
@@ -23,270 +43,272 @@ export function Tigrao() {
   const lidR = useRef<Mesh>(null);
   const tongue = useRef<Mesh>(null);
   const wrist = useRef<Mesh>(null);
+  const beam = useRef<Mesh>(null);
+  const lamp = useRef<PointLight>(null);
+  const wasAir = useRef(false);
+  const land = useRef(0);
+  const prevYaw = useRef(sim.yaw);
+  const turn = useRef(0);
   const badge = useMemo(() => badgeTexture(), []);
   const flag = useMemo(() => flagTexture(), []);
+  const nexus = useMemo(() => plateTexture("NEXUS"), []);
 
-  useFrame(() => {
+  useFrame((_, raw) => {
     const g = root.current;
     if (!g) return;
+    const dt = Math.min(raw, 0.05);
     g.position.set(sim.x, sim.y, sim.z);
     g.rotation.y = sim.yaw;
     const t = sim.time;
     const run = sim.anim === "run";
     const moving = sim.anim === "walk" || run;
-    const freq = run ? 12.2 : 7.2;
-    const amp = moving ? (run ? 0.78 : 0.55) : 0.04;
+    const freq = run ? 11.4 : 7.1;
+    const amp = moving ? (run ? 0.72 : 0.52) : 0.035;
     const swing = Math.sin(t * freq) * amp;
     const breathe = Math.sin(t * 1.7);
+    const yawDelta = Math.atan2(Math.sin(sim.yaw - prevYaw.current), Math.cos(sim.yaw - prevYaw.current));
+    prevYaw.current = sim.yaw;
+    turn.current = approach(turn.current, Math.max(-0.28, Math.min(0.28, -yawDelta * 8)), dt, 8);
 
-    if (hips.current) hips.current.position.y = 0.8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? 0.05 : 0.03) : 0);
-    if (torso.current) {
-      torso.current.position.y = 0.28 + breathe * 0.012;
-      torso.current.rotation.x = breathe * 0.02;
-      torso.current.rotation.z = moving ? Math.sin(t * freq) * 0.04 : 0;
+    if (!sim.grounded) wasAir.current = true;
+    else if (wasAir.current) {
+      wasAir.current = false;
+      land.current = 0.18;
+      if (sim.phase === "play") sfx.land();
     }
-    if (legL.current) legL.current.rotation.x = swing;
-    if (legR.current) legR.current.rotation.x = -swing;
-    if (armL.current) armL.current.rotation.x = -swing * 0.8;
-    if (armR.current) armR.current.rotation.x = swing * 0.8;
-    if (kneeL.current) kneeL.current.rotation.x = Math.max(0, -swing) * 0.9;
-    if (kneeR.current) kneeR.current.rotation.x = Math.max(0, swing) * 0.9;
-    if (head.current) {
-      head.current.rotation.y = Math.sin(t * 0.6) * 0.12;
-      head.current.rotation.x = Math.sin(t * 0.45) * 0.05;
-      head.current.rotation.z = moving ? -Math.sin(t * freq) * 0.04 : 0;
-    }
-    if (earL.current) earL.current.rotation.z = 0.35 + Math.sin(t * 2.2) * 0.05;
-    if (earR.current) earR.current.rotation.z = -0.35 - Math.sin(t * 2.2) * 0.05;
-    if (tail.current) {
-      tail.current.rotation.y = Math.sin(t * (sim.anim === "celebrate" ? 9 : 2.6)) * (sim.anim === "celebrate" ? 0.7 : 0.32);
-      tail.current.rotation.x = 0.55;
-    }
-    const blink = Math.pow(Math.max(0, Math.sin(t * 1.35)), 42);
-    if (lidL.current) lidL.current.scale.y = 0.35 + blink * 5;
-    if (lidR.current) lidR.current.scale.y = 0.35 + blink * 5;
-    if (tongue.current) tongue.current.scale.y = sim.anim === "celebrate" ? 1.4 : 0.7 + Math.sin(t * 2) * 0.08;
-    if (wrist.current) {
-      const mat = wrist.current.material;
-      if (!Array.isArray(mat)) (mat as MeshStandardMaterial).emissiveIntensity = sim.scanner ? 1.6 + Math.sin(t * 8) * 0.4 : 0.05;
-    }
+    if (land.current > 0) land.current = Math.max(0, land.current - dt);
+
+    let hipY = 0.8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? 0.045 : 0.028) : 0);
+    if (land.current > 0) hipY -= land.current * 0.22;
+    if (sim.anim === "celebrate") hipY = 0.8 + Math.abs(Math.sin(t * 8)) * 0.07;
+
+    let torsoX = breathe * 0.018;
+    const torsoZ = (moving ? Math.sin(t * freq) * 0.035 : 0) + turn.current;
+    let lLeg = swing;
+    let rLeg = -swing;
+    let lArm = -swing * 0.75;
+    let rArm = swing * 0.75;
+    let lZ = 0.1;
+    let rZ = -0.1;
+    let lKnee = Math.max(0, -swing) * 0.85;
+    let rKnee = Math.max(0, swing) * 0.85;
+    let headX = Math.sin(t * 0.45) * 0.04;
+    let headY = Math.sin(t * 0.6) * 0.1;
+    const headZ = moving ? -Math.sin(t * freq) * 0.035 : 0;
+    let tailX = 0.62;
+    let tailY = Math.sin(t * 2.4) * 0.28;
 
     if (sim.anim === "push") {
-      if (torso.current) torso.current.rotation.x = 0.42;
-      if (armL.current) armL.current.rotation.x = -1.25;
-      if (armR.current) armR.current.rotation.x = -1.25;
-      if (legL.current) legL.current.rotation.x = -0.25;
-      if (legR.current) legR.current.rotation.x = 0.4;
-      if (head.current) head.current.rotation.x = 0.2;
-    } else if (sim.anim === "scan") {
-      if (armL.current) {
-        armL.current.rotation.x = -1.35;
-        armL.current.rotation.z = 0.45;
+      torsoX = 0.48;
+      lArm = -1.2;
+      rArm = -1.2;
+      lZ = 0.18;
+      rZ = -0.18;
+      lLeg = -0.28;
+      rLeg = 0.42;
+      lKnee = 0.35;
+      rKnee = 0.15;
+      headX = 0.22;
+      headY = 0;
+      tailX = 0.3;
+    } else if (sim.anim === "scan" || (sim.scanner && sim.speed < 0.4)) {
+      lArm = -1.25;
+      lZ = 0.42;
+      headX = 0.12;
+      let bestX = sim.x;
+      let bestZ = sim.z - 1;
+      let bestD = 6.5;
+      for (const crate of sim.crates) {
+        const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
+        if (d < bestD) {
+          bestD = d;
+          bestX = crate.x;
+          bestZ = crate.z;
+        }
       }
+      const face = Math.atan2(-(bestX - sim.x), -(bestZ - sim.z));
+      const rel = Math.atan2(Math.sin(face - sim.yaw), Math.cos(face - sim.yaw));
+      headY = Math.max(-0.7, Math.min(0.7, rel));
     } else if (sim.anim === "jump") {
-      const up = sim.vy > 0;
-      if (legL.current) legL.current.rotation.x = up ? -0.55 : 0.35;
-      if (legR.current) legR.current.rotation.x = up ? -0.4 : 0.45;
-      if (armL.current) armL.current.rotation.x = -0.9;
-      if (armR.current) armR.current.rotation.x = -0.7;
+      const up = sim.vy > 0.2;
+      lLeg = up ? -0.5 : 0.32;
+      rLeg = up ? -0.38 : 0.4;
+      lArm = -0.85;
+      rArm = -0.7;
+      lKnee = up ? 0.2 : 0.45;
+      rKnee = up ? 0.15 : 0.4;
+      torsoX = up ? -0.08 : 0.12;
     } else if (sim.anim === "celebrate") {
-      const hop = Math.abs(Math.sin(t * 8)) * 0.08;
-      if (hips.current) hips.current.position.y = 0.8 + hop;
-      if (armL.current) {
-        armL.current.rotation.x = -2.5;
-        armL.current.rotation.z = 0.25;
-      }
-      if (armR.current) {
-        armR.current.rotation.x = -2.5;
-        armR.current.rotation.z = -0.25;
-      }
-      if (head.current) head.current.rotation.x = -0.15;
-    } else if (armL.current && armR.current) {
-      armL.current.rotation.z = 0.08;
-      armR.current.rotation.z = -0.08;
+      lArm = -2.4;
+      rArm = -2.4;
+      lZ = 0.28;
+      rZ = -0.28;
+      headX = -0.18;
+      tailY = Math.sin(t * 9) * 0.7;
+      tailX = 0.4;
     }
+
+    if (hips.current) hips.current.position.y = approach(hips.current.position.y, hipY, dt, 10);
+    setX(torso.current, torsoX, dt, sim.anim === "push" ? 8 : 6);
+    setZ(torso.current, torsoZ, dt, 8);
+    if (torso.current) torso.current.position.y = approach(torso.current.position.y, 0.28 + breathe * 0.01, dt, 6);
+    setX(legL.current, lLeg, dt, 14);
+    setX(legR.current, rLeg, dt, 14);
+    setX(kneeL.current, lKnee, dt, 14);
+    setX(kneeR.current, rKnee, dt, 14);
+    setX(armL.current, lArm, dt, 12);
+    setX(armR.current, rArm, dt, 12);
+    setZ(armL.current, lZ, dt, 12);
+    setZ(armR.current, rZ, dt, 12);
+    setX(head.current, headX, dt, 8);
+    setY(head.current, headY, dt, 8);
+    setZ(head.current, headZ, dt, 8);
+    if (earL.current) earL.current.rotation.z = approach(earL.current.rotation.z, 1.15 + Math.sin(t * 2.1) * 0.06, dt, 6);
+    if (earR.current) earR.current.rotation.z = approach(earR.current.rotation.z, -1.15 - Math.sin(t * 2.1) * 0.06, dt, 6);
+    setX(tail.current, tailX, dt, 6);
+    setY(tail.current, tailY, dt, 8);
+
+    const blink = Math.pow(Math.max(0, Math.sin(t * 1.2)), 48);
+    if (lidL.current) lidL.current.scale.y = 0.35 + blink * 6;
+    if (lidR.current) lidR.current.scale.y = 0.35 + blink * 6;
+    if (tongue.current) {
+      const out = sim.anim === "celebrate" ? 1.5 : 0.65 + Math.sin(t * 2) * 0.08;
+      tongue.current.scale.y = approach(tongue.current.scale.y, out, dt, 8);
+    }
+    if (wrist.current) {
+      const mat = wrist.current.material;
+      if (!Array.isArray(mat)) {
+        (mat as MeshStandardMaterial).emissiveIntensity = sim.scanner ? 1.8 + Math.sin(t * 8) * 0.45 : 0.08;
+      }
+    }
+    if (beam.current) beam.current.visible = sim.scanner && sim.phase === "play";
+    if (lamp.current) lamp.current.intensity = sim.scanner && sim.phase === "play" ? 1.8 : 0;
   });
 
   return (
     <group ref={root}>
       <group ref={hips} position={[0, 0.8, 0]}>
-        <group ref={tail} position={[0, 0.02, 0.16]}>
-          <mesh position={[0, 0, 0.1]} material={M.fur} dispose={null} castShadow>
+        <group ref={tail} position={[0, 0.04, 0.18]}>
+          <mesh position={[0, 0.02, 0.1]} material={M.fur} dispose={null} castShadow>
             <sphereGeometry args={[0.07, 12, 10]} />
           </mesh>
-          <mesh position={[0.02, -0.02, 0.2]} material={M.furDark} dispose={null}>
+          <mesh position={[0.015, 0.05, 0.2]} material={M.muzzle} dispose={null}>
             <sphereGeometry args={[0.055, 10, 8]} />
           </mesh>
-          <mesh position={[0.03, -0.04, 0.28]} material={M.fur} dispose={null}>
-            <sphereGeometry args={[0.04, 10, 8]} />
+          <mesh position={[0.02, 0.08, 0.3]} material={M.fur} dispose={null}>
+            <sphereGeometry args={[0.042, 10, 8]} />
           </mesh>
         </group>
 
-        <group ref={legL} position={[-0.13, 0, 0]}>
-          <mesh position={[0, -0.2, 0]} material={M.suit} dispose={null} castShadow>
-            <capsuleGeometry args={[0.075, 0.18, 4, 8]} />
-          </mesh>
-          <mesh position={[0, -0.28, 0.06]} material={M.suitBlue} dispose={null}>
-            <boxGeometry args={[0.14, 0.12, 0.12]} />
-          </mesh>
-          <group ref={kneeL} position={[0, -0.38, 0]}>
-            <mesh position={[0, -0.16, 0]} material={M.suit} dispose={null} castShadow>
-              <capsuleGeometry args={[0.065, 0.14, 3, 8]} />
-            </mesh>
-            <mesh position={[0, -0.32, 0.03]} material={M.boot} dispose={null} castShadow>
-              <boxGeometry args={[0.14, 0.1, 0.22]} />
-            </mesh>
-          </group>
-        </group>
-        <group ref={legR} position={[0.13, 0, 0]}>
-          <mesh position={[0, -0.2, 0]} material={M.suit} dispose={null} castShadow>
-            <capsuleGeometry args={[0.075, 0.18, 4, 8]} />
-          </mesh>
-          <mesh position={[0, -0.28, 0.06]} material={M.suitBlue} dispose={null}>
-            <boxGeometry args={[0.14, 0.12, 0.12]} />
-          </mesh>
-          <group ref={kneeR} position={[0, -0.38, 0]}>
-            <mesh position={[0, -0.16, 0]} material={M.suit} dispose={null} castShadow>
-              <capsuleGeometry args={[0.065, 0.14, 3, 8]} />
-            </mesh>
-            <mesh position={[0, -0.32, 0.03]} material={M.boot} dispose={null} castShadow>
-              <boxGeometry args={[0.14, 0.1, 0.22]} />
-            </mesh>
-          </group>
-        </group>
+        <Leg side={-1} leg={legL} knee={kneeL} />
+        <Leg side={1} leg={legR} knee={kneeR} />
 
         <group ref={torso} position={[0, 0.28, 0]}>
           <mesh position={[0, 0.12, 0]} material={M.suit} dispose={null} castShadow>
-            <boxGeometry args={[0.48, 0.46, 0.3]} />
+            <boxGeometry args={[0.46, 0.44, 0.28]} />
           </mesh>
-          <mesh position={[0, 0.28, 0]} material={M.suitDark} dispose={null}>
-            <boxGeometry args={[0.5, 0.12, 0.32]} />
+          <mesh position={[0, 0.3, 0]} material={M.suitDark} dispose={null}>
+            <boxGeometry args={[0.48, 0.1, 0.3]} />
           </mesh>
-          <mesh position={[-0.22, 0.22, 0]} material={M.suitBlue} dispose={null}>
-            <boxGeometry args={[0.12, 0.16, 0.28]} />
+          <mesh position={[-0.2, 0.22, 0]} material={M.suitBlue} dispose={null}>
+            <boxGeometry args={[0.12, 0.18, 0.26]} />
           </mesh>
-          <mesh position={[0.22, 0.22, 0]} material={M.suitBlue} dispose={null}>
-            <boxGeometry args={[0.12, 0.16, 0.28]} />
+          <mesh position={[0.2, 0.22, 0]} material={M.suitBlue} dispose={null}>
+            <boxGeometry args={[0.12, 0.18, 0.26]} />
           </mesh>
-          <mesh position={[0, -0.02, -0.16]} material={M.suitBlue} dispose={null}>
-            <boxGeometry args={[0.28, 0.08, 0.04]} />
+          <mesh position={[0, 0.08, -0.15]} material={M.suitBlue} dispose={null}>
+            <boxGeometry args={[0.3, 0.22, 0.03]} />
           </mesh>
-          <mesh position={[0, 0.1, -0.175]} rotation={[0, Math.PI, 0]} dispose={null}>
-            <planeGeometry args={[0.38, 0.2]} />
-            <meshBasicMaterial map={badge} transparent toneMapped={false} />
+          <mesh position={[0, 0.08, -0.175]} rotation={[0, Math.PI, 0]} dispose={null}>
+            <planeGeometry args={[0.28, 0.16]} />
+            <meshBasicMaterial map={badge} toneMapped={false} />
           </mesh>
-          <mesh position={[0.08, -0.02, -0.17]} material={M.gold} dispose={null}>
-            <sphereGeometry args={[0.035, 10, 8]} />
+          <mesh position={[0, -0.12, 0]} material={M.hullDark} dispose={null}>
+            <boxGeometry args={[0.4, 0.07, 0.24]} />
           </mesh>
-          <mesh position={[0, -0.14, 0]} material={M.hullDark} dispose={null}>
-            <boxGeometry args={[0.4, 0.08, 0.26]} />
+          <mesh position={[-0.12, -0.12, -0.1]} material={M.gold} dispose={null}>
+            <boxGeometry args={[0.07, 0.07, 0.05]} />
           </mesh>
-          <mesh position={[-0.12, -0.14, -0.12]} material={M.suitDark} dispose={null}>
-            <boxGeometry args={[0.08, 0.08, 0.06]} />
-          </mesh>
-          <mesh position={[0.12, -0.14, -0.12]} material={M.suitDark} dispose={null}>
-            <boxGeometry args={[0.08, 0.08, 0.06]} />
+          <mesh position={[0.12, -0.12, -0.1]} material={M.gold} dispose={null}>
+            <boxGeometry args={[0.07, 0.07, 0.05]} />
           </mesh>
 
-          <mesh position={[0, 0.16, 0.2]} material={M.suit} dispose={null} castShadow>
-            <boxGeometry args={[0.32, 0.4, 0.16]} />
+          <mesh position={[0, 0.14, 0.22]} material={M.suit} dispose={null} castShadow>
+            <boxGeometry args={[0.3, 0.36, 0.14]} />
           </mesh>
-          <mesh position={[0, 0.16, 0.29]} material={M.suitBlue} dispose={null}>
-            <boxGeometry args={[0.18, 0.22, 0.04]} />
+          <mesh position={[-0.08, 0.16, 0.3]} rotation={[0.1, 0, 0]} material={M.hull} dispose={null}>
+            <cylinderGeometry args={[0.05, 0.05, 0.28, 10]} />
           </mesh>
-          <mesh position={[0.1, 0.38, 0.2]} material={M.visorLight} dispose={null}>
-            <sphereGeometry args={[0.03, 8, 8]} />
+          <mesh position={[0.08, 0.16, 0.3]} rotation={[0.1, 0, 0]} material={M.hull} dispose={null}>
+            <cylinderGeometry args={[0.05, 0.05, 0.28, 10]} />
+          </mesh>
+          <mesh position={[0, 0.02, 0.3]} dispose={null}>
+            <planeGeometry args={[0.2, 0.06]} />
+            <meshBasicMaterial map={nexus} toneMapped={false} />
+          </mesh>
+          <mesh position={[0.1, 0.34, 0.22]} material={M.visorLight} dispose={null}>
+            <sphereGeometry args={[0.028, 8, 8]} />
           </mesh>
 
-          <mesh position={[0.3, 0.26, -0.02]} rotation={[0, Math.PI / 2, 0]} dispose={null}>
-            <planeGeometry args={[0.12, 0.08]} />
+          <mesh position={[0.28, 0.22, 0]} rotation={[0, Math.PI / 2, 0]} dispose={null}>
+            <planeGeometry args={[0.11, 0.07]} />
             <meshBasicMaterial map={flag} toneMapped={false} />
           </mesh>
 
-          <group ref={armL} position={[-0.32, 0.24, 0]}>
-            <mesh position={[0, -0.16, 0]} material={M.suit} dispose={null} castShadow>
-              <capsuleGeometry args={[0.055, 0.14, 3, 8]} />
-            </mesh>
-            <mesh position={[0, -0.18, 0]} material={M.suitBlue} dispose={null}>
-              <boxGeometry args={[0.1, 0.06, 0.1]} />
-            </mesh>
-            <mesh position={[0, -0.34, 0]} material={M.suitDark} dispose={null} castShadow>
-              <capsuleGeometry args={[0.048, 0.14, 3, 8]} />
-            </mesh>
-            <mesh position={[0, -0.48, -0.02]} material={M.glove} dispose={null} castShadow>
-              <sphereGeometry args={[0.07, 12, 10]} />
-            </mesh>
-            <mesh ref={wrist} position={[0, -0.4, -0.06]} dispose={null}>
-              <sphereGeometry args={[0.028, 8, 8]} />
-              <meshStandardMaterial color="#7eb8cc" emissive="#7eb8cc" emissiveIntensity={0.05} />
-            </mesh>
-          </group>
-          <group ref={armR} position={[0.32, 0.24, 0]}>
-            <mesh position={[0, -0.16, 0]} material={M.suit} dispose={null} castShadow>
-              <capsuleGeometry args={[0.055, 0.14, 3, 8]} />
-            </mesh>
-            <mesh position={[0, -0.18, 0]} material={M.suitBlue} dispose={null}>
-              <boxGeometry args={[0.1, 0.06, 0.1]} />
-            </mesh>
-            <mesh position={[0, -0.34, 0]} material={M.suitDark} dispose={null} castShadow>
-              <capsuleGeometry args={[0.048, 0.14, 3, 8]} />
-            </mesh>
-            <mesh position={[0, -0.48, -0.02]} material={M.glove} dispose={null} castShadow>
-              <sphereGeometry args={[0.07, 12, 10]} />
-            </mesh>
-          </group>
+          <Arm side={-1} arm={armL} wrist={wrist} beam={beam} lamp={lamp} />
+          <Arm side={1} arm={armR} />
 
-          <group ref={head} position={[0, 0.58, -0.02]}>
+          <group ref={head} position={[0, 0.52, -0.04]}>
             <mesh material={M.fur} dispose={null} castShadow>
-              <sphereGeometry args={[0.2, 22, 18]} />
+              <sphereGeometry args={[0.19, 22, 18]} />
             </mesh>
-            <mesh position={[0, 0.08, -0.08]} scale={[0.28, 0.55, 0.2]} material={M.muzzle} dispose={null}>
-              <sphereGeometry args={[0.2, 14, 12]} />
+            <mesh position={[0, -0.02, -0.14]} scale={[0.95, 0.62, 1.15]} material={M.muzzle} dispose={null} castShadow>
+              <sphereGeometry args={[0.12, 16, 12]} />
             </mesh>
-            <mesh position={[0, -0.04, -0.16]} scale={[0.72, 0.55, 0.85]} material={M.muzzle} dispose={null} castShadow>
-              <sphereGeometry args={[0.13, 16, 12]} />
+            <mesh position={[0, -0.01, -0.28]} material={M.nose} dispose={null}>
+              <sphereGeometry args={[0.038, 12, 10]} />
             </mesh>
-            <mesh position={[0, -0.02, -0.26]} material={M.nose} dispose={null}>
-              <sphereGeometry args={[0.045, 12, 10]} />
+            <mesh position={[0, -0.055, -0.2]} material={M.furDark} dispose={null}>
+              <boxGeometry args={[0.06, 0.012, 0.04]} />
             </mesh>
-            <mesh position={[0, -0.08, -0.2]} material={M.furDark} dispose={null}>
-              <sphereGeometry args={[0.03, 8, 8]} />
+            <mesh ref={tongue} position={[0, -0.075, -0.2]} material={M.tongue} dispose={null}>
+              <sphereGeometry args={[0.026, 8, 8]} />
             </mesh>
-            <mesh ref={tongue} position={[0, -0.1, -0.22]} material={M.tongue} dispose={null}>
-              <sphereGeometry args={[0.028, 8, 8]} />
-            </mesh>
-            <Eye x={-0.075} lid={lidL} />
-            <Eye x={0.075} lid={lidR} />
-            <group ref={earL} position={[-0.15, 0.16, -0.04]}>
-              <mesh rotation={[0.55, 0.15, 1.05]} scale={[0.5, 1.25, 0.28]} material={M.fur} dispose={null}>
-                <sphereGeometry args={[0.12, 12, 10]} />
+            <Eye x={-0.07} lid={lidL} />
+            <Eye x={0.07} lid={lidR} />
+            <group ref={earL} position={[-0.16, 0.12, -0.02]} rotation={[0.4, 0.2, 1.15]}>
+              <mesh scale={[0.45, 1.35, 0.28]} material={M.fur} dispose={null}>
+                <sphereGeometry args={[0.11, 12, 10]} />
+              </mesh>
+              <mesh position={[0.01, -0.02, -0.02]} scale={[0.28, 0.8, 0.16]} material={M.furDark} dispose={null}>
+                <sphereGeometry args={[0.11, 10, 8]} />
               </mesh>
             </group>
-            <group ref={earR} position={[0.15, 0.16, -0.04]}>
-              <mesh rotation={[0.55, -0.15, -1.05]} scale={[0.5, 1.25, 0.28]} material={M.fur} dispose={null}>
-                <sphereGeometry args={[0.12, 12, 10]} />
+            <group ref={earR} position={[0.16, 0.12, -0.02]} rotation={[0.4, -0.2, -1.15]}>
+              <mesh scale={[0.45, 1.35, 0.28]} material={M.fur} dispose={null}>
+                <sphereGeometry args={[0.11, 12, 10]} />
+              </mesh>
+              <mesh position={[-0.01, -0.02, -0.02]} scale={[0.28, 0.8, 0.16]} material={M.furDark} dispose={null}>
+                <sphereGeometry args={[0.11, 10, 8]} />
               </mesh>
             </group>
-            <mesh position={[0, 0.02, -0.05]} material={M.glass} dispose={null} renderOrder={3}>
-              <sphereGeometry args={[0.255, 28, 20]} />
+            <mesh position={[0, 0.02, -0.06]} material={M.glass} dispose={null} renderOrder={3}>
+              <sphereGeometry args={[0.24, 28, 20]} />
             </mesh>
             <mesh rotation={[Math.PI / 2, 0, 0]} material={M.suit} dispose={null} castShadow>
-              <torusGeometry args={[0.25, 0.045, 10, 24]} />
+              <torusGeometry args={[0.23, 0.038, 10, 24]} />
             </mesh>
-            <mesh position={[-0.24, 0.02, 0]} material={M.suit} dispose={null}>
-              <boxGeometry args={[0.08, 0.12, 0.1]} />
+            <mesh position={[-0.22, 0.01, 0]} material={M.suit} dispose={null}>
+              <boxGeometry args={[0.07, 0.1, 0.09]} />
             </mesh>
-            <mesh position={[0.24, 0.02, 0]} material={M.suit} dispose={null}>
-              <boxGeometry args={[0.08, 0.12, 0.1]} />
+            <mesh position={[0.22, 0.01, 0]} material={M.suit} dispose={null}>
+              <boxGeometry args={[0.07, 0.1, 0.09]} />
             </mesh>
-            <mesh position={[-0.29, 0.02, 0]} material={M.visorLight} dispose={null}>
-              <sphereGeometry args={[0.03, 8, 8]} />
+            <mesh position={[-0.26, 0.02, -0.02]} material={M.emit} dispose={null}>
+              <sphereGeometry args={[0.026, 8, 8]} />
             </mesh>
-            <mesh position={[0.29, 0.02, 0]} material={M.visorLight} dispose={null}>
-              <sphereGeometry args={[0.03, 8, 8]} />
-            </mesh>
-            <mesh position={[0, -0.02, 0.16]} material={M.suit} dispose={null}>
-              <sphereGeometry args={[0.22, 16, 12]} />
+            <mesh position={[0.26, 0.02, -0.02]} material={M.emit} dispose={null}>
+              <sphereGeometry args={[0.026, 8, 8]} />
             </mesh>
           </group>
         </group>
@@ -295,23 +317,99 @@ export function Tigrao() {
   );
 }
 
+function Leg({
+  side,
+  leg,
+  knee,
+}: {
+  side: number;
+  leg: RefObject<Group | null>;
+  knee: RefObject<Group | null>;
+}) {
+  return (
+    <group ref={leg} position={[side * 0.13, 0, 0]}>
+      <mesh position={[0, -0.2, 0]} material={M.suit} dispose={null} castShadow>
+        <capsuleGeometry args={[0.072, 0.18, 4, 8]} />
+      </mesh>
+      <mesh position={[0, -0.28, 0.04]} material={M.suitBlue} dispose={null}>
+        <boxGeometry args={[0.13, 0.1, 0.12]} />
+      </mesh>
+      <group ref={knee} position={[0, -0.38, 0]}>
+        <mesh position={[0, -0.16, 0]} material={M.suit} dispose={null} castShadow>
+          <capsuleGeometry args={[0.06, 0.14, 3, 8]} />
+        </mesh>
+        <mesh position={[0, -0.32, 0.03]} material={M.boot} dispose={null} castShadow>
+          <boxGeometry args={[0.13, 0.09, 0.2]} />
+        </mesh>
+        <mesh position={[0, -0.34, -0.06]} material={M.glove} dispose={null}>
+          <boxGeometry args={[0.1, 0.04, 0.06]} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function Arm({
+  side,
+  arm,
+  wrist,
+  beam,
+  lamp,
+}: {
+  side: number;
+  arm: RefObject<Group | null>;
+  wrist?: RefObject<Mesh | null>;
+  beam?: RefObject<Mesh | null>;
+  lamp?: RefObject<PointLight | null>;
+}) {
+  return (
+    <group ref={arm} position={[side * 0.3, 0.22, 0]}>
+      <mesh position={[0, -0.16, 0]} material={M.suit} dispose={null} castShadow>
+        <capsuleGeometry args={[0.052, 0.14, 3, 8]} />
+      </mesh>
+      <mesh position={[0, -0.18, 0]} material={M.suitBlue} dispose={null}>
+        <boxGeometry args={[0.09, 0.05, 0.09]} />
+      </mesh>
+      <mesh position={[0, -0.34, 0]} material={M.suitDark} dispose={null} castShadow>
+        <capsuleGeometry args={[0.046, 0.14, 3, 8]} />
+      </mesh>
+      <mesh position={[0, -0.48, -0.02]} material={M.glove} dispose={null} castShadow>
+        <sphereGeometry args={[0.065, 12, 10]} />
+      </mesh>
+      {side < 0 && wrist && beam && lamp ? (
+        <>
+          <mesh ref={wrist} position={[0, -0.4, -0.06]} dispose={null}>
+            <sphereGeometry args={[0.03, 8, 8]} />
+            <meshStandardMaterial color="#7eb8cc" emissive="#7eb8cc" emissiveIntensity={0.08} />
+          </mesh>
+          <mesh ref={beam} position={[0, -0.55, -0.55]} rotation={[Math.PI / 2.4, 0, 0]} visible={false}>
+            <cylinderGeometry args={[0.01, 0.08, 0.7, 8, 1, true]} />
+            <meshBasicMaterial color="#9fd8ea" transparent opacity={0.28} depthWrite={false} />
+          </mesh>
+          <pointLight ref={lamp} position={[0, -0.45, -0.2]} color="#9fd4e6" distance={4.5} decay={2} intensity={0} />
+        </>
+      ) : null}
+    </group>
+  );
+}
+
 function Eye({ x, lid }: { x: number; lid: RefObject<Mesh | null> }) {
   return (
-    <group position={[x, 0.03, -0.16]}>
+    <group position={[x, 0.045, -0.2]}>
       <mesh material={M.eye} dispose={null}>
-        <sphereGeometry args={[0.055, 14, 12]} />
+        <sphereGeometry args={[0.048, 14, 12]} />
       </mesh>
-      <mesh position={[0, 0, -0.028]} material={M.iris} dispose={null}>
-        <sphereGeometry args={[0.034, 12, 10]} />
+      <mesh position={[0, 0, -0.024]} material={M.iris} dispose={null}>
+        <sphereGeometry args={[0.03, 12, 10]} />
       </mesh>
-      <mesh position={[0, 0, -0.046]} material={M.pupil} dispose={null}>
-        <sphereGeometry args={[0.016, 8, 8]} />
+      <mesh position={[0, 0, -0.04]} material={M.pupil} dispose={null}>
+        <sphereGeometry args={[0.014, 8, 8]} />
       </mesh>
-      <mesh position={[0.01, 0.01, -0.048]} dispose={null}>
+      <mesh position={[0.01, 0.012, -0.046]} dispose={null}>
         <sphereGeometry args={[0.006, 6, 6]} />
         <meshBasicMaterial color="#f7fbff" />
       </mesh>
-      <mesh ref={lid} position={[0, 0.03, -0.03]} material={M.fur} dispose={null}>
+      <mesh ref={lid} position={[0, 0.028, -0.02]} material={M.fur} dispose={null}>
         <boxGeometry args={[0.07, 0.012, 0.03]} />
       </mesh>
     </group>

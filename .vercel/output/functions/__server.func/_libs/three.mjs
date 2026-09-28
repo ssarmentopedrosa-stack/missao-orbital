@@ -1,4 +1,4 @@
-import { _ as Object3D, g as MeshStandardMaterial, h as MeshLambertMaterial, m as Mesh, p as InstancedMesh, s as BoxGeometry, v as PointLight, x as Scene } from "./@react-three/fiber+[...].mjs";
+import { C as Scene, _ as MeshStandardMaterial, g as MeshLambertMaterial, m as Mesh, p as InstancedMesh, s as BoxGeometry, v as Object3D, y as PointLight } from "./@react-three/fiber+[...].mjs";
 //#region node_modules/three/examples/jsm/environments/RoomEnvironment.js
 /**
 * This class represents a scene with a basic room setup that can be used as

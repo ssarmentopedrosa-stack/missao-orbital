@@ -1,10 +1,448 @@
 import { i as __toESM } from "../_runtime.mjs";
-import { C as Vector3, S as TextureLoader, T as require_react, a as PMREMGenerator, b as SRGBColorSpace, c as BufferAttribute, d as Fog, f as Group, g as MeshStandardMaterial, l as BufferGeometry, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, w as require_jsx_runtime, y as RepeatWrapping } from "../_libs/@react-three/fiber+[...].mjs";
+import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-C9Za_csz.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-B3GGCkUZ.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
+function std(color, extra = {}) {
+	return new MeshStandardMaterial({
+		color,
+		roughness: .55,
+		metalness: .08,
+		...extra
+	});
+}
+var M = {
+	suit: std("#e6eef6", {
+		roughness: .68,
+		metalness: .06
+	}),
+	suitBlue: std("#184888", {
+		roughness: .42,
+		metalness: .38
+	}),
+	suitDark: std("#c9d3de", {
+		roughness: .55,
+		metalness: .12
+	}),
+	glove: std("#2a313b", {
+		roughness: .92,
+		metalness: .04
+	}),
+	boot: std("#d5dee8", {
+		roughness: .32,
+		metalness: .62
+	}),
+	fur: std("#b4743c", {
+		roughness: .86,
+		metalness: 0
+	}),
+	furDark: std("#6a3e24", {
+		roughness: .88,
+		metalness: 0
+	}),
+	muzzle: std("#f6ebe0", {
+		roughness: .72,
+		metalness: 0
+	}),
+	nose: std("#140e0c", {
+		roughness: .22,
+		metalness: .15
+	}),
+	tongue: std("#d46a6a", {
+		roughness: .42,
+		metalness: 0
+	}),
+	eye: std("#f7f1e8", {
+		roughness: .28,
+		metalness: 0
+	}),
+	iris: std("#c47a2c", {
+		roughness: .28,
+		metalness: .04,
+		emissive: "#c47a2c",
+		emissiveIntensity: .22
+	}),
+	pupil: std("#120d0a", { roughness: .4 }),
+	gold: std("#e0a23a", {
+		roughness: .32,
+		metalness: .62,
+		emissive: "#e0a23a",
+		emissiveIntensity: .18
+	}),
+	glass: new MeshStandardMaterial({
+		color: "#d7f1f8",
+		transparent: true,
+		opacity: .13,
+		roughness: .03,
+		metalness: .05,
+		envMapIntensity: 1.8,
+		depthWrite: false
+	}),
+	hull: std("#3d4b5c", {
+		roughness: .36,
+		metalness: .84
+	}),
+	hullDark: std("#232c38", {
+		roughness: .5,
+		metalness: .7
+	}),
+	floor: std("#1a2432", {
+		roughness: .48,
+		metalness: .5
+	}),
+	ice: std("#e7f4f8", {
+		roughness: .04,
+		metalness: .22,
+		emissive: "#7eb8cc",
+		emissiveIntensity: .08
+	}),
+	rubber: std("#241f1c", {
+		roughness: 1,
+		metalness: 0
+	}),
+	lane: std("#b7c2ce", {
+		roughness: .22,
+		metalness: .88
+	}),
+	dark: std("#121820", {
+		roughness: .55,
+		metalness: .48
+	}),
+	stripe: std("#e0a23a", {
+		roughness: .45,
+		metalness: .3,
+		emissive: "#e0a23a",
+		emissiveIntensity: .25
+	}),
+	pipe: std("#6a7888", {
+		roughness: .28,
+		metalness: .86
+	}),
+	emit: new MeshStandardMaterial({
+		color: "#9fd4e6",
+		emissive: "#7eb8cc",
+		emissiveIntensity: .9,
+		roughness: .35
+	}),
+	alarm: new MeshStandardMaterial({
+		color: "#e0a23a",
+		emissive: "#e0a23a",
+		emissiveIntensity: .4,
+		roughness: .4,
+		metalness: .2
+	}),
+	visorLight: new MeshStandardMaterial({
+		color: "#f4f7fb",
+		emissive: "#d5e4ef",
+		emissiveIntensity: 1.4,
+		roughness: .3
+	})
+};
+var RIB = 28;
+function Dressing() {
+	const ribs = (0, import_react.useRef)(null);
+	const junk = (0, import_react.useRef)(null);
+	const dust = (0, import_react.useMemo)(() => {
+		const geo = new BufferGeometry();
+		const n = 160;
+		const a = /* @__PURE__ */ new Float32Array(480);
+		for (let i = 0; i < n; i++) {
+			const bay = i % 3 === 0;
+			a[i * 3] = (Math.random() - .5) * (bay ? 14 : 12);
+			a[i * 3 + 1] = .35 + Math.random() * 2.6;
+			a[i * 3 + 2] = bay ? -12 - Math.random() * 16 : -1 + Math.random() * 11;
+		}
+		geo.setAttribute("position", new BufferAttribute(a, 3));
+		return geo;
+	}, []);
+	(0, import_react.useLayoutEffect)(() => {
+		const mesh = ribs.current;
+		if (!mesh) return;
+		const dummy = new Object3D();
+		let i = 0;
+		for (let z = -.4; z <= 10.4 && i < 24; z += 1.7) {
+			dummy.position.set(7.52, 1.65, z);
+			dummy.rotation.set(0, 0, 0);
+			dummy.updateMatrix();
+			mesh.setMatrixAt(i++, dummy.matrix);
+			dummy.position.set(-7.52, 1.65, z);
+			dummy.updateMatrix();
+			mesh.setMatrixAt(i++, dummy.matrix);
+		}
+		for (let z = -28; z <= -12 && i < RIB; z += 3.2) {
+			dummy.position.set(8.85, 2.1, z);
+			dummy.updateMatrix();
+			mesh.setMatrixAt(i++, dummy.matrix);
+			if (i >= RIB) break;
+			dummy.position.set(-8.85, 2.1, z);
+			dummy.updateMatrix();
+			mesh.setMatrixAt(i++, dummy.matrix);
+		}
+		mesh.count = i;
+		mesh.instanceMatrix.needsUpdate = true;
+	}, []);
+	useFrame((_, dt) => {
+		if (junk.current) junk.current.rotation.y += dt * .04;
+		const attr = dust.getAttribute("position");
+		for (let i = 0; i < attr.count; i++) {
+			let y = attr.getY(i) + dt * .04;
+			if (y > 3.15) y = .3;
+			attr.setY(i, y);
+		}
+		attr.needsUpdate = true;
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("instancedMesh", {
+			ref: ribs,
+			args: [
+				void 0,
+				void 0,
+				RIB
+			],
+			material: M.hullDark,
+			count: 0,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.05,
+				1.15,
+				1.15
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				6.7,
+				3.2,
+				5
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.045,
+				.045,
+				11.5,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-6.7,
+				3.2,
+				5
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.045,
+				.045,
+				11.5,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				2.82,
+				-5.2
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.035,
+				.035,
+				7.2,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				3.75,
+				-18
+			],
+			rotation: [
+				0,
+				0,
+				Math.PI / 2
+			],
+			material: M.hull,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				16,
+				.08,
+				.08
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				3.75,
+				-24
+			],
+			rotation: [
+				0,
+				0,
+				Math.PI / 2
+			],
+			material: M.hull,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				14,
+				.08,
+				.08
+			] })
+		}),
+		[
+			-2.2,
+			2.4,
+			8.2
+		].map((z) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-7.35,
+				2.55,
+				z
+			],
+			material: M.emit,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.04,
+				.08,
+				.55
+			] })
+		}, z)),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				2.95,
+				-1.15
+			],
+			material: M.alarm,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				2.4,
+				.05,
+				.06
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				3.15,
+				-9.3
+			],
+			material: M.alarm,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				2.2,
+				.05,
+				.06
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("points", {
+			geometry: dust,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointsMaterial", {
+				color: "#c5d6e4",
+				size: .025,
+				transparent: true,
+				opacity: .45,
+				depthWrite: false,
+				sizeAttenuation: true
+			})
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: junk,
+			position: [
+				0,
+				200,
+				0
+			],
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						6.4,
+						.8,
+						3.2
+					],
+					material: M.hull,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.45,
+						.22,
+						.7
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-5.2,
+						-.6,
+						4.4
+					],
+					material: M.suitBlue,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.3,
+						.3,
+						.3
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						2.2,
+						1.6,
+						-6.5
+					],
+					material: M.hullDark,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("octahedronGeometry", { args: [.28, 0] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						8.5,
+						-.4,
+						-2
+					],
+					material: M.pipe,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+						.06,
+						.06,
+						1.1,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-2.4,
+						2.2,
+						6
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.08,
+						8,
+						8
+					] })
+				})
+			]
+		})
+	] });
+}
 var ctx = null;
 var master = null;
 var started = false;
@@ -128,6 +566,9 @@ var sfx = {
 	jump() {
 		if (!ctx) return;
 		tone(220, ctx.currentTime, .02, .12);
+	},
+	land() {
+		burst(64, .09, .05, 240);
 	},
 	hit() {
 		burst(50, .2, .08, 180);
@@ -1204,6 +1645,7 @@ function Overlay() {
 	});
 }
 function Title({ best }) {
+	const beat = useBeat();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		className: "panel title-card",
 		"data-ui": true,
@@ -1211,6 +1653,14 @@ function Title({ best }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "kicker",
 				children: "Programa Orbital · Cadete Tigrão"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "beat",
+				children: [
+					"Newton-1 em órbita. Alerta no sistema de navegação.",
+					"Falha no sistema de navegação. O módulo N-1 está solto no laboratório.",
+					"Cadete Tigrão — a força pode ser a mesma. A aceleração, não."
+				][beat]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { children: ["MISSÃO NEWTON", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "RESGATE DA ESTAÇÃO ORBITAL" })] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -1240,6 +1690,20 @@ function Title({ best }) {
 		]
 	});
 }
+function useBeat() {
+	const [beat, setBeat] = (0, import_react.useState)(0);
+	(0, import_react.useEffect)(() => {
+		let frame = 0;
+		const tick = () => {
+			frame = requestAnimationFrame(tick);
+			const next = shotIndex(sim.shotTime);
+			setBeat((current) => current === next ? current : next);
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, []);
+	return beat;
+}
 function PlayHud({ snap }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -1257,7 +1721,25 @@ function PlayHud({ snap }) {
 					transform: "none",
 					width: "auto"
 				},
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: snap.line.speaker }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: snap.line.text })]
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: snap.line.speaker }),
+					snap.line.speaker === "NEWTON" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "role",
+						children: "IA de controle da estação"
+					}) : null,
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "wave",
+						"aria-hidden": true,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: snap.line.text })
+				]
 			}) : null]
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -1305,15 +1787,17 @@ function ReadoutCard({ readout }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "panel readout",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "kicker",
-				children: "Nexus Scanner"
+				children: [
+					readout.surface,
+					" · μ ",
+					n(readout.mu, 2),
+					" · μs ",
+					n(readout.muS, 2)
+				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", { children: [
-				readout.name,
-				" · ",
-				readout.surface
-			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: readout.name }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "eq",
 				children: [
@@ -1335,9 +1819,13 @@ function ReadoutCard({ readout }) {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [n(readout.staticFriction, 0), " N"] })
 				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "note",
-				children: readout.blocked ? "Parado. A força não vence o atrito estático." : readout.speed > .08 ? "Em movimento. Sem força, o atrito é quem para." : "F = m · a"
+				children: [
+					"F força · v velocidade · a aceleração · f atrito.",
+					" ",
+					readout.blocked ? "Parado. A força não vence o atrito estático." : readout.speed > .08 ? "Em movimento. Sem força, o atrito é quem para." : "F = m · a"
+				]
 			})
 		]
 	});
@@ -1666,31 +2154,58 @@ function texOf(c, repeat = false) {
 	return tex;
 }
 function earthTexture() {
-	const [c, g] = canvas(512, 256);
-	g.fillStyle = "#163e78";
-	g.fillRect(0, 0, 512, 256);
-	g.fillStyle = "#1f6b45";
-	for (let i = 0; i < 18; i++) {
+	const [c, g] = canvas(1024, 512);
+	const ocean = g.createLinearGradient(0, 0, 0, 512);
+	ocean.addColorStop(0, "#1c4f8a");
+	ocean.addColorStop(.45, "#0f315c");
+	ocean.addColorStop(1, "#1a4a82");
+	g.fillStyle = ocean;
+	g.fillRect(0, 0, 1024, 512);
+	g.fillStyle = "#e8eef3";
+	g.fillRect(0, 0, 1024, 28);
+	g.fillRect(0, 484, 1024, 28);
+	g.fillStyle = "#2d7a48";
+	g.beginPath();
+	g.moveTo(250, 230);
+	g.bezierCurveTo(300, 170, 360, 190, 372, 250);
+	g.bezierCurveTo(390, 320, 360, 390, 320, 430);
+	g.bezierCurveTo(280, 455, 255, 400, 248, 340);
+	g.bezierCurveTo(230, 280, 220, 250, 250, 230);
+	g.fill();
+	g.fillStyle = "#3c8f52";
+	g.beginPath();
+	g.moveTo(500, 150);
+	g.bezierCurveTo(560, 130, 590, 180, 575, 240);
+	g.bezierCurveTo(610, 280, 590, 360, 540, 400);
+	g.bezierCurveTo(500, 370, 490, 300, 500, 240);
+	g.bezierCurveTo(470, 190, 470, 160, 500, 150);
+	g.fill();
+	g.fillStyle = "#d8c48a";
+	g.beginPath();
+	g.ellipse(430, 210, 50, 22, .4, 0, Math.PI * 2);
+	g.fill();
+	g.fillStyle = "rgba(255,255,255,0.16)";
+	for (let i = 0; i < 14; i++) {
 		g.beginPath();
-		g.ellipse(40 + i * 97 % 460, 30 + i * 53 % 190, 30 + i % 5 * 14, 16 + i % 4 * 8, i, 0, Math.PI * 2);
+		g.ellipse(80 + i * 137 % 900, 70 + i * 61 % 360, 70 + i % 4 * 18, 16 + i % 3 * 6, i * .3, 0, Math.PI * 2);
 		g.fill();
 	}
-	g.fillStyle = "#8d7a45";
-	for (let i = 0; i < 8; i++) {
+	const night = g.createLinearGradient(760, 0, 1024, 0);
+	night.addColorStop(0, "rgba(0,0,0,0)");
+	night.addColorStop(1, "rgba(0,8,18,0.5)");
+	g.fillStyle = night;
+	g.fillRect(760, 0, 264, 512);
+	return texOf(c);
+}
+function cloudTexture() {
+	const [c, g] = canvas(1024, 512);
+	g.clearRect(0, 0, 1024, 512);
+	for (let i = 0; i < 22; i++) {
+		g.fillStyle = `rgba(255,255,255,${.25 + i % 5 * .08})`;
 		g.beginPath();
-		g.ellipse(80 + i * 50, 140, 22, 10, .4, 0, Math.PI * 2);
+		g.ellipse(i * 97 % 1e3, 40 + i * 53 % 420, 90 + i % 6 * 16, 18 + i % 4 * 5, i * .2, 0, Math.PI * 2);
 		g.fill();
 	}
-	g.strokeStyle = "rgba(255,255,255,0.35)";
-	g.lineWidth = 6;
-	for (let i = 0; i < 7; i++) {
-		g.beginPath();
-		g.moveTo(0, 20 + i * 34);
-		g.bezierCurveTo(120, 10 + i * 30, 280, 50 + i * 20, 512, 16 + i * 28);
-		g.stroke();
-	}
-	g.fillStyle = "rgba(0,0,0,0.18)";
-	g.fillRect(360, 0, 152, 256);
 	return texOf(c);
 }
 function starTexture() {
@@ -1766,13 +2281,29 @@ function paintScreen(ctx, w, h, title, formula, time) {
 }
 function badgeTexture() {
 	const [c, g] = canvas(512, 256);
-	g.clearRect(0, 0, 512, 256);
-	g.fillStyle = "#1e4d96";
-	g.font = "700 86px sans-serif";
+	g.fillStyle = "#14386e";
+	g.fillRect(0, 0, 512, 256);
+	g.fillStyle = "#f4f7fb";
+	g.font = "700 92px sans-serif";
 	g.textAlign = "center";
 	g.textBaseline = "middle";
 	g.fillText("ECIT", 256, 88);
+	g.font = "700 64px sans-serif";
 	g.fillText("BAYEUX", 256, 176);
+	return texOf(c);
+}
+function plateTexture(label) {
+	const [c, g] = canvas(512, 128);
+	g.fillStyle = "#102033";
+	g.fillRect(0, 0, 512, 128);
+	g.strokeStyle = "#7eb8cc";
+	g.lineWidth = 6;
+	g.strokeRect(8, 8, 496, 112);
+	g.fillStyle = "#d5eef6";
+	g.font = "700 64px sans-serif";
+	g.textAlign = "center";
+	g.textBaseline = "middle";
+	g.fillText(label, 256, 68);
 	return texOf(c);
 }
 function flagTexture() {
@@ -1846,131 +2377,6 @@ function HoloLabel({ text, position, color = "#c5e7f4" }) {
 		})
 	});
 }
-function std(color, extra = {}) {
-	return new MeshStandardMaterial({
-		color,
-		roughness: .55,
-		metalness: .08,
-		...extra
-	});
-}
-var M = {
-	suit: std("#e7eef6", {
-		roughness: .4,
-		metalness: .32
-	}),
-	suitBlue: std("#1e4d96", {
-		roughness: .38,
-		metalness: .4
-	}),
-	suitDark: std("#c5d0dc", {
-		roughness: .48,
-		metalness: .22
-	}),
-	glove: std("#3c4654", {
-		roughness: .72,
-		metalness: .18
-	}),
-	boot: std("#dfe6ee", {
-		roughness: .42,
-		metalness: .34
-	}),
-	fur: std("#a56a3a", {
-		roughness: .82,
-		metalness: 0
-	}),
-	furDark: std("#6b4126", {
-		roughness: .84,
-		metalness: 0
-	}),
-	muzzle: std("#f4e7da", {
-		roughness: .7,
-		metalness: 0
-	}),
-	nose: std("#140e0c", {
-		roughness: .22,
-		metalness: .2
-	}),
-	tongue: std("#d46a6a", {
-		roughness: .42,
-		metalness: 0
-	}),
-	eye: std("#f7f1e8", {
-		roughness: .35,
-		metalness: 0
-	}),
-	iris: std("#c47a2c", {
-		roughness: .3,
-		metalness: .05,
-		emissive: "#c47a2c",
-		emissiveIntensity: .18
-	}),
-	pupil: std("#120d0a", { roughness: .4 }),
-	gold: std("#e0a23a", {
-		roughness: .32,
-		metalness: .62,
-		emissive: "#e0a23a",
-		emissiveIntensity: .18
-	}),
-	glass: new MeshStandardMaterial({
-		color: "#d5eef6",
-		transparent: true,
-		opacity: .1,
-		roughness: .04,
-		metalness: .02,
-		envMapIntensity: 1.2,
-		depthWrite: false
-	}),
-	hull: std("#4c5a6a", {
-		roughness: .42,
-		metalness: .72
-	}),
-	hullDark: std("#2a3442", {
-		roughness: .48,
-		metalness: .66
-	}),
-	floor: std("#1a2432", {
-		roughness: .52,
-		metalness: .42
-	}),
-	ice: std("#d5e7ee", {
-		roughness: .07,
-		metalness: .16,
-		emissive: "#7eb8cc",
-		emissiveIntensity: .05
-	}),
-	rubber: std("#2a2623", {
-		roughness: .96,
-		metalness: .02
-	}),
-	lane: std("#9aa6b4", {
-		roughness: .28,
-		metalness: .84
-	}),
-	dark: std("#141b24", {
-		roughness: .6,
-		metalness: .4
-	}),
-	stripe: std("#e0a23a", {
-		roughness: .45,
-		metalness: .3,
-		emissive: "#e0a23a",
-		emissiveIntensity: .25
-	}),
-	alarm: new MeshStandardMaterial({
-		color: "#e0a23a",
-		emissive: "#e0a23a",
-		emissiveIntensity: .4,
-		roughness: .4,
-		metalness: .2
-	}),
-	visorLight: new MeshStandardMaterial({
-		color: "#f4f7fb",
-		emissive: "#d5e4ef",
-		emissiveIntensity: 1.4,
-		roughness: .3
-	})
-};
 var desired = new Vector3();
 var look = new Vector3();
 var smooth = new Vector3(8, 205, 12);
@@ -2075,11 +2481,20 @@ function Lights() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("hemisphereLight", { args: [
 			"#d5e4ef",
-			"#2a211c",
-			.58
+			"#241c18",
+			.46
 		] }),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ambientLight", { intensity: .14 }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ambientLight", { intensity: .1 }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sun, {}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("directionalLight", {
+			position: [
+				-8,
+				6,
+				-6
+			],
+			intensity: .42,
+			color: "#7eb8cc"
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
 			position: [
 				0,
@@ -2087,9 +2502,9 @@ function Lights() {
 				5
 			],
 			color: "#e7eef6",
-			distance: 11,
+			distance: 12,
 			decay: 2,
-			intensity: 1.1
+			intensity: 1.35
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
 			ref: dock,
@@ -2110,9 +2525,9 @@ function Lights() {
 				7.2
 			],
 			color: "#e0a23a",
-			distance: 6,
+			distance: 7,
 			decay: 2,
-			intensity: .35
+			intensity: .55
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
 			position: [
@@ -2121,9 +2536,20 @@ function Lights() {
 				-18
 			],
 			color: "#9fd0e4",
-			distance: 12,
+			distance: 14,
 			decay: 2,
-			intensity: .7
+			intensity: .85
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+			position: [
+				-5.2,
+				2.2,
+				5
+			],
+			color: "#9fd4e6",
+			distance: 6,
+			decay: 2,
+			intensity: .45
 		})
 	] });
 }
@@ -2163,7 +2589,9 @@ function CameraRig() {
 	useFrame((_, dt) => {
 		const capped = Math.min(dt, .05);
 		if (!scripted(capped, camera)) {
-			const dist = sim.sprinting && sim.speed > 4 ? 5.85 : 5.45;
+			const pushing = sim.pushing;
+			const scanning = sim.scanner && sim.speed < .45;
+			const dist = pushing ? 4.75 : scanning ? 4.65 : sim.sprinting && sim.speed > 4 ? 6.05 : 5.55;
 			const pitch = sim.camPitch;
 			const yaw = sim.camYaw;
 			const horiz = Math.cos(pitch) * dist;
@@ -2183,10 +2611,26 @@ function CameraRig() {
 				sz = z;
 			}
 			desired.set(sx, Math.max(.45, sy), sz);
-			look.set(sim.x + sim.vx * .1, sim.y + 1.28, sim.z + sim.vz * .1);
+			look.set(sim.x + sim.vx * .16, sim.y + 1.22, sim.z + sim.vz * .16);
+			if (sim.scanner) {
+				let best = null;
+				let bestD = 6.5;
+				for (const crate of sim.crates) {
+					const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
+					if (d < bestD) {
+						bestD = d;
+						best = crate;
+					}
+				}
+				if (best) {
+					look.x += (best.x - look.x) * .18;
+					look.y += (best.h * .55 - look.y) * .08;
+					look.z += (best.z - look.z) * .18;
+				}
+			}
 		}
 		const jump = smooth.distanceTo(desired) > 24;
-		const k = sim.reduce || jump ? 1 : 1 - Math.exp(-6.2 * capped);
+		const k = sim.reduce || jump ? 1 : 1 - Math.exp(-5.4 * capped);
 		smooth.lerp(desired, k);
 		smoothLook.lerp(look, k);
 		camera.position.copy(smooth);
@@ -2219,29 +2663,64 @@ function CrateBody({ kind, hx, hz, h }) {
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 			position: [
 				0,
-				0,
-				hz + .01
+				.02,
+				hz + .02
 			],
 			material: M.suitBlue,
 			dispose: null,
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-				hx * 1.4,
-				h * .45,
+				hx * 1.5,
+				h * .28,
 				.04
 			] })
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 			position: [
 				0,
-				h * .18,
-				hz + .04
+				h * .2,
+				hz + .05
 			],
 			material: M.gold,
 			dispose: null,
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-				.06,
+				.055,
 				10,
 				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				h * .55,
+				0
+			],
+			material: M.hull,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.04,
+				.04,
+				.16,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				h * .55 + .1,
+				0
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.suitBlue,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
+				.09,
+				.015,
+				6,
+				12
 			] })
 		})
 	] });
@@ -2329,20 +2808,58 @@ function Vectors() {
 	const pack = (0, import_react.useMemo)(() => {
 		const group = new Group();
 		const arrows = [];
-		for (let i = 0; i < 12; i++) {
+		for (let i = 0; i < 16; i++) {
 			const arrow = new ArrowHelper(new Vector3(0, 1, 0), new Vector3(), .4, 16777215, .16, .08);
 			arrow.visible = false;
 			group.add(arrow);
 			arrows.push(arrow);
 		}
+		const tags = [
+			"F",
+			"v",
+			"a",
+			"f",
+			"P",
+			"N"
+		].map((text, i) => {
+			const { tex } = labelSprite(text, [
+				"#f4f7fb",
+				"#7eb8cc",
+				"#c7c3ef",
+				"#e0a23a",
+				"#8aa0b5",
+				"#d5e4ef"
+			][i] ?? "#fff");
+			const sprite = new Sprite(new SpriteMaterial({
+				map: tex,
+				transparent: true,
+				depthWrite: false
+			}));
+			sprite.visible = false;
+			sprite.scale.set(.42, .16, 1);
+			group.add(sprite);
+			return sprite;
+		});
+		const ring = new Mesh(new RingGeometry(.45, .52, 28), new MeshBasicMaterial({
+			color: "#7eb8cc",
+			transparent: true,
+			opacity: .55,
+			side: 2,
+			depthWrite: false
+		}));
+		ring.rotation.x = -Math.PI / 2;
+		ring.visible = false;
+		group.add(ring);
 		return {
 			group,
-			arrows
+			arrows,
+			tags,
+			ring
 		};
 	}, []);
 	useFrame(() => {
 		let n = 0;
-		const show = (x, y, z, dx, dy, dz, len, color) => {
+		const show = (x, y, z, dx, dy, dz, len, color, label) => {
 			const arrow = pack.arrows[n];
 			if (!arrow || len < .12) return;
 			n += 1;
@@ -2356,12 +2873,21 @@ function Vectors() {
 			arrow.setDirection(dir);
 			const L = Math.min(len, 2.2);
 			arrow.setLength(L, Math.min(.2, L * .32), Math.min(.1, L * .16));
+			if (label != null && pack.tags[label]) {
+				const sprite = pack.tags[label];
+				sprite.visible = true;
+				sprite.position.set(x + dir.x * (L + .18), y + dir.y * (L + .18) + .08, z + dir.z * (L + .18));
+			}
 		};
 		pack.arrows.forEach((arrow) => {
 			arrow.visible = false;
 		});
+		pack.tags.forEach((sprite) => {
+			sprite.visible = false;
+		});
+		pack.ring.visible = false;
 		if (!sim.scanner || sim.phase === "title") return;
-		let focus = 99;
+		let focus = -1;
 		let focusD = 6.5;
 		sim.crates.forEach((crate, index) => {
 			const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
@@ -2372,15 +2898,26 @@ function Vectors() {
 		});
 		sim.crates.forEach((crate, index) => {
 			const y = crate.h + .2;
+			const accel = crate.blocked || crate.force < 1 ? crate.speed > .08 ? -crate.mu * G / 4 : 0 : (crate.force - crate.mu * crate.mass * G) / crate.mass;
 			if (crate.speed > .15) {
-				show(crate.x, y, crate.z, crate.vx, 0, crate.vz, crate.speed * .55, 8304844);
+				show(crate.x, y, crate.z, crate.vx, 0, crate.vz, crate.speed * .55, 8304844, index === focus ? 1 : void 0);
 				const f = crate.mu * crate.mass * G / 150;
-				show(crate.x, y + .02, crate.z, -crate.vx, 0, -crate.vz, f, 14721594);
-			} else if (crate.blocked && crate.force > 10) show(crate.x, y, crate.z, -crate.dirX, 0, -crate.dirZ, crate.muS * crate.mass * G / 160, 14721594);
-			if (crate.force > 20) show(crate.x, y + .05, crate.z, crate.dirX, 0, crate.dirZ, crate.force / 170, 16054267);
+				show(crate.x, y + .02, crate.z, -crate.vx, 0, -crate.vz, f, 14721594, index === focus ? 3 : void 0);
+			} else if (crate.blocked && crate.force > 10) show(crate.x, y, crate.z, -crate.dirX, 0, -crate.dirZ, crate.muS * crate.mass * G / 160, 14721594, index === focus ? 3 : void 0);
+			if (crate.force > 20) show(crate.x, y + .05, crate.z, crate.dirX, 0, crate.dirZ, crate.force / 170, 16054267, index === focus ? 0 : void 0);
+			if (Math.abs(accel) > .15 && crate.speed > .05) {
+				const sign = accel >= 0 ? 1 : -1;
+				const ax = crate.speed > .12 ? crate.vx * sign : crate.dirX;
+				const az = crate.speed > .12 ? crate.vz * sign : crate.dirZ;
+				show(crate.x, y + .12, crate.z, ax, 0, az, Math.min(1.4, Math.abs(accel) * .18), 13091823, index === focus ? 2 : void 0);
+			}
 			if (index === focus) {
-				show(crate.x + crate.hx + .15, crate.h * .7, crate.z, 0, -1, 0, .55, 9085109);
-				show(crate.x + crate.hx + .15, .15, crate.z, 0, 1, 0, .55, 14017775);
+				show(crate.x + crate.hx + .15, crate.h * .7, crate.z, 0, -1, 0, .55, 9085109, 4);
+				show(crate.x + crate.hx + .15, .15, crate.z, 0, 1, 0, .55, 14017775, 5);
+				pack.ring.visible = true;
+				pack.ring.position.set(crate.x, .05, crate.z);
+				const pulse = 1 + Math.sin(sim.time * 4) * .06;
+				pack.ring.scale.set(Math.max(crate.hx, crate.hz) * 2.4 * pulse, Math.max(crate.hx, crate.hz) * 2.4 * pulse, 1);
 			}
 		});
 	});
@@ -2388,7 +2925,16 @@ function Vectors() {
 }
 function Puffs() {
 	const refs = (0, import_react.useRef)([]);
-	useFrame(() => {
+	useFrame((_, dt) => {
+		if (sim.phase === "play") for (const crate of sim.crates) {
+			if (crate.speed < 1.4) continue;
+			if (Math.random() > dt * 5) continue;
+			const slot = sim.puffs.find((item) => item.life <= 0);
+			if (!slot) break;
+			slot.x = crate.x;
+			slot.z = crate.z;
+			slot.life = .55;
+		}
 		sim.puffs.forEach((puff, i) => {
 			const mesh = refs.current[i];
 			if (!mesh) return;
@@ -2423,6 +2969,21 @@ function Puffs() {
 		})]
 	}, i)) });
 }
+function approach(current, target, dt, rate = 11) {
+	return current + (target - current) * (1 - Math.exp(-rate * dt));
+}
+function setX(group, target, dt, rate = 11) {
+	if (!group) return;
+	group.rotation.x = approach(group.rotation.x, target, dt, rate);
+}
+function setY(group, target, dt, rate = 11) {
+	if (!group) return;
+	group.rotation.y = approach(group.rotation.y, target, dt, rate);
+}
+function setZ(group, target, dt, rate = 11) {
+	if (!group) return;
+	group.rotation.z = approach(group.rotation.z, target, dt, rate);
+}
 function Tigrao() {
 	const root = (0, import_react.useRef)(null);
 	const hips = (0, import_react.useRef)(null);
@@ -2441,85 +3002,137 @@ function Tigrao() {
 	const lidR = (0, import_react.useRef)(null);
 	const tongue = (0, import_react.useRef)(null);
 	const wrist = (0, import_react.useRef)(null);
+	const beam = (0, import_react.useRef)(null);
+	const lamp = (0, import_react.useRef)(null);
+	const wasAir = (0, import_react.useRef)(false);
+	const land = (0, import_react.useRef)(0);
+	const prevYaw = (0, import_react.useRef)(sim.yaw);
+	const turn = (0, import_react.useRef)(0);
 	const badge = (0, import_react.useMemo)(() => badgeTexture(), []);
 	const flag = (0, import_react.useMemo)(() => flagTexture(), []);
-	useFrame(() => {
+	const nexus = (0, import_react.useMemo)(() => plateTexture("NEXUS"), []);
+	useFrame((_, raw) => {
 		const g = root.current;
 		if (!g) return;
+		const dt = Math.min(raw, .05);
 		g.position.set(sim.x, sim.y, sim.z);
 		g.rotation.y = sim.yaw;
 		const t = sim.time;
 		const run = sim.anim === "run";
 		const moving = sim.anim === "walk" || run;
-		const freq = run ? 12.2 : 7.2;
-		const amp = moving ? run ? .78 : .55 : .04;
+		const freq = run ? 11.4 : 7.1;
+		const amp = moving ? run ? .72 : .52 : .035;
 		const swing = Math.sin(t * freq) * amp;
 		const breathe = Math.sin(t * 1.7);
-		if (hips.current) hips.current.position.y = .8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? .05 : .03) : 0);
-		if (torso.current) {
-			torso.current.position.y = .28 + breathe * .012;
-			torso.current.rotation.x = breathe * .02;
-			torso.current.rotation.z = moving ? Math.sin(t * freq) * .04 : 0;
+		const yawDelta = Math.atan2(Math.sin(sim.yaw - prevYaw.current), Math.cos(sim.yaw - prevYaw.current));
+		prevYaw.current = sim.yaw;
+		turn.current = approach(turn.current, Math.max(-.28, Math.min(.28, -yawDelta * 8)), dt, 8);
+		if (!sim.grounded) wasAir.current = true;
+		else if (wasAir.current) {
+			wasAir.current = false;
+			land.current = .18;
+			if (sim.phase === "play") sfx.land();
 		}
-		if (legL.current) legL.current.rotation.x = swing;
-		if (legR.current) legR.current.rotation.x = -swing;
-		if (armL.current) armL.current.rotation.x = -swing * .8;
-		if (armR.current) armR.current.rotation.x = swing * .8;
-		if (kneeL.current) kneeL.current.rotation.x = Math.max(0, -swing) * .9;
-		if (kneeR.current) kneeR.current.rotation.x = Math.max(0, swing) * .9;
-		if (head.current) {
-			head.current.rotation.y = Math.sin(t * .6) * .12;
-			head.current.rotation.x = Math.sin(t * .45) * .05;
-			head.current.rotation.z = moving ? -Math.sin(t * freq) * .04 : 0;
+		if (land.current > 0) land.current = Math.max(0, land.current - dt);
+		let hipY = .8 + (moving ? Math.abs(Math.sin(t * freq)) * (run ? .045 : .028) : 0);
+		if (land.current > 0) hipY -= land.current * .22;
+		if (sim.anim === "celebrate") hipY = .8 + Math.abs(Math.sin(t * 8)) * .07;
+		let torsoX = breathe * .018;
+		const torsoZ = (moving ? Math.sin(t * freq) * .035 : 0) + turn.current;
+		let lLeg = swing;
+		let rLeg = -swing;
+		let lArm = -swing * .75;
+		let rArm = swing * .75;
+		let lZ = .1;
+		let rZ = -.1;
+		let lKnee = Math.max(0, -swing) * .85;
+		let rKnee = Math.max(0, swing) * .85;
+		let headX = Math.sin(t * .45) * .04;
+		let headY = Math.sin(t * .6) * .1;
+		const headZ = moving ? -Math.sin(t * freq) * .035 : 0;
+		let tailX = .62;
+		let tailY = Math.sin(t * 2.4) * .28;
+		if (sim.anim === "push") {
+			torsoX = .48;
+			lArm = -1.2;
+			rArm = -1.2;
+			lZ = .18;
+			rZ = -.18;
+			lLeg = -.28;
+			rLeg = .42;
+			lKnee = .35;
+			rKnee = .15;
+			headX = .22;
+			headY = 0;
+			tailX = .3;
+		} else if (sim.anim === "scan" || sim.scanner && sim.speed < .4) {
+			lArm = -1.25;
+			lZ = .42;
+			headX = .12;
+			let bestX = sim.x;
+			let bestZ = sim.z - 1;
+			let bestD = 6.5;
+			for (const crate of sim.crates) {
+				const d = Math.hypot(crate.x - sim.x, crate.z - sim.z);
+				if (d < bestD) {
+					bestD = d;
+					bestX = crate.x;
+					bestZ = crate.z;
+				}
+			}
+			const face = Math.atan2(-(bestX - sim.x), -(bestZ - sim.z));
+			const rel = Math.atan2(Math.sin(face - sim.yaw), Math.cos(face - sim.yaw));
+			headY = Math.max(-.7, Math.min(.7, rel));
+		} else if (sim.anim === "jump") {
+			const up = sim.vy > .2;
+			lLeg = up ? -.5 : .32;
+			rLeg = up ? -.38 : .4;
+			lArm = -.85;
+			rArm = -.7;
+			lKnee = up ? .2 : .45;
+			rKnee = up ? .15 : .4;
+			torsoX = up ? -.08 : .12;
+		} else if (sim.anim === "celebrate") {
+			lArm = -2.4;
+			rArm = -2.4;
+			lZ = .28;
+			rZ = -.28;
+			headX = -.18;
+			tailY = Math.sin(t * 9) * .7;
+			tailX = .4;
 		}
-		if (earL.current) earL.current.rotation.z = .35 + Math.sin(t * 2.2) * .05;
-		if (earR.current) earR.current.rotation.z = -.35 - Math.sin(t * 2.2) * .05;
-		if (tail.current) {
-			tail.current.rotation.y = Math.sin(t * (sim.anim === "celebrate" ? 9 : 2.6)) * (sim.anim === "celebrate" ? .7 : .32);
-			tail.current.rotation.x = .55;
+		if (hips.current) hips.current.position.y = approach(hips.current.position.y, hipY, dt, 10);
+		setX(torso.current, torsoX, dt, sim.anim === "push" ? 8 : 6);
+		setZ(torso.current, torsoZ, dt, 8);
+		if (torso.current) torso.current.position.y = approach(torso.current.position.y, .28 + breathe * .01, dt, 6);
+		setX(legL.current, lLeg, dt, 14);
+		setX(legR.current, rLeg, dt, 14);
+		setX(kneeL.current, lKnee, dt, 14);
+		setX(kneeR.current, rKnee, dt, 14);
+		setX(armL.current, lArm, dt, 12);
+		setX(armR.current, rArm, dt, 12);
+		setZ(armL.current, lZ, dt, 12);
+		setZ(armR.current, rZ, dt, 12);
+		setX(head.current, headX, dt, 8);
+		setY(head.current, headY, dt, 8);
+		setZ(head.current, headZ, dt, 8);
+		if (earL.current) earL.current.rotation.z = approach(earL.current.rotation.z, 1.15 + Math.sin(t * 2.1) * .06, dt, 6);
+		if (earR.current) earR.current.rotation.z = approach(earR.current.rotation.z, -1.15 - Math.sin(t * 2.1) * .06, dt, 6);
+		setX(tail.current, tailX, dt, 6);
+		setY(tail.current, tailY, dt, 8);
+		const blink = Math.pow(Math.max(0, Math.sin(t * 1.2)), 48);
+		if (lidL.current) lidL.current.scale.y = .35 + blink * 6;
+		if (lidR.current) lidR.current.scale.y = .35 + blink * 6;
+		if (tongue.current) {
+			const out = sim.anim === "celebrate" ? 1.5 : .65 + Math.sin(t * 2) * .08;
+			tongue.current.scale.y = approach(tongue.current.scale.y, out, dt, 8);
 		}
-		const blink = Math.pow(Math.max(0, Math.sin(t * 1.35)), 42);
-		if (lidL.current) lidL.current.scale.y = .35 + blink * 5;
-		if (lidR.current) lidR.current.scale.y = .35 + blink * 5;
-		if (tongue.current) tongue.current.scale.y = sim.anim === "celebrate" ? 1.4 : .7 + Math.sin(t * 2) * .08;
 		if (wrist.current) {
 			const mat = wrist.current.material;
-			if (!Array.isArray(mat)) mat.emissiveIntensity = sim.scanner ? 1.6 + Math.sin(t * 8) * .4 : .05;
+			if (!Array.isArray(mat)) mat.emissiveIntensity = sim.scanner ? 1.8 + Math.sin(t * 8) * .45 : .08;
 		}
-		if (sim.anim === "push") {
-			if (torso.current) torso.current.rotation.x = .42;
-			if (armL.current) armL.current.rotation.x = -1.25;
-			if (armR.current) armR.current.rotation.x = -1.25;
-			if (legL.current) legL.current.rotation.x = -.25;
-			if (legR.current) legR.current.rotation.x = .4;
-			if (head.current) head.current.rotation.x = .2;
-		} else if (sim.anim === "scan") {
-			if (armL.current) {
-				armL.current.rotation.x = -1.35;
-				armL.current.rotation.z = .45;
-			}
-		} else if (sim.anim === "jump") {
-			const up = sim.vy > 0;
-			if (legL.current) legL.current.rotation.x = up ? -.55 : .35;
-			if (legR.current) legR.current.rotation.x = up ? -.4 : .45;
-			if (armL.current) armL.current.rotation.x = -.9;
-			if (armR.current) armR.current.rotation.x = -.7;
-		} else if (sim.anim === "celebrate") {
-			const hop = Math.abs(Math.sin(t * 8)) * .08;
-			if (hips.current) hips.current.position.y = .8 + hop;
-			if (armL.current) {
-				armL.current.rotation.x = -2.5;
-				armL.current.rotation.z = .25;
-			}
-			if (armR.current) {
-				armR.current.rotation.x = -2.5;
-				armR.current.rotation.z = -.25;
-			}
-			if (head.current) head.current.rotation.x = -.15;
-		} else if (armL.current && armR.current) {
-			armL.current.rotation.z = .08;
-			armR.current.rotation.z = -.08;
-		}
+		if (beam.current) beam.current.visible = sim.scanner && sim.phase === "play";
+		if (lamp.current) lamp.current.intensity = sim.scanner && sim.phase === "play" ? 1.8 : 0;
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
 		ref: root,
@@ -2535,14 +3148,14 @@ function Tigrao() {
 					ref: tail,
 					position: [
 						0,
-						.02,
-						.16
+						.04,
+						.18
 					],
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								0,
+								.02,
 								.1
 							],
 							material: M.fur,
@@ -2556,11 +3169,11 @@ function Tigrao() {
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								.02,
-								-.02,
+								.015,
+								.05,
 								.2
 							],
-							material: M.furDark,
+							material: M.muzzle,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 								.055,
@@ -2570,175 +3183,29 @@ function Tigrao() {
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								.03,
-								-.04,
-								.28
+								.02,
+								.08,
+								.3
 							],
 							material: M.fur,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.04,
+								.042,
 								10,
 								8
 							] })
 						})
 					]
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-					ref: legL,
-					position: [
-						-.13,
-						0,
-						0
-					],
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								0,
-								-.2,
-								0
-							],
-							material: M.suit,
-							dispose: null,
-							castShadow: true,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-								.075,
-								.18,
-								4,
-								8
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								0,
-								-.28,
-								.06
-							],
-							material: M.suitBlue,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.14,
-								.12,
-								.12
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-							ref: kneeL,
-							position: [
-								0,
-								-.38,
-								0
-							],
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-								position: [
-									0,
-									-.16,
-									0
-								],
-								material: M.suit,
-								dispose: null,
-								castShadow: true,
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-									.065,
-									.14,
-									3,
-									8
-								] })
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-								position: [
-									0,
-									-.32,
-									.03
-								],
-								material: M.boot,
-								dispose: null,
-								castShadow: true,
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-									.14,
-									.1,
-									.22
-								] })
-							})]
-						})
-					]
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Leg, {
+					side: -1,
+					leg: legL,
+					knee: kneeL
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-					ref: legR,
-					position: [
-						.13,
-						0,
-						0
-					],
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								0,
-								-.2,
-								0
-							],
-							material: M.suit,
-							dispose: null,
-							castShadow: true,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-								.075,
-								.18,
-								4,
-								8
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
-								0,
-								-.28,
-								.06
-							],
-							material: M.suitBlue,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.14,
-								.12,
-								.12
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-							ref: kneeR,
-							position: [
-								0,
-								-.38,
-								0
-							],
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-								position: [
-									0,
-									-.16,
-									0
-								],
-								material: M.suit,
-								dispose: null,
-								castShadow: true,
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-									.065,
-									.14,
-									3,
-									8
-								] })
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-								position: [
-									0,
-									-.32,
-									.03
-								],
-								material: M.boot,
-								dispose: null,
-								castShadow: true,
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-									.14,
-									.1,
-									.22
-								] })
-							})]
-						})
-					]
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Leg, {
+					side: 1,
+					leg: legR,
+					knee: kneeR
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 					ref: torso,
@@ -2758,28 +3225,28 @@ function Tigrao() {
 							dispose: null,
 							castShadow: true,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.48,
 								.46,
-								.3
+								.44,
+								.28
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								.28,
+								.3,
 								0
 							],
 							material: M.suitDark,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.5,
-								.12,
-								.32
+								.48,
+								.1,
+								.3
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								-.22,
+								-.2,
 								.22,
 								0
 							],
@@ -2787,13 +3254,13 @@ function Tigrao() {
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
 								.12,
-								.16,
-								.28
+								.18,
+								.26
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								.22,
+								.2,
 								.22,
 								0
 							],
@@ -2801,28 +3268,28 @@ function Tigrao() {
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
 								.12,
-								.16,
-								.28
+								.18,
+								.26
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								-.02,
-								-.16
+								.08,
+								-.15
 							],
 							material: M.suitBlue,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.28,
-								.08,
-								.04
+								.3,
+								.22,
+								.03
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 							position: [
 								0,
-								.1,
+								.08,
 								-.175
 							],
 							rotation: [
@@ -2831,116 +3298,139 @@ function Tigrao() {
 								0
 							],
 							dispose: null,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.38, .2] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.28, .16] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 								map: badge,
-								transparent: true,
 								toneMapped: false
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								.08,
-								-.02,
-								-.17
-							],
-							material: M.gold,
-							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.035,
-								10,
-								8
-							] })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-							position: [
 								0,
-								-.14,
+								-.12,
 								0
 							],
 							material: M.hullDark,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
 								.4,
-								.08,
-								.26
+								.07,
+								.24
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								-.12,
-								-.14,
-								-.12
+								-.12,
+								-.1
 							],
-							material: M.suitDark,
+							material: M.gold,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.08,
-								.08,
-								.06
+								.07,
+								.07,
+								.05
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								.12,
-								-.14,
-								-.12
+								-.12,
+								-.1
 							],
-							material: M.suitDark,
+							material: M.gold,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.08,
-								.08,
-								.06
+								.07,
+								.07,
+								.05
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								0,
-								.16,
-								.2
+								.14,
+								.22
 							],
 							material: M.suit,
 							dispose: null,
 							castShadow: true,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.32,
-								.4,
-								.16
+								.3,
+								.36,
+								.14
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
-								0,
+								-.08,
 								.16,
-								.29
+								.3
 							],
-							material: M.suitBlue,
+							rotation: [
+								.1,
+								0,
+								0
+							],
+							material: M.hull,
 							dispose: null,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-								.18,
-								.22,
-								.04
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+								.05,
+								.05,
+								.28,
+								10
 							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+							position: [
+								.08,
+								.16,
+								.3
+							],
+							rotation: [
+								.1,
+								0,
+								0
+							],
+							material: M.hull,
+							dispose: null,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+								.05,
+								.05,
+								.28,
+								10
+							] })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+							position: [
+								0,
+								.02,
+								.3
+							],
+							dispose: null,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.2, .06] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+								map: nexus,
+								toneMapped: false
+							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 							position: [
 								.1,
-								.38,
-								.2
+								.34,
+								.22
 							],
 							material: M.visorLight,
 							dispose: null,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-								.03,
+								.028,
 								8,
 								8
 							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 							position: [
-								.3,
-								.26,
-								-.02
+								.28,
+								.22,
+								0
 							],
 							rotation: [
 								0,
@@ -2948,177 +3438,28 @@ function Tigrao() {
 								0
 							],
 							dispose: null,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.12, .08] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.11, .07] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 								map: flag,
 								toneMapped: false
 							})]
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-							ref: armL,
-							position: [
-								-.32,
-								.24,
-								0
-							],
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.16,
-										0
-									],
-									material: M.suit,
-									dispose: null,
-									castShadow: true,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-										.055,
-										.14,
-										3,
-										8
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.18,
-										0
-									],
-									material: M.suitBlue,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.1,
-										.06,
-										.1
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.34,
-										0
-									],
-									material: M.suitDark,
-									dispose: null,
-									castShadow: true,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-										.048,
-										.14,
-										3,
-										8
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.48,
-										-.02
-									],
-									material: M.glove,
-									dispose: null,
-									castShadow: true,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.07,
-										12,
-										10
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
-									ref: wrist,
-									position: [
-										0,
-										-.4,
-										-.06
-									],
-									dispose: null,
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.028,
-										8,
-										8
-									] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshStandardMaterial", {
-										color: "#7eb8cc",
-										emissive: "#7eb8cc",
-										emissiveIntensity: .05
-									})]
-								})
-							]
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Arm, {
+							side: -1,
+							arm: armL,
+							wrist,
+							beam,
+							lamp
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
-							ref: armR,
-							position: [
-								.32,
-								.24,
-								0
-							],
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.16,
-										0
-									],
-									material: M.suit,
-									dispose: null,
-									castShadow: true,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-										.055,
-										.14,
-										3,
-										8
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.18,
-										0
-									],
-									material: M.suitBlue,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.1,
-										.06,
-										.1
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.34,
-										0
-									],
-									material: M.suitDark,
-									dispose: null,
-									castShadow: true,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-										.048,
-										.14,
-										3,
-										8
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.48,
-										-.02
-									],
-									material: M.glove,
-									dispose: null,
-									castShadow: true,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.07,
-										12,
-										10
-									] })
-								})
-							]
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Arm, {
+							side: 1,
+							arm: armR
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 							ref: head,
 							position: [
 								0,
-								.58,
-								-.02
+								.52,
+								-.04
 							],
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
@@ -3126,7 +3467,7 @@ function Tigrao() {
 									dispose: null,
 									castShadow: true,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.2,
+										.19,
 										22,
 										18
 									] })
@@ -3134,38 +3475,19 @@ function Tigrao() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
-										.08,
-										-.08
+										-.02,
+										-.14
 									],
 									scale: [
-										.28,
-										.55,
-										.2
-									],
-									material: M.muzzle,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.2,
-										14,
-										12
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.04,
-										-.16
-									],
-									scale: [
-										.72,
-										.55,
-										.85
+										.95,
+										.62,
+										1.15
 									],
 									material: M.muzzle,
 									dispose: null,
 									castShadow: true,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.13,
+										.12,
 										16,
 										12
 									] })
@@ -3173,13 +3495,13 @@ function Tigrao() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
-										-.02,
-										-.26
+										-.01,
+										-.28
 									],
 									material: M.nose,
 									dispose: null,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.045,
+										.038,
 										12,
 										10
 									] })
@@ -3187,105 +3509,141 @@ function Tigrao() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
-										-.08,
+										-.055,
 										-.2
 									],
 									material: M.furDark,
 									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.03,
-										8,
-										8
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+										.06,
+										.012,
+										.04
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									ref: tongue,
 									position: [
 										0,
-										-.1,
-										-.22
+										-.075,
+										-.2
 									],
 									material: M.tongue,
 									dispose: null,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.028,
+										.026,
 										8,
 										8
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, {
-									x: -.075,
+									x: -.07,
 									lid: lidL
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, {
-									x: .075,
+									x: .07,
 									lid: lidR
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 									ref: earL,
 									position: [
-										-.15,
-										.16,
-										-.04
+										-.16,
+										.12,
+										-.02
 									],
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-										rotation: [
-											.55,
-											.15,
-											1.05
-										],
+									rotation: [
+										.4,
+										.2,
+										1.15
+									],
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 										scale: [
-											.5,
-											1.25,
+											.45,
+											1.35,
 											.28
 										],
 										material: M.fur,
 										dispose: null,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-											.12,
+											.11,
 											12,
 											10
 										] })
-									})
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+										position: [
+											.01,
+											-.02,
+											-.02
+										],
+										scale: [
+											.28,
+											.8,
+											.16
+										],
+										material: M.furDark,
+										dispose: null,
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+											.11,
+											10,
+											8
+										] })
+									})]
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 									ref: earR,
 									position: [
-										.15,
 										.16,
-										-.04
+										.12,
+										-.02
 									],
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-										rotation: [
-											.55,
-											-.15,
-											-1.05
-										],
+									rotation: [
+										.4,
+										-.2,
+										-1.15
+									],
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 										scale: [
-											.5,
-											1.25,
+											.45,
+											1.35,
 											.28
 										],
 										material: M.fur,
 										dispose: null,
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-											.12,
+											.11,
 											12,
 											10
 										] })
-									})
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+										position: [
+											-.01,
+											-.02,
+											-.02
+										],
+										scale: [
+											.28,
+											.8,
+											.16
+										],
+										material: M.furDark,
+										dispose: null,
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+											.11,
+											10,
+											8
+										] })
+									})]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
 										0,
 										.02,
-										-.05
+										-.06
 									],
 									material: M.glass,
 									dispose: null,
 									renderOrder: 3,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.255,
+										.24,
 										28,
 										20
 									] })
@@ -3300,80 +3658,66 @@ function Tigrao() {
 									dispose: null,
 									castShadow: true,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
-										.25,
-										.045,
+										.23,
+										.038,
 										10,
 										24
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
-										-.24,
-										.02,
+										-.22,
+										.01,
 										0
 									],
 									material: M.suit,
 									dispose: null,
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.08,
-										.12,
-										.1
+										.07,
+										.1,
+										.09
 									] })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 									position: [
-										.24,
-										.02,
-										0
-									],
-									material: M.suit,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
-										.08,
-										.12,
-										.1
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										-.29,
-										.02,
-										0
-									],
-									material: M.visorLight,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.03,
-										8,
-										8
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										.29,
-										.02,
-										0
-									],
-									material: M.visorLight,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-										.03,
-										8,
-										8
-									] })
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-									position: [
-										0,
-										-.02,
-										.16
-									],
-									material: M.suit,
-									dispose: null,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 										.22,
-										16,
-										12
+										.01,
+										0
+									],
+									material: M.suit,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+										.07,
+										.1,
+										.09
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										-.26,
+										.02,
+										-.02
+									],
+									material: M.emit,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.026,
+										8,
+										8
+									] })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+									position: [
+										.26,
+										.02,
+										-.02
+									],
+									material: M.emit,
+									dispose: null,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+										.026,
+										8,
+										8
 									] })
 								})
 							]
@@ -3384,19 +3728,248 @@ function Tigrao() {
 		})
 	});
 }
+function Leg({ side, leg, knee }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+		ref: leg,
+		position: [
+			side * .13,
+			0,
+			0
+		],
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.2,
+					0
+				],
+				material: M.suit,
+				dispose: null,
+				castShadow: true,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+					.072,
+					.18,
+					4,
+					8
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.28,
+					.04
+				],
+				material: M.suitBlue,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+					.13,
+					.1,
+					.12
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+				ref: knee,
+				position: [
+					0,
+					-.38,
+					0
+				],
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.16,
+							0
+						],
+						material: M.suit,
+						dispose: null,
+						castShadow: true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+							.06,
+							.14,
+							3,
+							8
+						] })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.32,
+							.03
+						],
+						material: M.boot,
+						dispose: null,
+						castShadow: true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+							.13,
+							.09,
+							.2
+						] })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+						position: [
+							0,
+							-.34,
+							-.06
+						],
+						material: M.glove,
+						dispose: null,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+							.1,
+							.04,
+							.06
+						] })
+					})
+				]
+			})
+		]
+	});
+}
+function Arm({ side, arm, wrist, beam, lamp }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+		ref: arm,
+		position: [
+			side * .3,
+			.22,
+			0
+		],
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.16,
+					0
+				],
+				material: M.suit,
+				dispose: null,
+				castShadow: true,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+					.052,
+					.14,
+					3,
+					8
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.18,
+					0
+				],
+				material: M.suitBlue,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+					.09,
+					.05,
+					.09
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.34,
+					0
+				],
+				material: M.suitDark,
+				dispose: null,
+				castShadow: true,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+					.046,
+					.14,
+					3,
+					8
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					-.48,
+					-.02
+				],
+				material: M.glove,
+				dispose: null,
+				castShadow: true,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.065,
+					12,
+					10
+				] })
+			}),
+			side < 0 && wrist && beam && lamp ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+					ref: wrist,
+					position: [
+						0,
+						-.4,
+						-.06
+					],
+					dispose: null,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.03,
+						8,
+						8
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshStandardMaterial", {
+						color: "#7eb8cc",
+						emissive: "#7eb8cc",
+						emissiveIntensity: .08
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+					ref: beam,
+					position: [
+						0,
+						-.55,
+						-.55
+					],
+					rotation: [
+						Math.PI / 2.4,
+						0,
+						0
+					],
+					visible: false,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+						.01,
+						.08,
+						.7,
+						8,
+						1,
+						true
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+						color: "#9fd8ea",
+						transparent: true,
+						opacity: .28,
+						depthWrite: false
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+					ref: lamp,
+					position: [
+						0,
+						-.45,
+						-.2
+					],
+					color: "#9fd4e6",
+					distance: 4.5,
+					decay: 2,
+					intensity: 0
+				})
+			] }) : null
+		]
+	});
+}
 function Eye({ x, lid }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 		position: [
 			x,
-			.03,
-			-.16
+			.045,
+			-.2
 		],
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 				material: M.eye,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.055,
+					.048,
 					14,
 					12
 				] })
@@ -3405,12 +3978,12 @@ function Eye({ x, lid }) {
 				position: [
 					0,
 					0,
-					-.028
+					-.024
 				],
 				material: M.iris,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.034,
+					.03,
 					12,
 					10
 				] })
@@ -3419,12 +3992,12 @@ function Eye({ x, lid }) {
 				position: [
 					0,
 					0,
-					-.046
+					-.04
 				],
 				material: M.pupil,
 				dispose: null,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.016,
+					.014,
 					8,
 					8
 				] })
@@ -3432,8 +4005,8 @@ function Eye({ x, lid }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 				position: [
 					.01,
-					.01,
-					-.048
+					.012,
+					-.046
 				],
 				dispose: null,
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
@@ -3446,8 +4019,8 @@ function Eye({ x, lid }) {
 				ref: lid,
 				position: [
 					0,
-					.03,
-					-.03
+					.028,
+					-.02
 				],
 				material: M.fur,
 				dispose: null,
@@ -3951,6 +4524,7 @@ function Rocket() {
 }
 function Station() {
 	const earth = (0, import_react.useMemo)(() => earthTexture(), []);
+	const clouds = (0, import_react.useMemo)(() => cloudTexture(), []);
 	const spin = (0, import_react.useRef)(null);
 	useFrame((_, dt) => {
 		if (spin.current && sim.phase === "title") spin.current.rotation.y += dt * .08;
@@ -3987,6 +4561,21 @@ function Station() {
 					.16,
 					10,
 					36
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				rotation: [
+					Math.PI / 2,
+					.4,
+					0
+				],
+				material: M.hullDark,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
+					4.4,
+					.05,
+					8,
+					40
 				] })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
@@ -4059,6 +4648,20 @@ function Station() {
 					8
 				] })
 			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					-1.2,
+					1.85,
+					.4
+				],
+				material: M.alarm,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.06,
+					8,
+					8
+				] })
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 				position: [
 					-11,
@@ -4067,8 +4670,8 @@ function Station() {
 				],
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 					6.4,
-					40,
-					28
+					48,
+					32
 				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
 					map: earth,
 					toneMapped: false
@@ -4081,13 +4684,31 @@ function Station() {
 					-7
 				],
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					6.75,
+					6.62,
+					32,
+					24
+				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+					map: clouds,
+					transparent: true,
+					opacity: .55,
+					depthWrite: false,
+					toneMapped: false
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+				position: [
+					-11,
+					1.2,
+					-7
+				],
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					6.85,
 					28,
 					18
 				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
-					color: "#7eb8cc",
+					color: "#9fd4e6",
 					transparent: true,
-					opacity: .14,
+					opacity: .12,
 					depthWrite: false
 				})]
 			})
@@ -4769,6 +5390,7 @@ function Game() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FogTune, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Lights, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(World, {}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dressing, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Crates, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Vectors, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Puffs, {}),

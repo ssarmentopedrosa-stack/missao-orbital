@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh, MeshStandardMaterial } from "three";
 import * as THREE from "three";
 import { HoloLabel, Solid } from "./bits";
-import { earthTexture, paintScreen, panelTexture, starTexture } from "./draw";
+import { cloudTexture, earthTexture, paintScreen, panelTexture, starTexture } from "./draw";
 import { BLOCKS, DOCK } from "./layout";
 import { M } from "./materials";
 import { sim } from "./sim";
@@ -224,6 +224,7 @@ function Rocket() {
 
 function Station() {
   const earth = useMemo(() => earthTexture(), []);
+  const clouds = useMemo(() => cloudTexture(), []);
   const spin = useRef<Group>(null);
   useFrame((_, dt) => {
     if (spin.current && sim.phase === "title") spin.current.rotation.y += dt * 0.08;
@@ -235,6 +236,9 @@ function Station() {
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]} material={M.hull} dispose={null}>
         <torusGeometry args={[3.1, 0.16, 10, 36]} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0.4, 0]} material={M.hullDark} dispose={null}>
+        <torusGeometry args={[4.4, 0.05, 8, 40]} />
       </mesh>
       <mesh position={[4.1, 0.2, 0]} material={M.hull} dispose={null}>
         <boxGeometry args={[2.1, 1.1, 1.3]} />
@@ -251,13 +255,20 @@ function Station() {
       <mesh position={[1.55, 1.7, 0]} material={M.visorLight} dispose={null}>
         <sphereGeometry args={[0.08, 8, 8]} />
       </mesh>
+      <mesh position={[-1.2, 1.85, 0.4]} material={M.alarm} dispose={null}>
+        <sphereGeometry args={[0.06, 8, 8]} />
+      </mesh>
       <mesh position={[-11, 1.2, -7]}>
-        <sphereGeometry args={[6.4, 40, 28]} />
+        <sphereGeometry args={[6.4, 48, 32]} />
         <meshBasicMaterial map={earth} toneMapped={false} />
       </mesh>
       <mesh position={[-11, 1.2, -7]}>
-        <sphereGeometry args={[6.75, 28, 18]} />
-        <meshBasicMaterial color="#7eb8cc" transparent opacity={0.14} depthWrite={false} />
+        <sphereGeometry args={[6.62, 32, 24]} />
+        <meshBasicMaterial map={clouds} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh position={[-11, 1.2, -7]}>
+        <sphereGeometry args={[6.85, 28, 18]} />
+        <meshBasicMaterial color="#9fd4e6" transparent opacity={0.12} depthWrite={false} />
       </mesh>
     </group>
   );
