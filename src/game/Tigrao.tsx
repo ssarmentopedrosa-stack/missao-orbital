@@ -253,6 +253,13 @@ export function Tigrao() {
       }
     }
 
+    if (sim.stage === 2 && elevator.adjusting && sim.anim === "idle" && !sim.line) {
+      rArm = 1.12;
+      rZ = -0.08;
+      torsoX = -0.16;
+      headX = -0.04;
+    }
+
     if (shot === 3) {
       headY = Math.sin(t * 1.4) * 0.42;
       headX = -0.05;

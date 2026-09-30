@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, hoistAccel, integrateHoist, netForce } from "../src/game/hoist.ts";
+import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, accelOf, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, weightOf, G_MOON } from "../src/game/hoist.ts";
 
 test("peso do contêiner é m·g", () => {
   assert.equal(HOIST_MASS, 40);
@@ -44,3 +44,62 @@ test("o freio do scanner não integra o movimento", () => {
   assert.equal(step.y, 2.55);
   assert.equal(step.v, 0);
 });
+
+test("massa variável: T > P sobe, T = P equilibra, T < P desce", () => {
+  const mass = 100;
+  const P = weightOf(mass);
+  assert.ok(Math.abs(P - 981) < 1e-9);
+  assert.ok(Math.abs(netForceOf(1300, mass) - 319) < 1e-9);
+  assert.ok(Math.abs(accelOf(1300, mass) - 3.19) < 1e-9);
+  assert.ok(Math.abs(netForceOf(P, mass)) < 1e-9);
+  assert.ok(Math.abs(accelOf(P, mass)) < 1e-9);
+  assert.ok(accelOf(700, mass) < 0);
+  assert.ok(Math.abs(accelOf(700, mass) - (700 - P) / mass) < 1e-9);
+  const up = integrateVariable(2, 0, 1300, mass, 9.81, 0.2, false);
+  assert.ok(up.y > 2 && up.v > 0 && up.a > 0);
+  const hold = integrateVariable(4, 1.2, P, mass, 9.81, 0.3, false);
+  assert.ok(Math.abs(hold.a) < 1e-9);
+  assert.ok(Math.abs(hold.v - 1.2) < 1e-9);
+  const down = integrateVariable(4, 0, 700, mass, 9.81, 0.2, false);
+  assert.ok(down.y < 4 && down.v < 0 && down.a < 0);
+});
+
+test("a mesma resultante acelera menos a massa maior", () => {
+  const Fr = 80;
+  const t20 = weightOf(20) + Fr;
+  const t100 = weightOf(100) + Fr;
+  assert.ok(Math.abs(netForceOf(t20, 20) - Fr) < 1e-6);
+  assert.ok(Math.abs(netForceOf(t100, 100) - Fr) < 1e-6);
+  assert.ok(Math.abs(accelOf(t20, 20) - 4) < 1e-9);
+  assert.ok(Math.abs(accelOf(t100, 100) - 0.8) < 1e-9);
+});
+
+test("a mesma tração não produz a mesma aceleração em massas diferentes", () => {
+  const T = 1200;
+  const a20 = accelOf(T, 20);
+  const a100 = accelOf(T, 100);
+  assert.ok(a20 > a100);
+  assert.ok(a20 > 0 && a100 > 0);
+});
+
+test("mesma massa, gravidades diferentes, pesos diferentes", () => {
+  const earth = weightOf(80, 9.81);
+  const moon = weightOf(80, G_MOON);
+  assert.ok(earth !== moon);
+  assert.ok(Math.abs(moon - 80 * 1.62) < 1e-9);
+  assert.ok(earth > moon * 5);
+  assert.ok(Math.abs(accelOf(moon, 80, G_MOON)) < 1e-9);
+});
+
+test("integração variável limita velocidade e não produz NaN", () => {
+  const step = integrateVariable(2, 0, 5000, 20, 9.81, 1, false);
+  assert.ok(Number.isFinite(step.y) && Number.isFinite(step.v) && Number.isFinite(step.a));
+  assert.ok(Math.abs(step.v) <= 5.6 + 1e-9);
+  const locked = integrateVariable(3, 2, 10, 50, 9.81, 0.5, true);
+  assert.equal(locked.y, 3);
+  assert.equal(locked.v, 0);
+  const floor = integrateVariable(1.1, -4, 0, 40, 9.81, 0.5, false);
+  assert.equal(floor.hitFloor, true);
+  assert.equal(floor.y, 1.05);
+});
+

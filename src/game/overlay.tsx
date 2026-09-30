@@ -42,6 +42,7 @@ export function Overlay() {
       {snap.paused && !snap.mapOpen ? <PausePanel /> : null}
       {snap.phase === "complete" && snap.result ? <Complete result={snap.result} /> : null}
       {sim.stage === 2 && sim.transit > 0 ? <StageCard /> : null}
+      {elevator.done && elevator.finale <= 0 && snap.phase === "play" ? <StageReport /> : null}
       {snap.phase === "play" && !snap.paused && !snap.mapOpen ? <Touch /> : null}
     </div>
   );
@@ -53,9 +54,9 @@ function StageCard() {
       <p className="kicker">Missão Newton</p>
       <h1>
         ETAPA 2
-        <span>O ELEVADOR DA NEWTON-1</span>
+        <span>A FORÇA INVISÍVEL</span>
       </h1>
-      <p className="sub">Objetivo: reposicionar o contêiner de manutenção.</p>
+      <p className="sub">Nem toda força pode ser vista. Mas seus efeitos podem ser medidos.</p>
     </section>
   );
 }
@@ -117,6 +118,7 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
           <p className="kicker">Objetivo</p>
           <strong>{snap.objective}</strong>
         </div>
+        {sim.stage === 2 && elevator.active && elevator.scanned && sim.transit <= 0 ? <ForceStrip /> : null}
         {snap.line ? (
           <div className="panel line" style={{ position: "static", transform: "none", width: "auto" }}>
             <b>{snap.line.speaker}</b>
@@ -156,8 +158,8 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
         {snap.readout && sim.stage !== 2 ? <ReadoutCard readout={snap.readout} /> : null}
         {sim.stage === 2 && snap.scanner && elevator.active ? <HoistCard /> : null}
       </div>
-      {snap.prompt ? <div className="panel prompt">{snap.prompt}</div> : null}
-      {sim.stage === 2 && elevator.active ? <div className="panel prompt">{elevator.hint}</div> : null}
+      {snap.prompt && sim.stage !== 2 ? <div className="panel prompt">{snap.prompt}</div> : null}
+      {sim.stage === 2 && elevator.active && sim.transit <= 0 ? <div className="panel prompt wrap">{elevator.hint}</div> : null}
     </>
   );
 }
@@ -205,11 +207,11 @@ function br(value: number, digits = 1): string {
 
 function HoistCard() {
   const h = hoistState();
-  const up = h.Fr >= 0;
+  const arrow = (n: number) => (Math.abs(n) < 0.05 ? "" : n > 0 ? " ↑" : " ↓");
   return (
     <div className="panel readout hoist">
       <p className="kicker">Scanner Newton</p>
-      <h2>Contêiner</h2>
+      <h2>{h.name}</h2>
       <div className="eq">
         <em>m</em>
         <span>{br(h.mass, 1)} kg</span>
@@ -221,14 +223,86 @@ function HoistCard() {
         <span>{br(h.T, 1)} N ↑</span>
         <em>Fr</em>
         <span>
-          {br(Math.abs(h.Fr), 1)} N {Math.abs(h.Fr) < 0.8 ? "·" : up ? "↑" : "↓"}
+          {br(h.Fr, 1)} N{arrow(h.Fr)}
         </span>
         <em>a</em>
         <span>
-          {br(Math.abs(h.a), 2)} m/s² {Math.abs(h.a) < 0.05 ? "" : up ? "↑" : "↓"}
+          {br(h.a, 2)} m/s²{arrow(h.a)}
+        </span>
+        <em>v</em>
+        <span>
+          {br(h.v, 2)} m/s{arrow(h.v)}
         </span>
       </div>
-      <p className="note">ESTADO: {h.state}. Peso e tração não somem. Zero, quando acontece, é a resultante.</p>
+      <p className="note">P = m·g · Fr = T − P · a = Fr/m</p>
+    </div>
+  );
+}
+
+function ForceStrip() {
+  const h = hoistState();
+  const arrow = (n: number) => (Math.abs(n) < 0.05 ? "" : n > 0 ? " ↑" : " ↓");
+  return (
+    <div className="panel force-strip">
+      <p>
+        m {br(h.mass, 0)} kg · g {br(h.g, 2)}
+        {h.moon ? " · Lua" : ""}
+      </p>
+      <p>
+        P {br(h.P, 1)} N · T {br(h.T, 1)} N
+      </p>
+      <p>
+        Fr {br(h.Fr, 1)} N{arrow(h.Fr)} · a {br(h.a, 2)}
+        {arrow(h.a)} · v {br(h.v, 2)}
+      </p>
+      <p className="note">{h.note}</p>
+    </div>
+  );
+}
+
+function StageReport() {
+  const [hide, setHide] = useState(false);
+  const h = hoistState();
+  if (hide) return null;
+  const rows: [string, boolean][] = [
+    ["Peso", h.mastery.peso],
+    ["Tração", h.mastery.tracao],
+    ["Força resultante", h.mastery.resultante],
+    ["Massa", h.mastery.massa],
+    ["Aceleração", h.mastery.aceleracao],
+    ["2ª lei de Newton", h.mastery.newton],
+    ["Peso e gravidade", h.mastery.gravidade],
+  ];
+  return (
+    <div className="modal" data-ui>
+      <div className="panel sheet">
+        <p className="kicker">Relatório da missão</p>
+        <h2>Etapa 2 concluída</h2>
+        <p className="sub">Uma força isolada não determina o movimento. O que importa é a força resultante.</p>
+        <ul className="report-list">
+          {rows.map(([label, ok]) => (
+            <li key={label}>
+              <span>{label}</span>
+              <b>{ok ? "✓" : "não testado"}</b>
+            </li>
+          ))}
+        </ul>
+        <div className="stats">
+          <div>
+            <span>Tempo</span>
+            {clock(h.elapsed)}
+          </div>
+          <div>
+            <span>Impactos</span>
+            {h.tries}
+          </div>
+        </div>
+        <div className="row">
+          <button className="btn" type="button" onClick={() => setHide(true)}>
+            Continuar observando
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -245,7 +319,7 @@ function Bearing() {
       el.style.opacity = show ? "1" : "0";
       if (!show) return;
       const tx = 0;
-      const tz = sim.z < -14 ? -25 : -8;
+      const tz = sim.stage === 2 ? -58.2 : sim.z < -14 ? -25 : -8;
       const dx = tx - sim.x;
       const dz = tz - sim.z;
       const fx = -Math.sin(sim.camYaw);
@@ -342,7 +416,7 @@ function MapPanel() {
       <div className="panel sheet map-sheet">
         <p className="kicker">Navegação · Newton-1</p>
         <h2>Mapa da missão</h2>
-        {sim.stage === 2 ? <p className="sub">Etapa 2 · Setor de carga da Newton-1. O elevador não entra no mapa da etapa 1.</p> : null}
+        {sim.stage === 2 ? <p className="sub">Etapa 2 · A força invisível. O setor de carga fica além do mapa da etapa 1.</p> : null}
         <div className="map-layout">
           <div className="schematic" aria-hidden>
             <div className="room goal" style={{ left: "28%", right: "28%", top: "6%", height: "22%" }}>

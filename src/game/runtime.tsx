@@ -6,8 +6,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { HoloLabel } from "./bits";
 import { labelSprite } from "./draw";
 import { pump } from "./audio";
-import { elevator, SHAFT, tickElevator } from "./elevator";
-import { HOIST_WEIGHT, netForce } from "./hoist";
+import { elevator, hoistState, SHAFT, tickElevator } from "./elevator";
 import { BLOCKS, CINE_LEN, CRATE_SPECS, DOCK, G, exteriorShot, shotIndex } from "./layout";
 import { M } from "./materials";
 import { installProbe, sim, step } from "./sim";
@@ -146,6 +145,12 @@ export function Lights() {
 }
 
 function scripted(dt: number, camera: THREE.PerspectiveCamera): boolean {
+  if (sim.stage === 2 && elevator.finale > 0) {
+    const u = 1 - Math.min(1, elevator.finale / 7.2);
+    desired.set(1.35, 2.4 + u * 5.1, -53.4);
+    look.set(SHAFT.x, Math.min(8.4, elevator.y + 0.3), SHAFT.z);
+    return true;
+  }
   if (sim.stage === 2 && sim.transit > 0) {
     const u = 1 - sim.transit / 6.4;
     desired.set(-1.2 + u * 0.4, 2.15 + u * 1.4, sim.z + 3.1);
@@ -356,12 +361,14 @@ export function Vectors() {
       group.add(arrow);
       arrows.push(arrow);
     }
-    const tags = ["F", "v", "a", "f", "P", "N"].map((text, i) => {
-      const color = ["#f4f7fb", "#7eb8cc", "#c7c3ef", "#e0a23a", "#8aa0b5", "#d5e4ef"][i] ?? "#fff";
-      const { tex } = labelSprite(text, color);
+    const labels = ["F", "v", "a", "f", "P", "N", "TRAÇÃO", "PESO", "RESULTANTE"];
+    const tagColors = ["#f4f7fb", "#7eb8cc", "#c7c3ef", "#e0a23a", "#8aa0b5", "#d5e4ef", "#e0a23a", "#9fb0c0", "#f4f7fb"];
+    const tags = labels.map((text, i) => {
+      const color = tagColors[i] ?? "#fff";
+      const { tex, w } = labelSprite(text, color);
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
       sprite.visible = false;
-      sprite.scale.set(0.42, 0.16, 1);
+      sprite.scale.set(i >= 6 ? Math.min(1.25, w) : 0.42, i >= 6 ? 0.18 : 0.16, 1);
       group.add(sprite);
       return sprite;
     });
@@ -415,15 +422,14 @@ export function Vectors() {
     });
     pack.ring.visible = false;
     if (sim.stage === 2 && elevator.active && sim.scanner && sim.phase === "play") {
-      const y = elevator.y + 0.55;
-      const T = elevator.tension;
-      const P = HOIST_WEIGHT;
-      const Fr = netForce(T);
-      const scale = 1 / 230;
-      show(SHAFT.x - 0.15, y, SHAFT.z, 0, -1, 0, P * scale, 0x8aa0b5, 4);
-      show(SHAFT.x + 0.15, y, SHAFT.z, 0, 1, 0, Math.max(0.2, T * scale), 0xe0a23a, 0);
-      if (Math.abs(Fr) > 6) {
-        show(SHAFT.x + 0.55, y, SHAFT.z, 0, Math.sign(Fr), 0, Math.max(0.28, Math.abs(Fr) * scale), 0xf4f7fb, 2);
+      const h = hoistState();
+      const y = h.y + 0.55;
+      const span = Math.max(h.P, h.T, 80);
+      const scale = 1.65 / span;
+      show(SHAFT.x - 0.22, y, SHAFT.z, 0, -1, 0, Math.max(0.2, h.P * scale), 0x8aa0b5, 7);
+      show(SHAFT.x + 0.22, y, SHAFT.z, 0, 1, 0, Math.max(0.2, h.T * scale), 0xe0a23a, 6);
+      if (Math.abs(h.Fr) > 6) {
+        show(SHAFT.x + 0.62, y, SHAFT.z, 0, Math.sign(h.Fr) || 1, 0, Math.max(0.28, Math.abs(h.Fr) * scale), 0xf4f7fb, 8);
       }
       pack.ring.visible = true;
       pack.ring.position.set(SHAFT.x, 0.06, SHAFT.z);

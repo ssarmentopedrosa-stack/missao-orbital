@@ -169,6 +169,7 @@ export const sim = {
   padSprint: false,
   jumpEdge: false,
   interactEdge: false,
+  actEdge: false,
   scanEdge: false,
   pauseEdge: false,
   nextFoot: 0,
@@ -364,7 +365,7 @@ export function toggleScanner(): void {
   if (sim.scanner) {
     sim.scans += 1;
     sfx.scan();
-    if (!sim.sawScan) {
+    if (!sim.sawScan && sim.stage === 1) {
       sim.sawScan = true;
       say(
         "NEXUS",
@@ -424,6 +425,7 @@ export function restart(toTitle: boolean): void {
   sim.solved = false;
   sim.stage = 1;
   sim.transit = 0;
+  sim.actEdge = false;
   sim.integrity = 100;
   sim.cell = 100;
   sim.pushes = 0;
@@ -771,7 +773,8 @@ export function step(dt: number): void {
 
   if (sim.interactEdge) {
     sim.interactEdge = false;
-    tryInteract();
+    if (sim.stage === 2) sim.actEdge = true;
+    else tryInteract();
   }
 
   sim.pushing = false;
@@ -837,7 +840,7 @@ export function step(dt: number): void {
             sim.vx += nx * vin;
             sim.vz += nz * vin;
           }
-          if (crate.kind === "heavy" && !sim.sawHeavy) {
+          if (crate.kind === "heavy" && !sim.sawHeavy && sim.stage === 1) {
             sim.sawHeavy = true;
             say("NEWTON", "A bateria não se move. Abra o scanner e compare a sua força com o atrito estático.", 5.5);
           }
@@ -946,7 +949,7 @@ export function step(dt: number): void {
     }
   }
 
-  if (!sim.sawHall && sim.z < -1.6) {
+  if (sim.stage === 1 && !sim.sawHall && sim.z < -1.6) {
     sim.sawHall = true;
     say(
       "NEWTON",
@@ -954,7 +957,7 @@ export function step(dt: number): void {
       6,
     );
   }
-  if (!sim.sawBay && sim.z < -10.2) {
+  if (sim.stage === 1 && !sim.sawBay && sim.z < -10.2) {
     sim.sawBay = true;
     sim.objective = sim.solved ? sim.objective : "Acople o módulo de 20 kg na plataforma azul";
     say(

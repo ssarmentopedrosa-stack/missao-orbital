@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-B8gfceHY.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-D39H1I_Z.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -501,6 +501,231 @@ function Dressing() {
 		})
 	] });
 }
+function canvas(w, h) {
+	const c = document.createElement("canvas");
+	c.width = w;
+	c.height = h;
+	const g = c.getContext("2d");
+	if (!g) throw new Error("canvas");
+	return [c, g];
+}
+function texOf(c, repeat = false) {
+	const tex = new CanvasTexture(c);
+	tex.colorSpace = SRGBColorSpace;
+	tex.anisotropy = 8;
+	if (repeat) {
+		tex.wrapS = RepeatWrapping;
+		tex.wrapT = RepeatWrapping;
+	}
+	return tex;
+}
+function earthTexture() {
+	const [c, g] = canvas(1024, 512);
+	const ocean = g.createLinearGradient(0, 0, 0, 512);
+	ocean.addColorStop(0, "#1c4f8a");
+	ocean.addColorStop(.45, "#0f315c");
+	ocean.addColorStop(1, "#1a4a82");
+	g.fillStyle = ocean;
+	g.fillRect(0, 0, 1024, 512);
+	g.fillStyle = "#e8eef3";
+	g.fillRect(0, 0, 1024, 28);
+	g.fillRect(0, 484, 1024, 28);
+	g.fillStyle = "#2d7a48";
+	g.beginPath();
+	g.moveTo(250, 230);
+	g.bezierCurveTo(300, 170, 360, 190, 372, 250);
+	g.bezierCurveTo(390, 320, 360, 390, 320, 430);
+	g.bezierCurveTo(280, 455, 255, 400, 248, 340);
+	g.bezierCurveTo(230, 280, 220, 250, 250, 230);
+	g.fill();
+	g.fillStyle = "#3c8f52";
+	g.beginPath();
+	g.moveTo(500, 150);
+	g.bezierCurveTo(560, 130, 590, 180, 575, 240);
+	g.bezierCurveTo(610, 280, 590, 360, 540, 400);
+	g.bezierCurveTo(500, 370, 490, 300, 500, 240);
+	g.bezierCurveTo(470, 190, 470, 160, 500, 150);
+	g.fill();
+	g.fillStyle = "#d8c48a";
+	g.beginPath();
+	g.ellipse(430, 210, 50, 22, .4, 0, Math.PI * 2);
+	g.fill();
+	g.fillStyle = "rgba(255,255,255,0.16)";
+	for (let i = 0; i < 14; i++) {
+		g.beginPath();
+		g.ellipse(80 + i * 137 % 900, 70 + i * 61 % 360, 70 + i % 4 * 18, 16 + i % 3 * 6, i * .3, 0, Math.PI * 2);
+		g.fill();
+	}
+	const night = g.createLinearGradient(760, 0, 1024, 0);
+	night.addColorStop(0, "rgba(0,0,0,0)");
+	night.addColorStop(1, "rgba(0,8,18,0.5)");
+	g.fillStyle = night;
+	g.fillRect(760, 0, 264, 512);
+	return texOf(c);
+}
+function cloudTexture() {
+	const [c, g] = canvas(1024, 512);
+	g.clearRect(0, 0, 1024, 512);
+	for (let i = 0; i < 22; i++) {
+		g.fillStyle = `rgba(255,255,255,${.25 + i % 5 * .08})`;
+		g.beginPath();
+		g.ellipse(i * 97 % 1e3, 40 + i * 53 % 420, 90 + i % 6 * 16, 18 + i % 4 * 5, i * .2, 0, Math.PI * 2);
+		g.fill();
+	}
+	return texOf(c);
+}
+function starTexture() {
+	const [c, g] = canvas(256, 256);
+	g.fillStyle = "#070d16";
+	g.fillRect(0, 0, 256, 256);
+	for (let i = 0; i < 80; i++) {
+		g.fillStyle = i % 7 === 0 ? "#e0a23a" : "#d5e4ef";
+		g.globalAlpha = .4 + i % 5 * .12;
+		g.fillRect(i * 47 % 256, i * 91 % 256, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1);
+	}
+	g.globalAlpha = 1;
+	return texOf(c);
+}
+function panelTexture() {
+	const [c, g] = canvas(256, 256);
+	g.fillStyle = "#1a2432";
+	g.fillRect(0, 0, 256, 256);
+	g.strokeStyle = "#0d141e";
+	g.lineWidth = 8;
+	for (let i = 0; i <= 256; i += 64) {
+		g.beginPath();
+		g.moveTo(i, 0);
+		g.lineTo(i, 256);
+		g.stroke();
+		g.beginPath();
+		g.moveTo(0, i);
+		g.lineTo(256, i);
+		g.stroke();
+	}
+	g.strokeStyle = "#31465c";
+	g.lineWidth = 2;
+	for (let y = 0; y < 256; y += 64) for (let x = 0; x < 256; x += 64) g.strokeRect(x + 8, y + 8, 48, 48);
+	const tex = texOf(c, true);
+	tex.repeat.set(4, 4);
+	return tex;
+}
+function paintScreen(ctx, w, h, title, formula, time) {
+	ctx.clearRect(0, 0, w, h);
+	ctx.fillStyle = "#07141f";
+	ctx.fillRect(0, 0, w, h);
+	ctx.strokeStyle = "rgba(126,184,204,0.25)";
+	ctx.lineWidth = 1;
+	for (let x = 0; x < w; x += 32) {
+		ctx.beginPath();
+		ctx.moveTo(x, 0);
+		ctx.lineTo(x, h);
+		ctx.stroke();
+	}
+	for (let y = 0; y < h; y += 32) {
+		ctx.beginPath();
+		ctx.moveTo(0, y);
+		ctx.lineTo(w, y);
+		ctx.stroke();
+	}
+	ctx.strokeStyle = "#7eb8cc";
+	ctx.lineWidth = 3;
+	ctx.beginPath();
+	for (let i = 0; i <= 64; i++) {
+		const u = i / 64;
+		const x = 24 + u * (w - 48);
+		const y = h * .62 + Math.sin(u * 8 + time * 1.6) * 36 + Math.sin(u * 3 + time) * 12;
+		if (i === 0) ctx.moveTo(x, y);
+		else ctx.lineTo(x, y);
+	}
+	ctx.stroke();
+	ctx.fillStyle = "#d5e4ef";
+	ctx.font = "600 28px sans-serif";
+	ctx.fillText(title, 20, 40);
+	ctx.fillStyle = "#e0a23a";
+	ctx.font = "600 42px sans-serif";
+	ctx.fillText(formula, 20, h - 28);
+}
+function badgeTexture() {
+	const [c, g] = canvas(512, 256);
+	g.fillStyle = "#14386e";
+	g.fillRect(0, 0, 512, 256);
+	g.fillStyle = "#f4f7fb";
+	g.font = "700 92px sans-serif";
+	g.textAlign = "center";
+	g.textBaseline = "middle";
+	g.fillText("ECIT", 256, 88);
+	g.font = "700 64px sans-serif";
+	g.fillText("BAYEUX", 256, 176);
+	return texOf(c);
+}
+function plateTexture(label) {
+	const [c, g] = canvas(512, 128);
+	g.fillStyle = "#102033";
+	g.fillRect(0, 0, 512, 128);
+	g.strokeStyle = "#7eb8cc";
+	g.lineWidth = 6;
+	g.strokeRect(8, 8, 496, 112);
+	g.fillStyle = "#d5eef6";
+	g.font = "700 64px sans-serif";
+	g.textAlign = "center";
+	g.textBaseline = "middle";
+	g.fillText(label, 256, 68);
+	return texOf(c);
+}
+var labels = /* @__PURE__ */ new Map();
+function labelSprite(text, color) {
+	const key = `${color}|${text}`;
+	const hit = labels.get(key);
+	if (hit) return hit;
+	const probe = document.createElement("canvas").getContext("2d");
+	if (!probe) throw new Error("canvas");
+	probe.font = "600 64px sans-serif";
+	const width = Math.ceil(probe.measureText(text).width + 36);
+	const [c, g] = canvas(Math.max(64, width), 84);
+	g.font = "600 64px sans-serif";
+	g.fillStyle = color;
+	g.textAlign = "center";
+	g.textBaseline = "middle";
+	g.fillText(text, c.width / 2, c.height / 2);
+	const tex = texOf(c);
+	const h = .16;
+	const value = {
+		tex,
+		w: h * (c.width / c.height),
+		h
+	};
+	labels.set(key, value);
+	return value;
+}
+function Solid({ position, args, material, cast, receive, rotation }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+		position,
+		rotation,
+		material,
+		castShadow: cast,
+		receiveShadow: receive,
+		dispose: null,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args })
+	});
+}
+function HoloLabel({ text, position, color = "#c5e7f4" }) {
+	const sprite = (0, import_react.useMemo)(() => labelSprite(text, color), [text, color]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sprite", {
+		position,
+		scale: [
+			sprite.w,
+			sprite.h,
+			1
+		],
+		renderOrder: 2,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("spriteMaterial", {
+			map: sprite.tex,
+			transparent: true,
+			depthWrite: false,
+			toneMapped: false
+		})
+	});
+}
 var ctx = null;
 var master = null;
 var started = false;
@@ -665,8 +890,82 @@ var sfx = {
 	ui() {
 		if (!ctx) return;
 		tone(480, ctx.currentTime, .02, .08);
+	},
+	motor() {
+		if (!ctx) return;
+		tone(72, ctx.currentTime, .012, .1, "triangle");
+	},
+	cable() {
+		burst(160, .07, .022, 880);
 	}
 };
+/** Vertical hoist math. g matches layout.ts. The fixed-mass helpers stay for stage-1-era tests. */
+var HOIST_G = 9.81;
+40 * HOIST_G;
+var Y_MIN = 1.05;
+var Y_MAX = 9.15;
+var G_MOON = 1.62;
+var HOIST_Y_MIN = Y_MIN;
+var HOIST_Y_MAX = Y_MAX;
+var HOIST_V_MAX = 5.6;
+function finite(n, fallback) {
+	return Number.isFinite(n) ? n : fallback;
+}
+/** P = m·g. Defaults match the station gravity used by stage 1. */
+function weightOf(mass, g = HOIST_G) {
+	return finite(mass, 40) * finite(g, HOIST_G);
+}
+/** Positive upward: FR = T − P. */
+function netForceOf(tension, mass, g = HOIST_G) {
+	return finite(tension, 0) - weightOf(mass, g);
+}
+/** a = FR / m. The value the HUD shows is the value that is integrated. */
+function accelOf(tension, mass, g = HOIST_G) {
+	const m = Math.max(.5, finite(mass, 40));
+	const a = netForceOf(tension, m, g) / m;
+	return Number.isFinite(a) ? a : 0;
+}
+function integrateVariable(y, v, tension, mass, g, dt, locked, yMin = HOIST_Y_MIN, yMax = HOIST_Y_MAX) {
+	const step = Math.min(.05, Math.max(0, finite(dt, 0)));
+	const a = accelOf(tension, mass, g);
+	const y0 = finite(y, yMin);
+	if (locked) return {
+		y: y0,
+		v: 0,
+		a,
+		hitTop: false,
+		hitFloor: false
+	};
+	let vy = finite(v, 0) + a * step;
+	if (vy > 5.6) vy = HOIST_V_MAX;
+	if (vy < -5.6) vy = -5.6;
+	let py = y0 + vy * step;
+	let hitFloor = false;
+	let hitTop = false;
+	if (py < yMin) {
+		hitFloor = true;
+		py = yMin;
+		if (vy < 0) vy = 0;
+	} else if (py > yMax) {
+		hitTop = true;
+		py = yMax;
+		if (vy > 0) vy = 0;
+	}
+	if (!Number.isFinite(py) || !Number.isFinite(vy)) return {
+		y: y0,
+		v: 0,
+		a: 0,
+		hitTop: false,
+		hitFloor: false
+	};
+	return {
+		y: py,
+		v: vy,
+		a,
+		hitTop,
+		hitFloor
+	};
+}
 var SPAWN = {
 	x: 0,
 	z: 7.2,
@@ -881,6 +1180,78 @@ var BLOCKS = [
 		maxZ: -10.3,
 		h: 1.05,
 		kind: "prop"
+	},
+	{
+		minX: -5.75,
+		maxX: -5.3,
+		minZ: -63.1,
+		maxZ: -48.7,
+		h: 4.4,
+		kind: "hidden"
+	},
+	{
+		minX: 5.3,
+		maxX: 5.75,
+		minZ: -63.1,
+		maxZ: -48.7,
+		h: 4.4,
+		kind: "hidden"
+	},
+	{
+		minX: -5.75,
+		maxX: 5.75,
+		minZ: -63.1,
+		maxZ: -62.65,
+		h: 4.4,
+		kind: "hidden"
+	},
+	{
+		minX: -5.75,
+		maxX: 5.75,
+		minZ: -49.15,
+		maxZ: -48.7,
+		h: 4.4,
+		kind: "hidden"
+	},
+	{
+		minX: -4.05,
+		maxX: -3.1,
+		minZ: -54.95,
+		maxZ: -54.05,
+		h: .95,
+		kind: "hidden"
+	},
+	{
+		minX: -4.05,
+		maxX: -3.1,
+		minZ: -57.15,
+		maxZ: -56.25,
+		h: .95,
+		kind: "hidden"
+	},
+	{
+		minX: -4.05,
+		maxX: -3.1,
+		minZ: -59.35,
+		maxZ: -58.45,
+		h: .95,
+		kind: "hidden"
+	},
+	{
+		minX: 2.85,
+		maxX: 3.8,
+		minZ: -52.6,
+		maxZ: -51.85,
+		h: 1.2,
+		kind: "hidden"
+	},
+	{
+		minX: 3.7,
+		maxX: 4.45,
+		minZ: -56.7,
+		maxZ: -56.1,
+		h: 1.05,
+		kind: "hidden"
 	}
 ];
 /** Title beats. 0–1 are exterior; 2–8 move inside the station. */
@@ -939,6 +1310,8 @@ var sim = {
 	scanner: false,
 	freeplay: false,
 	solved: false,
+	stage: 1,
+	transit: 0,
 	x: SPAWN.x,
 	y: 0,
 	z: SPAWN.z,
@@ -984,6 +1357,7 @@ var sim = {
 	padSprint: false,
 	jumpEdge: false,
 	interactEdge: false,
+	actEdge: false,
 	scanEdge: false,
 	pauseEdge: false,
 	nextFoot: 0,
@@ -1095,6 +1469,9 @@ function say(speaker, text, seconds) {
 	sfx.radio();
 	publishNow();
 }
+function speak(speaker, text, seconds) {
+	say(speaker, text, seconds);
+}
 function puff(x, z) {
 	const slot = sim.puffs.find((item) => item.life <= 0) ?? sim.puffs[0];
 	if (!slot) return;
@@ -1157,7 +1534,7 @@ function toggleScanner() {
 	if (sim.scanner) {
 		sim.scans += 1;
 		sfx.scan();
-		if (!sim.sawScan) {
+		if (!sim.sawScan && sim.stage === 1) {
 			sim.sawScan = true;
 			say("NEXUS", "Scanner ativo. Ciano é velocidade, âmbar é atrito, branco é a sua força. Se ela não vence o atrito estático, o corpo não sai do lugar.", 6.5);
 			return;
@@ -1208,6 +1585,9 @@ function restart(toTitle) {
 	sim.scanner = false;
 	sim.freeplay = false;
 	sim.solved = false;
+	sim.stage = 1;
+	sim.transit = 0;
+	sim.actEdge = false;
 	sim.integrity = 100;
 	sim.cell = 100;
 	sim.pushes = 0;
@@ -1443,6 +1823,17 @@ function step(dt) {
 		}
 		return;
 	}
+	if (sim.stage === 2 && sim.transit > 0) {
+		sim.vx = 0;
+		sim.vz = 0;
+		sim.vy = 0;
+		sim.speed = 0;
+		sim.grounded = true;
+		sim.anim = "walk";
+		sim.lookDX = 0;
+		sim.lookDY = 0;
+		return;
+	}
 	sim.camYaw -= sim.lookDX * .0042;
 	sim.camPitch = Math.max(.22, Math.min(.78, sim.camPitch - sim.lookDY * .0032));
 	sim.lookDX = 0;
@@ -1508,7 +1899,8 @@ function step(dt) {
 	}
 	if (sim.interactEdge) {
 		sim.interactEdge = false;
-		tryInteract();
+		if (sim.stage === 2) sim.actEdge = true;
+		else tryInteract();
 	}
 	sim.pushing = false;
 	tickCells(dt);
@@ -1569,7 +1961,7 @@ function step(dt) {
 						sim.vx += nx * vin;
 						sim.vz += nz * vin;
 					}
-					if (crate.kind === "heavy" && !sim.sawHeavy) {
+					if (crate.kind === "heavy" && !sim.sawHeavy && sim.stage === 1) {
 						sim.sawHeavy = true;
 						say("NEWTON", "A bateria não se move. Abra o scanner e compare a sua força com o atrito estático.", 5.5);
 					}
@@ -1669,11 +2061,11 @@ function step(dt) {
 			}
 		}
 	}
-	if (!sim.sawHall && sim.z < -1.6) {
+	if (sim.stage === 1 && !sim.sawHall && sim.z < -1.6) {
 		sim.sawHall = true;
 		say("NEWTON", "Três pistas à frente: gelo, metal e borracha. A força que você aplica é a mesma. A aceleração, não.", 6);
 	}
-	if (!sim.sawBay && sim.z < -10.2) {
+	if (sim.stage === 1 && !sim.sawBay && sim.z < -10.2) {
 		sim.sawBay = true;
 		sim.objective = sim.solved ? sim.objective : "Acople o módulo de 20 kg na plataforma azul";
 		say("NEWTON", "Empurre o módulo de 20 kg até a plataforma. Quando soltar, ele continua — até o atrito agir.", 6.2);
@@ -1700,6 +2092,21 @@ function installProbe() {
 	window.__controlsTest = {
 		getYaw: () => sim.yaw,
 		getSpeed: () => Math.hypot(sim.vx, sim.vz),
+		getHeld: () => [...held],
+		getState: () => ({
+			phase: sim.phase,
+			x: sim.x,
+			y: sim.y,
+			z: sim.z,
+			yaw: sim.yaw,
+			vy: sim.vy,
+			speed: Math.hypot(sim.vx, sim.vz),
+			paused: sim.paused,
+			mapOpen: sim.mapOpen,
+			scanner: sim.scanner,
+			pushes: sim.pushes,
+			stage: sim.stage
+		}),
 		setKeys: (codes) => {
 			held.clear();
 			for (const code of codes) held.add(code);
@@ -1707,6 +2114,1529 @@ function installProbe() {
 		advanceTitle: (t) => {
 			sim.shotTime = t;
 		}
+	};
+}
+var PANEL = {
+	x: 2.55,
+	z: -52.15
+};
+var SHAFT = {
+	x: 0,
+	z: -58.2
+};
+var GRAV = {
+	x: 4.05,
+	z: -56.4
+};
+var LOADS = [
+	{
+		id: "a",
+		name: "Carga A",
+		mass: 20,
+		x: -3.55,
+		z: -54.5
+	},
+	{
+		id: "b",
+		name: "Carga B",
+		mass: 50,
+		x: -3.55,
+		z: -56.7
+	},
+	{
+		id: "c",
+		name: "Carga C",
+		mass: 100,
+		x: -3.55,
+		z: -58.9
+	}
+];
+var Y_START = 2.55;
+var TRANSIT = 6.4;
+var T_MAX = 1800;
+var elevator = {
+	active: false,
+	goal: "scan",
+	tension: 300,
+	mass: 40,
+	g: HOIST_G,
+	loadId: "maint",
+	y: Y_START,
+	v: 0,
+	scanned: false,
+	arrived: false,
+	alarm: false,
+	alarmT: 0,
+	done: false,
+	hint: "",
+	note: "",
+	balanceHold: 0,
+	compareHold: 0,
+	drop: 0,
+	dropHold: 0,
+	labUp: false,
+	labDown: false,
+	labBalance: false,
+	labHold: 0,
+	proto: 0,
+	protoHold: 0,
+	braking: false,
+	cheer: 0,
+	finale: 0,
+	prevE: false,
+	prevFr: 0,
+	adjusting: false,
+	motorT: 0,
+	tries: 0,
+	t0: 0,
+	swaps: 0,
+	saidG: false,
+	saidWait: false,
+	saidSame: false,
+	lineQueue: [],
+	mastery: {
+		peso: false,
+		tracao: false,
+		resultante: false,
+		massa: false,
+		aceleracao: false,
+		newton: false,
+		gravidade: false
+	}
+};
+function resetMotion() {
+	elevator.goal = "scan";
+	elevator.tension = 300;
+	elevator.mass = 40;
+	elevator.g = HOIST_G;
+	elevator.loadId = "maint";
+	elevator.y = Y_START;
+	elevator.v = 0;
+	elevator.scanned = false;
+	elevator.arrived = false;
+	elevator.alarm = false;
+	elevator.alarmT = 0;
+	elevator.done = false;
+	elevator.hint = "";
+	elevator.note = "";
+	elevator.balanceHold = 0;
+	elevator.compareHold = 0;
+	elevator.drop = 0;
+	elevator.dropHold = 0;
+	elevator.labUp = false;
+	elevator.labDown = false;
+	elevator.labBalance = false;
+	elevator.labHold = 0;
+	elevator.proto = 0;
+	elevator.protoHold = 0;
+	elevator.braking = false;
+	elevator.cheer = 0;
+	elevator.finale = 0;
+	elevator.prevE = false;
+	elevator.prevFr = 0;
+	elevator.adjusting = false;
+	elevator.motorT = 0;
+	elevator.tries = 0;
+	elevator.swaps = 0;
+	elevator.saidG = false;
+	elevator.saidWait = false;
+	elevator.saidSame = false;
+	elevator.lineQueue = [];
+	elevator.mastery = {
+		peso: false,
+		tracao: false,
+		resultante: false,
+		massa: false,
+		aceleracao: false,
+		newton: false,
+		gravidade: false
+	};
+}
+function queueAs(speaker, text, seconds) {
+	elevator.lineQueue.push({
+		speaker,
+		text,
+		seconds
+	});
+}
+function queue(text, seconds) {
+	queueAs("NEWTON", text, seconds);
+}
+function pumpLines() {
+	if (sim.line) return;
+	const next = elevator.lineQueue.shift();
+	if (!next) return;
+	speak(next.speaker, next.text, next.seconds);
+}
+function comma(n, digits = 1) {
+	return (Math.abs(n) < 5 * 10 ** -(digits + 1) ? 0 : n).toFixed(digits).replace(".", ",");
+}
+function loadName() {
+	if (elevator.loadId === "protocol") return "Protocolo Newton";
+	const found = LOADS.find((item) => item.id === elevator.loadId);
+	if (found) return found.name;
+	return "Contêiner de manutenção";
+}
+function hoistState() {
+	const mass = elevator.mass;
+	const g = elevator.g;
+	const T = elevator.tension;
+	const P = weightOf(mass, g);
+	const Fr = netForceOf(T, mass, g);
+	const a = accelOf(T, mass, g);
+	const state = Math.abs(Fr) < .8 ? "EQUILÍBRIO" : Fr > 0 ? "ACELERANDO ↑" : "ACELERANDO ↓";
+	return {
+		mass,
+		g,
+		P,
+		T,
+		Fr,
+		a,
+		v: elevator.v,
+		y: elevator.y,
+		state,
+		goal: elevator.goal,
+		hint: elevator.hint,
+		note: elevator.note,
+		alarm: elevator.alarm,
+		done: elevator.done,
+		scanned: elevator.scanned,
+		active: elevator.active,
+		name: loadName(),
+		finale: elevator.finale,
+		tries: elevator.tries,
+		elapsed: Math.max(0, sim.time - elevator.t0),
+		mastery: elevator.mastery,
+		moon: g < 5
+	};
+}
+function near(x, z, r) {
+	return Math.hypot(sim.x - x, sim.z - z) < r;
+}
+function nearPanel() {
+	return near(PANEL.x, PANEL.z, 2.15);
+}
+function nearHoist() {
+	return nearPanel() || near(SHAFT.x, SHAFT.z, 6.8);
+}
+function nearLoad() {
+	let best = null;
+	let bestD = 1.45;
+	for (const load of LOADS) {
+		const d = Math.hypot(sim.x - load.x, sim.z - load.z);
+		if (d < bestD) {
+			bestD = d;
+			best = load;
+		}
+	}
+	return best;
+}
+function clampTension(value) {
+	if (!Number.isFinite(value)) return elevator.tension;
+	return Math.max(0, Math.min(T_MAX, Math.round(value * 10) / 10));
+}
+function physicsNote(P, T, Fr, a, v) {
+	if (Math.abs(Fr) < 8 && Math.abs(v) > .22) return "Resultante nula — e a carga continua em movimento.";
+	if (Math.abs(Fr) < 8) return "Forças equilibradas. A resultante é nula.";
+	if (T > P + 8 && a > .05) return "Tração maior que o peso. A carga acelera para cima.";
+	if (T < P - 8 && a < -.05) return "Peso maior que a tração. A aceleração aponta para baixo.";
+	if (a > .05) return "A aceleração aponta para cima.";
+	if (a < -.05) return "A aceleração aponta para baixo.";
+	return "Observe o peso, a tração e a diferença entre eles.";
+}
+function bumpTension(dir, amount) {
+	elevator.tension = clampTension(elevator.tension + dir * amount);
+	elevator.mastery.tracao = true;
+}
+function applyLoad(load) {
+	const prevM = elevator.mass;
+	const prevA = accelOf(elevator.tension, prevM, elevator.g);
+	const nextA = accelOf(elevator.tension, load.mass, elevator.g);
+	elevator.mass = load.mass;
+	elevator.loadId = load.id;
+	elevator.mastery.massa = true;
+	elevator.swaps += 1;
+	sfx.ui();
+	if (Math.abs(prevM - load.mass) > .5) queue(`${load.name}, ${load.mass} kg. A tração ficou em ${comma(elevator.tension, 0)} N. A aceleração foi de ${comma(prevA, 2)} para ${comma(nextA, 2)} m/s².`, 5.6);
+	if (elevator.swaps >= 2 && !elevator.saidSame) {
+		elevator.saidSame = true;
+		queue("Mesma tração não significa mesma resultante: o peso muda com a massa. E, para a mesma resultante, a massa maior acelera menos. a = Fr / m.", 6.4);
+	}
+}
+function toggleGravity() {
+	const moon = elevator.g < 5;
+	const mass = elevator.mass;
+	elevator.g = moon ? HOIST_G : G_MOON;
+	elevator.mastery.gravidade = true;
+	sfx.ui();
+	queue(`Simulador em gravidade da ${elevator.g < 5 ? "Lua" : "estação"}. A massa continua ${comma(mass, 0)} kg. O peso passou a ${comma(weightOf(mass, elevator.g), 1)} N.`, 5.2);
+	if (!elevator.saidG) {
+		elevator.saidG = true;
+		queueAs("TIGRÃO", "Minha massa continua a mesma.", 2.8);
+		queue("Exatamente. O que mudou foi a força gravitacional. Peso é força. Massa, não.", 4.6);
+	}
+}
+function enterDescent() {
+	elevator.goal = "descent";
+	elevator.drop = 0;
+	elevator.dropHold = 0;
+	elevator.mastery.resultante = true;
+	if (elevator.y < 4.3) elevator.y = 4.9;
+	elevator.v = 0;
+	elevator.tension = clampTension(weightOf(elevator.mass, elevator.g) - 110);
+	elevator.alarm = true;
+	elevator.alarmT = 2.4;
+	sim.shake = Math.max(sim.shake, .16);
+	sfx.cable();
+	queue("A tração caiu abaixo do peso. A carga acelera para baixo. Isso é a força resultante, não um defeito do cabo.", 5.4);
+}
+function enterLab() {
+	elevator.goal = "lab";
+	elevator.g = HOIST_G;
+	elevator.labUp = false;
+	elevator.labDown = false;
+	elevator.labBalance = false;
+	elevator.labHold = 0;
+	elevator.alarm = false;
+	queue("Laboratório de forças. Três cargas: 20, 50 e 100 kg. Escolha uma com E e produza subida, equilíbrio e descida.", 6.2);
+	queue("O simulador à direita troca a gravidade entre a estação e a Lua. A massa não muda. O peso, sim.", 5.4);
+}
+function enterProtocol() {
+	elevator.goal = "protocol";
+	elevator.g = HOIST_G;
+	elevator.mass = 120;
+	elevator.loadId = "protocol";
+	elevator.y = HOIST_Y_MIN + .15;
+	elevator.v = 0;
+	elevator.tension = clampTension(weightOf(120, HOIST_G));
+	elevator.proto = 0;
+	elevator.protoHold = 0;
+	elevator.braking = false;
+	elevator.mastery.newton = true;
+	sfx.ui();
+	queue("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
+	queue("Mantenha parada, suba acelerando, siga com velocidade constante e desacelere antes da plataforma.", 5.6);
+}
+function finish() {
+	if (elevator.done) return;
+	elevator.done = true;
+	elevator.goal = "done";
+	elevator.alarm = false;
+	elevator.v = 0;
+	elevator.tension = clampTension(weightOf(elevator.mass, HOIST_G));
+	elevator.g = HOIST_G;
+	elevator.finale = 7.2;
+	elevator.cheer = 7.2;
+	sim.animLock = "celebrate";
+	sim.shake = Math.max(sim.shake, .12);
+	sim.objective = "Etapa 2 concluída";
+	sfx.success();
+	queue("Você descobriu algo importante.", 2.8);
+	queue("Uma força isolada não determina o movimento.", 3.4);
+	queue("O que importa é a força resultante.", 3.2);
+	queue("Quando você entende as forças, começa a entender o movimento.", 4.2);
+}
+function beginStage2() {
+	if (sim.stage === 2 && elevator.active) return;
+	resetMotion();
+	elevator.active = true;
+	elevator.t0 = sim.time;
+	elevator.hint = "Caminhe até o painel. A carga está pronta e mesmo assim não sobe.";
+	sim.stage = 2;
+	sim.phase = "play";
+	sim.paused = false;
+	sim.mapOpen = false;
+	sim.freeplay = false;
+	sim.scanner = false;
+	sim.animLock = null;
+	sim.transit = TRANSIT;
+	sim.x = -3.1;
+	sim.y = 0;
+	sim.z = -50.35;
+	sim.yaw = Math.PI;
+	sim.vx = 0;
+	sim.vy = 0;
+	sim.vz = 0;
+	sim.speed = 0;
+	sim.objective = "Investigue o elevador e descubra por que ele não sobe.";
+	elevator.lineQueue = [
+		{
+			speaker: "NEWTON",
+			text: "Tigrão, temos um problema.",
+			seconds: 3.1
+		},
+		{
+			speaker: "NEWTON",
+			text: "A carga está pronta, mas o elevador não consegue colocá-la em movimento.",
+			seconds: 4.6
+		},
+		{
+			speaker: "NEWTON",
+			text: "Você está diante de três forças: peso, tração e força resultante.",
+			seconds: 4.6
+		},
+		{
+			speaker: "NEWTON",
+			text: "Descubra como elas determinam o movimento.",
+			seconds: 3.6
+		}
+	];
+	const first = elevator.lineQueue.shift();
+	if (first) speak(first.speaker, first.text, first.seconds);
+	else sfx.ui();
+}
+function readForces() {
+	const P = weightOf(elevator.mass, elevator.g);
+	const T = elevator.tension;
+	return {
+		P,
+		T,
+		Fr: netForceOf(T, elevator.mass, elevator.g),
+		a: accelOf(T, elevator.mass, elevator.g)
+	};
+}
+function tickElevator(dt) {
+	const tap = sim.actEdge;
+	sim.actEdge = false;
+	const hdt = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	if (sim.stage !== 2) {
+		elevator.active = false;
+		elevator.alarm = false;
+		elevator.adjusting = false;
+		return;
+	}
+	if (!elevator.active) return;
+	if (sim.transit > 0) {
+		sim.transit = Math.max(0, sim.transit - hdt);
+		const u = 1 - sim.transit / TRANSIT;
+		const s = u * u * (3 - 2 * u);
+		sim.x = -3.1;
+		sim.y = 0;
+		sim.z = -50.35 + (-53.15 - -50.35) * Math.min(1, s);
+		sim.yaw = Math.PI;
+		sim.vx = 0;
+		sim.vz = 0;
+		sim.speed = 0;
+		sim.objective = "Investigue o elevador e descubra por que ele não sobe.";
+		pumpLines();
+		return;
+	}
+	if (elevator.finale > 0) {
+		elevator.finale = Math.max(0, elevator.finale - hdt);
+		sim.x = .2;
+		sim.y = 0;
+		sim.z = -54.6;
+		sim.yaw = 0;
+		sim.vx = 0;
+		sim.vy = 0;
+		sim.vz = 0;
+		sim.speed = 0;
+		sim.animLock = elevator.finale > 0 ? "celebrate" : null;
+		sim.objective = "Etapa 2 concluída";
+		pumpLines();
+		return;
+	}
+	if (elevator.alarmT > 0) {
+		elevator.alarmT = Math.max(0, elevator.alarmT - hdt);
+		elevator.alarm = elevator.alarmT > 0;
+	}
+	if (sim.phase !== "play" || sim.paused || sim.mapOpen) {
+		elevator.adjusting = false;
+		pumpLines();
+		return;
+	}
+	const e = held.has("KeyE");
+	const shift = held.has("ShiftLeft") || held.has("ShiftRight") || sim.touchSprint;
+	const atPanel = nearPanel();
+	const load = nearLoad();
+	const atGrav = near(GRAV.x, GRAV.z, 1.55);
+	elevator.adjusting = Boolean(atPanel && e && elevator.goal !== "scan" && elevator.goal !== "done");
+	if (tap && load && elevator.goal === "lab") applyLoad(load);
+	else if (tap && atGrav && elevator.goal === "lab") toggleGravity();
+	else if (tap && load && elevator.goal !== "lab") queue("As cargas do laboratório entram depois que você controlar a descida.", 3.6);
+	else if (tap && atGrav && elevator.goal !== "lab") queue("O simulador de gravidade abre no laboratório de forças.", 3.4);
+	else if (elevator.goal === "scan" && tap && atPanel && !elevator.saidWait) {
+		elevator.saidWait = true;
+		queue("Antes de alterar qualquer coisa, observe. Abra o scanner na carga.", 3.8);
+	} else if (atPanel && elevator.goal !== "scan" && elevator.goal !== "done") {
+		const dir = shift ? -1 : 1;
+		const gap = Math.abs(elevator.tension - weightOf(elevator.mass, elevator.g));
+		const rate = gap > 80 ? Math.max(36, Math.min(120, elevator.mass * .9)) : gap > 25 ? 22 : 9;
+		const tapStep = gap > 60 ? Math.max(10, elevator.mass * .22) : 2;
+		if (e) {
+			if (!elevator.prevE) bumpTension(dir, Math.min(8, tapStep));
+			else bumpTension(dir, rate * hdt);
+		} else if (tap) bumpTension(dir, tapStep);
+	}
+	elevator.prevE = e;
+	const locked = elevator.goal === "scan" || elevator.goal === "done";
+	const prevV = elevator.v;
+	const step = integrateVariable(elevator.y, elevator.v, elevator.tension, elevator.mass, elevator.g, hdt, locked);
+	elevator.y = step.y;
+	elevator.v = step.v;
+	if (step.hitFloor && prevV < -1.2 && !locked) {
+		elevator.tries += 1;
+		elevator.alarmT = Math.max(elevator.alarmT, 1.3);
+		elevator.y = Math.max(elevator.y, 3.5);
+		elevator.v = -.15;
+		sfx.fail();
+		queue("Impacto no piso. A velocidade estava grande. Aumente a tração antes do fim da descida.", 4.4);
+	}
+	if (step.hitTop && elevator.goal === "protocol" && elevator.proto < 3 && !(elevator.braking && Math.abs(prevV) < .55)) {
+		elevator.tries += 1;
+		elevator.y = 6.15;
+		elevator.v = .22;
+		sfx.fail();
+		queue("A plataforma chegou cedo demais. Desacelere no caminho: tração menor que o peso enquanto a carga ainda sobe.", 5.2);
+	}
+	const { P, T, Fr, a } = readForces();
+	elevator.note = physicsNote(P, T, Fr, a, elevator.v);
+	if (elevator.prevFr * Fr < -1 && Math.abs(Fr) > 4 && Math.abs(elevator.prevFr) > 4) sfx.cable();
+	elevator.prevFr = Fr;
+	if (Math.abs(Fr) < 8) elevator.mastery.resultante = true;
+	if (Math.abs(elevator.v) > .22) {
+		elevator.motorT += hdt;
+		if (elevator.motorT > .48) {
+			elevator.motorT = 0;
+			sfx.motor();
+		}
+	}
+	if (elevator.goal === "scan") {
+		sim.objective = elevator.arrived ? "2 · Ative o scanner" : "1 · Investigue o elevador";
+		if (!elevator.arrived && atPanel) {
+			elevator.arrived = true;
+			queue("O cabo está frouxo para o peso desta carga. Escaneie antes de mudar a tração.", 4.4);
+		}
+		elevator.hint = elevator.arrived ? "Q liga o scanner. Peso para baixo, tração para cima." : "Caminhe até o painel do guincho. A carga não sobe.";
+		if (sim.scanner && nearHoist()) {
+			elevator.scanned = true;
+			elevator.mastery.peso = true;
+			elevator.goal = "compare";
+			elevator.compareHold = 0;
+			queue("Peso é m·g, para baixo. Tração é o cabo, para cima. As duas existem ao mesmo tempo.", 5);
+			queue("E aumenta a tração. Shift+E diminui. No toque, Agir faz o mesmo passo — Correr inverte.", 4.6);
+		}
+	} else if (elevator.goal === "compare") {
+		sim.objective = "3 · Compare o peso e a tração";
+		elevator.hint = T > P + 12 ? "A tração já supera o peso. A resultante aponta para cima." : T < P - 12 ? `Peso ${comma(P, 1)} N, tração ${comma(T, 1)} N. A resultante ainda aponta para baixo.` : "Quase iguais. Resultante perto de zero não é ausência de forças.";
+		if (elevator.mastery.tracao) elevator.compareHold += hdt;
+		if (elevator.compareHold > .9 || elevator.y > 3.0999999999999996 && elevator.v > .12 && Fr > 0) {
+			elevator.goal = "rise";
+			queue("A diferença entre elas é a força resultante. Fr = T − P. E Fr = m·a.", 4.8);
+			queue("Faça a carga subir. A tração precisa ser maior que o peso.", 3.8);
+		}
+	} else if (elevator.goal === "rise") {
+		sim.objective = "4 · Faça a carga subir";
+		elevator.hint = Fr > 8 ? "Tração maior que o peso. A resultante aponta para cima." : Math.abs(Fr) <= 8 ? "Forças equilibradas. Se a carga estava parada, ela continua parada." : "A tração ainda não supera o peso.";
+		if (elevator.y > 3.0999999999999996 && elevator.v > .14 && Fr > 0) {
+			elevator.mastery.aceleracao = true;
+			elevator.goal = "balance";
+			elevator.balanceHold = 0;
+			queue("Agora pare a aceleração. Iguale a tração ao peso. Se ela ainda sobe, a velocidade não zera na hora.", 5.8);
+		}
+	} else if (elevator.goal === "balance") {
+		sim.objective = "5 · Pare a aceleração";
+		if (Math.abs(Fr) <= 8) {
+			elevator.balanceHold += hdt;
+			elevator.hint = Math.abs(elevator.v) > .35 ? "Resultante quase zero: a velocidade se conserva. Reduza a tração para frear, depois volte ao peso." : "Tração e peso continuam. A resultante é zero. A aceleração também.";
+		} else {
+			elevator.balanceHold = 0;
+			elevator.hint = Fr > 0 ? "Ainda há resultante para cima. A tração está maior que o peso." : "Ainda há resultante para baixo.";
+		}
+		if (elevator.balanceHold > 1.05 && Math.abs(elevator.v) < .35) {
+			elevator.v = 0;
+			enterDescent();
+		}
+	} else if (elevator.goal === "descent") {
+		sim.objective = "6 · Controle a descida";
+		if (elevator.drop === 0) {
+			elevator.hint = a < -.12 ? "Aceleração para baixo. Deixe a velocidade crescer um pouco." : "Reduza a tração abaixo do peso.";
+			if (a < -.12 && elevator.v < -.18) elevator.drop = 1;
+		} else if (elevator.drop === 1) {
+			elevator.hint = "Iguale a tração ao peso sem parar a carga. Resultante zero não apaga a velocidade.";
+			if (Math.abs(Fr) <= 8 && elevator.v < -.12) elevator.dropHold += hdt;
+			else elevator.dropHold = 0;
+			if (elevator.dropHold > .75) {
+				elevator.drop = 2;
+				elevator.mastery.resultante = true;
+				queue("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
+			}
+		} else {
+			elevator.hint = "Freie antes do piso. Tração um pouco maior que o peso, até a velocidade chegar perto de zero.";
+			if (elevator.y > 1.7 && elevator.y < 8.2 && Math.abs(elevator.v) < .28 && a > -.08) enterLab();
+		}
+	} else if (elevator.goal === "lab") {
+		sim.objective = "Laboratório · subida, equilíbrio e descida";
+		if (!(elevator.loadId === "a" || elevator.loadId === "b" || elevator.loadId === "c")) elevator.hint = "E numa carga à esquerda: 20, 50 ou 100 kg. Depois ajuste a tração no painel.";
+		else {
+			if (a > .3 && elevator.v > .1) elevator.labUp = true;
+			if (a < -.3 && elevator.v < -.1) elevator.labDown = true;
+			if (Math.abs(Fr) <= 8) elevator.labHold += hdt;
+			else elevator.labHold = 0;
+			if (elevator.labHold > .65) elevator.labBalance = true;
+			const missing = [
+				elevator.labUp ? "" : "subida",
+				elevator.labBalance ? "" : "equilíbrio",
+				elevator.labDown ? "" : "descida"
+			].filter(Boolean);
+			elevator.hint = missing.length ? `Com ${comma(elevator.mass, 0)} kg falta: ${missing.join(", ")}.` : "As três situações estão registradas.";
+			if (elevator.labUp && elevator.labDown && elevator.labBalance) enterProtocol();
+		}
+	} else if (elevator.goal === "protocol") {
+		sim.objective = "7 · Protocolo Newton";
+		if (elevator.proto === 0) {
+			elevator.hint = "Mantenha a carga parada: tração igual ao peso, velocidade zero.";
+			if (Math.abs(Fr) < 12 && Math.abs(elevator.v) < .18 && elevator.y < 2.2) elevator.protoHold += hdt;
+			else elevator.protoHold = 0;
+			if (elevator.protoHold > .85) {
+				elevator.proto = 1;
+				elevator.protoHold = 0;
+				queue("Parada, com forças presentes. Agora faça a carga subir acelerando.", 4);
+			}
+		} else if (elevator.proto === 1) {
+			elevator.hint = "Aceleração para cima. Passe da metade do poço ainda ganhando velocidade.";
+			if (elevator.y > 3.6 && a > .28 && elevator.v > .2) {
+				elevator.proto = 2;
+				elevator.protoHold = 0;
+				queue("Agora velocidade constante: iguale a tração ao peso enquanto ela ainda sobe.", 4.6);
+			}
+		} else if (elevator.proto === 2) {
+			elevator.hint = Math.abs(elevator.v) < .12 ? "A velocidade zerou. Aumente um pouco a tração e, no meio da subida, iguale de novo." : "Resultante perto de zero e velocidade para cima. Segure assim por um instante.";
+			if (Math.abs(Fr) <= 10 && elevator.v > .22) elevator.protoHold += hdt;
+			else elevator.protoHold = 0;
+			if (elevator.protoHold > .8) {
+				elevator.proto = 3;
+				queue("Força resultante zero, velocidade conservada. Desacelere antes da plataforma.", 4.6);
+			}
+		} else {
+			elevator.hint = elevator.braking ? "Quase lá. Chegue à plataforma de cima com velocidade baixa." : "Tração abaixo do peso, ainda subindo, para a velocidade cair antes do topo.";
+			if (a < -.15 && elevator.v > .12 && elevator.y < 8.5) elevator.braking = true;
+			if (elevator.braking && elevator.y > 8.55 && Math.abs(elevator.v) < .45) finish();
+		}
+	} else {
+		sim.objective = "Etapa 2 concluída · força resultante";
+		elevator.hint = "Tração e peso continuam. Quem decide a aceleração é a resultante.";
+		elevator.alarm = false;
+	}
+	if (Math.abs(elevator.v) > 5.6) elevator.v = Math.sign(elevator.v) * HOIST_V_MAX;
+	pumpLines();
+}
+if (typeof window !== "undefined") window.__elevatorTest = {
+	begin: beginStage2,
+	get: hoistState,
+	setTension: (n) => {
+		elevator.tension = clampTension(n);
+	},
+	setMass: (n) => {
+		elevator.mass = n;
+	},
+	setGravity: (n) => {
+		elevator.g = n;
+	},
+	skipTransit: () => {
+		sim.transit = 0;
+		sim.x = -3.1;
+		sim.z = -53.15;
+		sim.yaw = Math.PI;
+	}
+};
+function Cargo() {
+	const car = (0, import_react.useRef)(null);
+	const cable = (0, import_react.useRef)(null);
+	const alarmL = (0, import_react.useRef)(null);
+	const alarmR = (0, import_react.useRef)(null);
+	const drum = (0, import_react.useRef)(null);
+	const pick = (0, import_react.useRef)(null);
+	const plate = (0, import_react.useMemo)(() => plateTexture("NEWTON-1"), []);
+	const mission = (0, import_react.useMemo)(() => plateTexture("DINÂMICA"), []);
+	const screen = (0, import_react.useMemo)(() => M.emit.clone(), []);
+	useFrame((_, dt) => {
+		const y = elevator.active ? elevator.y : 2.55;
+		if (car.current) car.current.position.y = y;
+		if (cable.current) {
+			const top = 10.6;
+			const hook = y + .72;
+			const len = Math.max(.3, top - hook);
+			cable.current.scale.y = len;
+			cable.current.position.y = hook + len / 2;
+			const tension = .02 + Math.min(.03, elevator.tension / 6e4);
+			cable.current.scale.x = tension / .025;
+			cable.current.scale.z = tension / .025;
+		}
+		if (drum.current) drum.current.rotation.x += elevator.v * dt * 1.6;
+		if (pick.current) {
+			const load = LOADS.find((item) => item.id === elevator.loadId);
+			pick.current.visible = Boolean(load);
+			if (load) pick.current.position.set(load.x, .05, load.z);
+		}
+		screen.emissive.set(elevator.alarm ? "#e07a4a" : elevator.v > .2 ? "#8fd0a8" : elevator.v < -.2 ? "#e0a23a" : "#7eb8cc");
+		const flash = elevator.alarm ? 1.2 + Math.sin(sim.time * 14) * 1.6 : .12;
+		if (alarmL.current) alarmL.current.intensity = flash;
+		if (alarmR.current) alarmR.current.intensity = flash;
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			position: [
+				0,
+				0,
+				-56
+			],
+			receiveShadow: true,
+			material: M.floor,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [11.2, 14.6] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			position: [
+				0,
+				.02,
+				-58.2
+			],
+			material: M.lane,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ringGeometry", { args: [
+				1.15,
+				1.45,
+				28
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			position: [
+				0,
+				4.35,
+				-56
+			],
+			material: M.hullDark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [11, 14.4] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				-5.52,
+				2.15,
+				-56
+			],
+			args: [
+				.28,
+				4.3,
+				14.2
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				5.52,
+				2.15,
+				-56
+			],
+			args: [
+				.28,
+				4.3,
+				14.2
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				0,
+				2.15,
+				-62.85
+			],
+			args: [
+				11,
+				4.3,
+				.28
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				0,
+				2.15,
+				-48.95
+			],
+			args: [
+				11,
+				4.3,
+				.28
+			],
+			material: M.hullDark
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				0,
+				1.2,
+				-48.78
+			],
+			args: [
+				2.2,
+				2.4,
+				.08
+			],
+			material: M.suitBlue
+		}),
+		[
+			-4.2,
+			-1.4,
+			1.4,
+			4.2
+		].map((x) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				x,
+				2.2,
+				-62.6
+			],
+			material: M.hullDark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.12,
+				4,
+				.12
+			] })
+		}, x)),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-5.2,
+				3.55,
+				-56
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.06,
+				.06,
+				13.5,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				5.2,
+				3.15,
+				-57
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.05,
+				.05,
+				12,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				.04,
+				-55
+			],
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			material: M.stripe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.16, 8] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				-1.15,
+				5.4,
+				-58.2
+			],
+			args: [
+				.18,
+				9.2,
+				.18
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				1.15,
+				5.4,
+				-58.2
+			],
+			args: [
+				.18,
+				9.2,
+				.18
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				0,
+				10.15,
+				-58.2
+			],
+			args: [
+				2.8,
+				.28,
+				1.4
+			],
+			material: M.suitBlue
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				9.7,
+				-58.2
+			],
+			rotation: [
+				Math.PI / 2,
+				0,
+				0
+			],
+			material: M.gold,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("torusGeometry", { args: [
+				.28,
+				.05,
+				8,
+				16
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			ref: drum,
+			position: [
+				0,
+				10.05,
+				-58.2
+			],
+			rotation: [
+				0,
+				0,
+				Math.PI / 2
+			],
+			material: M.hullDark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.16,
+				.16,
+				.72,
+				12
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			ref: cable,
+			position: [
+				0,
+				8,
+				-58.2
+			],
+			material: M.hullDark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.025,
+				.025,
+				1,
+				6
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: car,
+			position: [
+				SHAFT.x,
+				2.55,
+				SHAFT.z
+			],
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.suit,
+					castShadow: true,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						1.35,
+						1.05,
+						1.15
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						0,
+						.59
+					],
+					material: M.suitBlue,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						1.05,
+						.28,
+						.04
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						.62,
+						0
+					],
+					material: M.gold,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.28,
+						.12,
+						.28
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+					position: [
+						0,
+						.18,
+						.62
+					],
+					rotation: [
+						0,
+						0,
+						0
+					],
+					dispose: null,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.7, .22] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+						map: plate,
+						toneMapped: false
+					})]
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			position: [
+				3.15,
+				0,
+				-52.2
+			],
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+					position: [
+						0,
+						.55,
+						0
+					],
+					args: [
+						1.15,
+						1.1,
+						.7
+					],
+					material: M.hullDark
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						1.28,
+						.28
+					],
+					material: M.dark,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.7,
+						.42,
+						.06
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						1.28,
+						.32
+					],
+					material: screen,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.58, .3] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.28,
+						.7,
+						.38
+					],
+					material: M.stripe,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.08,
+						.2,
+						.08
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.28,
+						.7,
+						.38
+					],
+					material: M.suitBlue,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+						.06,
+						.06,
+						.22,
+						8
+					] })
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+			position: [
+				0,
+				2.4,
+				-62.55
+			],
+			dispose: null,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [2.4, .42] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshBasicMaterial", {
+				map: mission,
+				toneMapped: false
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "SETOR DE CARGA",
+			position: [
+				0,
+				3.3,
+				-62.4
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "P = m · g",
+			position: [
+				-3.3,
+				3.15,
+				-62.45
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "FR = T − P",
+			position: [
+				0,
+				2.55,
+				-62.45
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "a = FR / m",
+			position: [
+				3.3,
+				3.15,
+				-62.45
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "GUINCHO",
+			position: [
+				3.15,
+				1.85,
+				-52.2
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "PLATAFORMA",
+			position: [
+				2.3,
+				8.95,
+				-57.1
+			]
+		}),
+		LOADS.map((load) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			position: [
+				load.x,
+				.36,
+				load.z
+			],
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: load.mass > 80 ? M.dark : load.mass > 30 ? M.hull : M.suit,
+					castShadow: true,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.72,
+						.58,
+						.72
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						.08,
+						.37
+					],
+					material: M.stripe,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.46,
+						.06,
+						.03
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+					text: `${load.name}  ${load.mass} kg`,
+					position: [
+						0,
+						.62,
+						0
+					]
+				})
+			]
+		}, load.id)),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			ref: pick,
+			visible: false,
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			material: M.lane,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ringGeometry", { args: [
+				.55,
+				.68,
+				24
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			position: [
+				GRAV.x,
+				0,
+				GRAV.z
+			],
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+				position: [
+					0,
+					.48,
+					0
+				],
+				args: [
+					.62,
+					.96,
+					.42
+				],
+				material: M.hullDark
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					.92,
+					.22
+				],
+				material: M.emit,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.36, .18] })
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "g  ESTAÇÃO / LUA",
+			position: [
+				GRAV.x,
+				1.55,
+				GRAV.z
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-1.7,
+				8.62,
+				-57.15
+			],
+			material: M.hull,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				1.5,
+				.12,
+				.42
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				1.7,
+				8.62,
+				-57.15
+			],
+			material: M.hull,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				1.5,
+				.12,
+				.42
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				0,
+				8.62,
+				-59.15
+			],
+			material: M.hullDark,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				3.6,
+				.1,
+				.28
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-2.15,
+				6.4,
+				-58.2
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.04,
+				.04,
+				7.2,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				2.15,
+				6.4,
+				-58.2
+			],
+			material: M.pipe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.04,
+				.04,
+				7.2,
+				8
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				-4.6,
+				1.3,
+				-54
+			],
+			material: M.alarm,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.12,
+				.12,
+				.5
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				4.6,
+				1.3,
+				-60
+			],
+			material: M.alarm,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.12,
+				.12,
+				.5
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+			ref: alarmL,
+			position: [
+				-4.2,
+				2.4,
+				-54
+			],
+			color: "#e0a23a",
+			distance: 8,
+			decay: 2,
+			intensity: .15
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+			ref: alarmR,
+			position: [
+				4.2,
+				2.4,
+				-60
+			],
+			color: "#e0a23a",
+			distance: 8,
+			decay: 2,
+			intensity: .15
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+			position: [
+				0,
+				3.2,
+				-58.2
+			],
+			color: "#9fd4e6",
+			distance: 10,
+			decay: 2,
+			intensity: 1.15
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+			position: [
+				-2,
+				2.6,
+				-51
+			],
+			color: "#d5e4ef",
+			distance: 8,
+			decay: 2,
+			intensity: .55
+		})
+	] });
+}
+var KEY_FROM_CHAR = {
+	w: "KeyW",
+	W: "KeyW",
+	a: "KeyA",
+	A: "KeyA",
+	s: "KeyS",
+	S: "KeyS",
+	d: "KeyD",
+	D: "KeyD",
+	ArrowUp: "ArrowUp",
+	ArrowDown: "ArrowDown",
+	ArrowLeft: "ArrowLeft",
+	ArrowRight: "ArrowRight",
+	" ": "Space",
+	Spacebar: "Space",
+	Shift: "ShiftLeft",
+	e: "KeyE",
+	E: "KeyE",
+	q: "KeyQ",
+	Q: "KeyQ",
+	Tab: "Tab",
+	Escape: "Escape",
+	Esc: "Escape",
+	Enter: "Enter"
+};
+var HANDLED = /* @__PURE__ */ new Set([
+	"KeyW",
+	"KeyA",
+	"KeyS",
+	"KeyD",
+	"ArrowUp",
+	"ArrowDown",
+	"ArrowLeft",
+	"ArrowRight",
+	"ShiftLeft",
+	"ShiftRight",
+	"Space",
+	"Enter",
+	"KeyE",
+	"KeyQ",
+	"Tab",
+	"Escape"
+]);
+function resolveCode(code, key) {
+	if (code && code !== "Unidentified") return code;
+	return KEY_FROM_CHAR[key] ?? "";
+}
+/** Returns true only on the transition to pressed, so auto-repeat does not retrigger. */
+function noteDown(held, code) {
+	if (held.has(code)) return false;
+	held.add(code);
+	return true;
+}
+function noteUp(held, code) {
+	held.delete(code);
+}
+function releaseAll(held) {
+	held.clear();
+}
+function focusGame(root) {
+	window.focus();
+	if (root && document.activeElement !== root) root.focus({ preventScroll: true });
+}
+function installControls(hooks) {
+	let locked = false;
+	let exitRequested = false;
+	const onKeyDown = (event) => {
+		if (event.ctrlKey || event.metaKey) return;
+		const target = event.target;
+		if (target instanceof HTMLElement && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+		const code = resolveCode(event.code, event.key);
+		if (!code || !HANDLED.has(code)) return;
+		event.preventDefault();
+		const fresh = noteDown(hooks.held, code);
+		focusGame(hooks.root);
+		if (!fresh) return;
+		if (code === "Tab") {
+			hooks.map();
+			return;
+		}
+		if (code === "Escape") {
+			if (document.pointerLockElement) {
+				exitRequested = true;
+				document.exitPointerLock();
+			}
+			hooks.pause();
+			return;
+		}
+		if (code === "KeyE") {
+			hooks.interact();
+			return;
+		}
+		if (code === "KeyQ") {
+			hooks.scan();
+			return;
+		}
+		if (code === "Space" || code === "Enter") {
+			if (hooks.getPhase() === "title") hooks.start();
+			else if (code === "Space") hooks.jump();
+		}
+	};
+	const onKeyUp = (event) => {
+		const code = resolveCode(event.code, event.key);
+		if (!code) return;
+		noteUp(hooks.held, code);
+	};
+	const dropIfAway = () => {
+		if (document.pointerLockElement) {
+			focusGame(hooks.root);
+			return;
+		}
+		if (document.hidden || !document.hasFocus()) releaseAll(hooks.held);
+	};
+	const onVisibility = () => {
+		if (document.hidden) releaseAll(hooks.held);
+	};
+	const onLock = () => {
+		const now = document.pointerLockElement != null;
+		if (locked && !now && !exitRequested) hooks.pause();
+		exitRequested = false;
+		locked = now;
+		if (now) focusGame(hooks.root);
+	};
+	window.addEventListener("keydown", onKeyDown, true);
+	window.addEventListener("keyup", onKeyUp, true);
+	window.addEventListener("blur", dropIfAway);
+	document.addEventListener("visibilitychange", onVisibility);
+	document.addEventListener("pointerlockchange", onLock);
+	return () => {
+		window.removeEventListener("keydown", onKeyDown, true);
+		window.removeEventListener("keyup", onKeyUp, true);
+		window.removeEventListener("blur", dropIfAway);
+		document.removeEventListener("visibilitychange", onVisibility);
+		document.removeEventListener("pointerlockchange", onLock);
+		releaseAll(hooks.held);
 	};
 }
 function clock(seconds) {
@@ -1723,13 +3653,33 @@ function Overlay() {
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "vignette" }),
 			snap.scanner && snap.phase === "play" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "scanner-tint" }) : null,
+			elevator.alarm ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "alarm-tint" }) : null,
 			snap.phase === "play" && !snap.solved ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bearing, {}) : null,
 			snap.phase === "title" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Title, { best: snap.best }) : null,
 			snap.phase === "play" || snap.phase === "cinema" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PlayHud, { snap }) : null,
 			snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPanel, {}) : null,
 			snap.paused && !snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PausePanel, {}) : null,
 			snap.phase === "complete" && snap.result ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Complete, { result: snap.result }) : null,
+			sim.stage === 2 && sim.transit > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageCard, {}) : null,
+			elevator.done && elevator.finale <= 0 && snap.phase === "play" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageReport, {}) : null,
 			snap.phase === "play" && !snap.paused && !snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Touch, {}) : null
+		]
+	});
+}
+function StageCard() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+		className: "panel title-card",
+		"data-ui": true,
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "kicker",
+				children: "Missão Newton"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { children: ["ETAPA 2", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "A FORÇA INVISÍVEL" })] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "sub",
+				children: "Nem toda força pode ser vista. Mas seus efeitos podem ser medidos."
+			})
 		]
 	});
 }
@@ -1804,39 +3754,43 @@ function PlayHud({ snap }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "hud-left",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "panel obj",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "kicker",
-					children: "Objetivo"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: snap.objective })]
-			}), snap.line ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "panel line",
-				style: {
-					position: "static",
-					transform: "none",
-					width: "auto"
-				},
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: snap.line.speaker }),
-					snap.line.speaker === "NEWTON" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "role",
-						children: "IA de controle da estação"
-					}) : null,
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "wave",
-						"aria-hidden": true,
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {})
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: snap.line.text })
-				]
-			}) : null]
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "panel obj",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "kicker",
+						children: "Objetivo"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: snap.objective })]
+				}),
+				sim.stage === 2 && elevator.active && elevator.scanned && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ForceStrip, {}) : null,
+				snap.line ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "panel line",
+					style: {
+						position: "static",
+						transform: "none",
+						width: "auto"
+					},
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: snap.line.speaker }),
+						snap.line.speaker === "NEWTON" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "role",
+							children: "IA de controle da estação"
+						}) : null,
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "wave",
+							"aria-hidden": true,
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: snap.line.text })
+					]
+				}) : null
+			]
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "hud-right",
@@ -1870,12 +3824,17 @@ function PlayHud({ snap }) {
 						" · Q"
 					]
 				}),
-				snap.readout ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReadoutCard, { readout: snap.readout }) : null
+				snap.readout && sim.stage !== 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReadoutCard, { readout: snap.readout }) : null,
+				sim.stage === 2 && snap.scanner && elevator.active ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoistCard, {}) : null
 			]
 		}),
-		snap.prompt ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		snap.prompt && sim.stage !== 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "panel prompt",
 			children: snap.prompt
+		}) : null,
+		sim.stage === 2 && elevator.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "panel prompt wrap",
+			children: elevator.hint
 		}) : null
 	] });
 }
@@ -1926,6 +3885,145 @@ function ReadoutCard({ readout }) {
 		]
 	});
 }
+function br(value, digits = 1) {
+	return value.toFixed(digits).replace(".", ",");
+}
+function HoistCard() {
+	const h = hoistState();
+	const arrow = (n) => Math.abs(n) < .05 ? "" : n > 0 ? " ↑" : " ↓";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "panel readout hoist",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "kicker",
+				children: "Scanner Newton"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: h.name }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "eq",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "m" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [br(h.mass, 1), " kg"] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "g" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [br(h.g, 2), " m/s²"] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "P" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [br(h.P, 1), " N ↓"] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "T" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [br(h.T, 1), " N ↑"] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "Fr" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+						br(h.Fr, 1),
+						" N",
+						arrow(h.Fr)
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "a" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+						br(h.a, 2),
+						" m/s²",
+						arrow(h.a)
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("em", { children: "v" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+						br(h.v, 2),
+						" m/s",
+						arrow(h.v)
+					] })
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note",
+				children: "P = m·g · Fr = T − P · a = Fr/m"
+			})
+		]
+	});
+}
+function ForceStrip() {
+	const h = hoistState();
+	const arrow = (n) => Math.abs(n) < .05 ? "" : n > 0 ? " ↑" : " ↓";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "panel force-strip",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"m ",
+				br(h.mass, 0),
+				" kg · g ",
+				br(h.g, 2),
+				h.moon ? " · Lua" : ""
+			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"P ",
+				br(h.P, 1),
+				" N · T ",
+				br(h.T, 1),
+				" N"
+			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Fr ",
+				br(h.Fr, 1),
+				" N",
+				arrow(h.Fr),
+				" · a ",
+				br(h.a, 2),
+				arrow(h.a),
+				" · v ",
+				br(h.v, 2)
+			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note",
+				children: h.note
+			})
+		]
+	});
+}
+function StageReport() {
+	const [hide, setHide] = (0, import_react.useState)(false);
+	const h = hoistState();
+	if (hide) return null;
+	const rows = [
+		["Peso", h.mastery.peso],
+		["Tração", h.mastery.tracao],
+		["Força resultante", h.mastery.resultante],
+		["Massa", h.mastery.massa],
+		["Aceleração", h.mastery.aceleracao],
+		["2ª lei de Newton", h.mastery.newton],
+		["Peso e gravidade", h.mastery.gravidade]
+	];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "modal",
+		"data-ui": true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "panel sheet",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "kicker",
+					children: "Relatório da missão"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Etapa 2 concluída" }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "sub",
+					children: "Uma força isolada não determina o movimento. O que importa é a força resultante."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "report-list",
+					children: rows.map(([label, ok]) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: label }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: ok ? "✓" : "não testado" })] }, label))
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "stats",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Tempo" }), clock(h.elapsed)] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Impactos" }), h.tries] })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "row",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						className: "btn",
+						type: "button",
+						onClick: () => setHide(true),
+						children: "Continuar observando"
+					})
+				})
+			]
+		})
+	});
+}
 function Bearing() {
 	const ref = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
@@ -1938,7 +4036,7 @@ function Bearing() {
 			el.style.opacity = show ? "1" : "0";
 			if (!show) return;
 			const tx = 0;
-			const tz = sim.z < -14 ? -25 : -8;
+			const tz = sim.stage === 2 ? -58.2 : sim.z < -14 ? -25 : -8;
 			const dx = tx - sim.x;
 			const dz = tz - sim.z;
 			const fx = -Math.sin(sim.camYaw);
@@ -2038,17 +4136,26 @@ function Complete({ result }) {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "row",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						className: "btn",
-						type: "button",
-						onClick: () => continueLab(),
-						children: "Continuar no laboratório"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						className: "btn ghost",
-						type: "button",
-						onClick: () => restart(false),
-						children: "Repetir"
-					})]
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							className: "btn",
+							type: "button",
+							onClick: () => beginStage2(),
+							children: "CONTINUAR PARA ETAPA 2"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							className: "btn ghost",
+							type: "button",
+							onClick: () => continueLab(),
+							children: "Continuar no laboratório"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							className: "btn ghost",
+							type: "button",
+							onClick: () => restart(false),
+							children: "Repetir"
+						})
+					]
 				})
 			]
 		})
@@ -2068,6 +4175,10 @@ function MapPanel() {
 					children: "Navegação · Newton-1"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Mapa da missão" }),
+				sim.stage === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "sub",
+					children: "Etapa 2 · A força invisível. O setor de carga fica além do mapa da etapa 1."
+				}) : null,
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "map-layout",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -2231,231 +4342,6 @@ function Touch() {
 		})]
 	});
 }
-function canvas(w, h) {
-	const c = document.createElement("canvas");
-	c.width = w;
-	c.height = h;
-	const g = c.getContext("2d");
-	if (!g) throw new Error("canvas");
-	return [c, g];
-}
-function texOf(c, repeat = false) {
-	const tex = new CanvasTexture(c);
-	tex.colorSpace = SRGBColorSpace;
-	tex.anisotropy = 8;
-	if (repeat) {
-		tex.wrapS = RepeatWrapping;
-		tex.wrapT = RepeatWrapping;
-	}
-	return tex;
-}
-function earthTexture() {
-	const [c, g] = canvas(1024, 512);
-	const ocean = g.createLinearGradient(0, 0, 0, 512);
-	ocean.addColorStop(0, "#1c4f8a");
-	ocean.addColorStop(.45, "#0f315c");
-	ocean.addColorStop(1, "#1a4a82");
-	g.fillStyle = ocean;
-	g.fillRect(0, 0, 1024, 512);
-	g.fillStyle = "#e8eef3";
-	g.fillRect(0, 0, 1024, 28);
-	g.fillRect(0, 484, 1024, 28);
-	g.fillStyle = "#2d7a48";
-	g.beginPath();
-	g.moveTo(250, 230);
-	g.bezierCurveTo(300, 170, 360, 190, 372, 250);
-	g.bezierCurveTo(390, 320, 360, 390, 320, 430);
-	g.bezierCurveTo(280, 455, 255, 400, 248, 340);
-	g.bezierCurveTo(230, 280, 220, 250, 250, 230);
-	g.fill();
-	g.fillStyle = "#3c8f52";
-	g.beginPath();
-	g.moveTo(500, 150);
-	g.bezierCurveTo(560, 130, 590, 180, 575, 240);
-	g.bezierCurveTo(610, 280, 590, 360, 540, 400);
-	g.bezierCurveTo(500, 370, 490, 300, 500, 240);
-	g.bezierCurveTo(470, 190, 470, 160, 500, 150);
-	g.fill();
-	g.fillStyle = "#d8c48a";
-	g.beginPath();
-	g.ellipse(430, 210, 50, 22, .4, 0, Math.PI * 2);
-	g.fill();
-	g.fillStyle = "rgba(255,255,255,0.16)";
-	for (let i = 0; i < 14; i++) {
-		g.beginPath();
-		g.ellipse(80 + i * 137 % 900, 70 + i * 61 % 360, 70 + i % 4 * 18, 16 + i % 3 * 6, i * .3, 0, Math.PI * 2);
-		g.fill();
-	}
-	const night = g.createLinearGradient(760, 0, 1024, 0);
-	night.addColorStop(0, "rgba(0,0,0,0)");
-	night.addColorStop(1, "rgba(0,8,18,0.5)");
-	g.fillStyle = night;
-	g.fillRect(760, 0, 264, 512);
-	return texOf(c);
-}
-function cloudTexture() {
-	const [c, g] = canvas(1024, 512);
-	g.clearRect(0, 0, 1024, 512);
-	for (let i = 0; i < 22; i++) {
-		g.fillStyle = `rgba(255,255,255,${.25 + i % 5 * .08})`;
-		g.beginPath();
-		g.ellipse(i * 97 % 1e3, 40 + i * 53 % 420, 90 + i % 6 * 16, 18 + i % 4 * 5, i * .2, 0, Math.PI * 2);
-		g.fill();
-	}
-	return texOf(c);
-}
-function starTexture() {
-	const [c, g] = canvas(256, 256);
-	g.fillStyle = "#070d16";
-	g.fillRect(0, 0, 256, 256);
-	for (let i = 0; i < 80; i++) {
-		g.fillStyle = i % 7 === 0 ? "#e0a23a" : "#d5e4ef";
-		g.globalAlpha = .4 + i % 5 * .12;
-		g.fillRect(i * 47 % 256, i * 91 % 256, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1);
-	}
-	g.globalAlpha = 1;
-	return texOf(c);
-}
-function panelTexture() {
-	const [c, g] = canvas(256, 256);
-	g.fillStyle = "#1a2432";
-	g.fillRect(0, 0, 256, 256);
-	g.strokeStyle = "#0d141e";
-	g.lineWidth = 8;
-	for (let i = 0; i <= 256; i += 64) {
-		g.beginPath();
-		g.moveTo(i, 0);
-		g.lineTo(i, 256);
-		g.stroke();
-		g.beginPath();
-		g.moveTo(0, i);
-		g.lineTo(256, i);
-		g.stroke();
-	}
-	g.strokeStyle = "#31465c";
-	g.lineWidth = 2;
-	for (let y = 0; y < 256; y += 64) for (let x = 0; x < 256; x += 64) g.strokeRect(x + 8, y + 8, 48, 48);
-	const tex = texOf(c, true);
-	tex.repeat.set(4, 4);
-	return tex;
-}
-function paintScreen(ctx, w, h, title, formula, time) {
-	ctx.clearRect(0, 0, w, h);
-	ctx.fillStyle = "#07141f";
-	ctx.fillRect(0, 0, w, h);
-	ctx.strokeStyle = "rgba(126,184,204,0.25)";
-	ctx.lineWidth = 1;
-	for (let x = 0; x < w; x += 32) {
-		ctx.beginPath();
-		ctx.moveTo(x, 0);
-		ctx.lineTo(x, h);
-		ctx.stroke();
-	}
-	for (let y = 0; y < h; y += 32) {
-		ctx.beginPath();
-		ctx.moveTo(0, y);
-		ctx.lineTo(w, y);
-		ctx.stroke();
-	}
-	ctx.strokeStyle = "#7eb8cc";
-	ctx.lineWidth = 3;
-	ctx.beginPath();
-	for (let i = 0; i <= 64; i++) {
-		const u = i / 64;
-		const x = 24 + u * (w - 48);
-		const y = h * .62 + Math.sin(u * 8 + time * 1.6) * 36 + Math.sin(u * 3 + time) * 12;
-		if (i === 0) ctx.moveTo(x, y);
-		else ctx.lineTo(x, y);
-	}
-	ctx.stroke();
-	ctx.fillStyle = "#d5e4ef";
-	ctx.font = "600 28px sans-serif";
-	ctx.fillText(title, 20, 40);
-	ctx.fillStyle = "#e0a23a";
-	ctx.font = "600 42px sans-serif";
-	ctx.fillText(formula, 20, h - 28);
-}
-function badgeTexture() {
-	const [c, g] = canvas(512, 256);
-	g.fillStyle = "#14386e";
-	g.fillRect(0, 0, 512, 256);
-	g.fillStyle = "#f4f7fb";
-	g.font = "700 92px sans-serif";
-	g.textAlign = "center";
-	g.textBaseline = "middle";
-	g.fillText("ECIT", 256, 88);
-	g.font = "700 64px sans-serif";
-	g.fillText("BAYEUX", 256, 176);
-	return texOf(c);
-}
-function plateTexture(label) {
-	const [c, g] = canvas(512, 128);
-	g.fillStyle = "#102033";
-	g.fillRect(0, 0, 512, 128);
-	g.strokeStyle = "#7eb8cc";
-	g.lineWidth = 6;
-	g.strokeRect(8, 8, 496, 112);
-	g.fillStyle = "#d5eef6";
-	g.font = "700 64px sans-serif";
-	g.textAlign = "center";
-	g.textBaseline = "middle";
-	g.fillText(label, 256, 68);
-	return texOf(c);
-}
-var labels = /* @__PURE__ */ new Map();
-function labelSprite(text, color) {
-	const key = `${color}|${text}`;
-	const hit = labels.get(key);
-	if (hit) return hit;
-	const probe = document.createElement("canvas").getContext("2d");
-	if (!probe) throw new Error("canvas");
-	probe.font = "600 64px sans-serif";
-	const width = Math.ceil(probe.measureText(text).width + 36);
-	const [c, g] = canvas(Math.max(64, width), 84);
-	g.font = "600 64px sans-serif";
-	g.fillStyle = color;
-	g.textAlign = "center";
-	g.textBaseline = "middle";
-	g.fillText(text, c.width / 2, c.height / 2);
-	const tex = texOf(c);
-	const h = .16;
-	const value = {
-		tex,
-		w: h * (c.width / c.height),
-		h
-	};
-	labels.set(key, value);
-	return value;
-}
-function Solid({ position, args, material, cast, receive, rotation }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-		position,
-		rotation,
-		material,
-		castShadow: cast,
-		receiveShadow: receive,
-		dispose: null,
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args })
-	});
-}
-function HoloLabel({ text, position, color = "#c5e7f4" }) {
-	const sprite = (0, import_react.useMemo)(() => labelSprite(text, color), [text, color]);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sprite", {
-		position,
-		scale: [
-			sprite.w,
-			sprite.h,
-			1
-		],
-		renderOrder: 2,
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("spriteMaterial", {
-			map: sprite.tex,
-			transparent: true,
-			depthWrite: false,
-			toneMapped: false
-		})
-	});
-}
 var desired = new Vector3();
 var look = new Vector3();
 var smooth = new Vector3(8, 205, 12);
@@ -2480,8 +4366,9 @@ function Simulator() {
 			acc -= h;
 			guard += 1;
 		}
+		tickElevator(dt);
 		pump(sim.phase);
-		M.alarm.emissiveIntensity = sim.phase === "title" ? .35 + (Math.sin(sim.time * 6) * .5 + .5) * 1.3 : .2;
+		M.alarm.emissiveIntensity = elevator.alarm ? .55 + (Math.sin(sim.time * 12) * .5 + .5) * 2.1 : sim.phase === "title" ? .35 + (Math.sin(sim.time * 6) * .5 + .5) * 1.3 : .2;
 		for (const puff of sim.puffs) if (puff.life > 0) puff.life -= dt * 1.4;
 	});
 	return null;
@@ -2633,6 +4520,18 @@ function Lights() {
 	] });
 }
 function scripted(dt, camera) {
+	if (sim.stage === 2 && elevator.finale > 0) {
+		const u = 1 - Math.min(1, elevator.finale / 7.2);
+		desired.set(1.35, 2.4 + u * 5.1, -53.4);
+		look.set(SHAFT.x, Math.min(8.4, elevator.y + .3), SHAFT.z);
+		return true;
+	}
+	if (sim.stage === 2 && sim.transit > 0) {
+		const u = 1 - sim.transit / 6.4;
+		desired.set(-1.2 + u * .4, 2.15 + u * 1.4, sim.z + 3.1);
+		look.set(SHAFT.x, 2.2 + u * 1.6, SHAFT.z);
+		return true;
+	}
 	if (sim.phase === "title") {
 		const shot = shotIndex(sim.shotTime);
 		const u = sim.shotTime % 64;
@@ -2917,29 +4816,37 @@ function Vectors() {
 			group.add(arrow);
 			arrows.push(arrow);
 		}
-		const tags = [
+		const labels = [
 			"F",
 			"v",
 			"a",
 			"f",
 			"P",
-			"N"
-		].map((text, i) => {
-			const { tex } = labelSprite(text, [
-				"#f4f7fb",
-				"#7eb8cc",
-				"#c7c3ef",
-				"#e0a23a",
-				"#8aa0b5",
-				"#d5e4ef"
-			][i] ?? "#fff");
+			"N",
+			"TRAÇÃO",
+			"PESO",
+			"RESULTANTE"
+		];
+		const tagColors = [
+			"#f4f7fb",
+			"#7eb8cc",
+			"#c7c3ef",
+			"#e0a23a",
+			"#8aa0b5",
+			"#d5e4ef",
+			"#e0a23a",
+			"#9fb0c0",
+			"#f4f7fb"
+		];
+		const tags = labels.map((text, i) => {
+			const { tex, w } = labelSprite(text, tagColors[i] ?? "#fff");
 			const sprite = new Sprite(new SpriteMaterial({
 				map: tex,
 				transparent: true,
 				depthWrite: false
 			}));
 			sprite.visible = false;
-			sprite.scale.set(.42, .16, 1);
+			sprite.scale.set(i >= 6 ? Math.min(1.25, w) : .42, i >= 6 ? .18 : .16, 1);
 			group.add(sprite);
 			return sprite;
 		});
@@ -2989,6 +4896,19 @@ function Vectors() {
 			sprite.visible = false;
 		});
 		pack.ring.visible = false;
+		if (sim.stage === 2 && elevator.active && sim.scanner && sim.phase === "play") {
+			const h = hoistState();
+			const y = h.y + .55;
+			const scale = 1.65 / Math.max(h.P, h.T, 80);
+			show(SHAFT.x - .22, y, SHAFT.z, 0, -1, 0, Math.max(.2, h.P * scale), 9085109, 7);
+			show(SHAFT.x + .22, y, SHAFT.z, 0, 1, 0, Math.max(.2, h.T * scale), 14721594, 6);
+			if (Math.abs(h.Fr) > 6) show(SHAFT.x + .62, y, SHAFT.z, 0, Math.sign(h.Fr) || 1, 0, Math.max(.28, Math.abs(h.Fr) * scale), 16054267, 8);
+			pack.ring.visible = true;
+			pack.ring.position.set(SHAFT.x, .06, SHAFT.z);
+			const pulse = 1 + Math.sin(sim.time * 4) * .05;
+			pack.ring.scale.set(1.7 * pulse, 1.7 * pulse, 1);
+			return;
+		}
 		if (sim.phase === "title" && (shotIndex(sim.shotTime) === 6 || shotIndex(sim.shotTime) === 7)) {
 			const crate = sim.crates.find((item) => item.kind === "module");
 			if (crate) {
@@ -3220,6 +5140,11 @@ function Tigrao() {
 		else if (shot === 4 || shot === 5 || shot === 7) mood = "curious";
 		else if (near && near.d < 2.6 && sim.anim === "idle") mood = "curious";
 		else if (!sim.grounded && sim.vy < 0) mood = "alert";
+		if (sim.stage === 2 && elevator.active && sim.phase === "play") {
+			if (elevator.done) mood = "success";
+			else if (elevator.alarm) mood = "surprise";
+			else if (sim.scanner && sim.speed < .45) mood = "curious";
+		}
 		const stride = moving ? Math.abs(Math.sin(t * freq)) : 0;
 		let hipY = .7 + (moving ? stride * (run ? .045 : .028) - Math.abs(swing) * .04 : breathe * .01);
 		if (mood === "success") hipY = .7 + Math.abs(Math.sin(t * 7.5)) * .055;
@@ -3299,7 +5224,10 @@ function Tigrao() {
 			headX = .22;
 			tailX = -.7;
 		}
-		if (near && near.d < 4.2 && (sim.anim === "idle" || sim.anim === "push" || sim.anim === "scan" || sim.scanner)) {
+		if (sim.stage === 2 && elevator.active && (sim.anim === "idle" || sim.anim === "scan" || sim.scanner || elevator.alarm)) {
+			headY = clamp(lookYaw(SHAFT.x, SHAFT.z), -.7, .7);
+			headX = elevator.alarm ? .22 : elevator.y > 5 ? .16 : -.08;
+		} else if (near && near.d < 4.2 && (sim.anim === "idle" || sim.anim === "push" || sim.anim === "scan" || sim.scanner)) {
 			const aim = lookYaw(near.x, near.z);
 			if (Math.abs(aim) < 1.45) {
 				headY = clamp(aim, -.7, .7);
@@ -3316,6 +5244,12 @@ function Tigrao() {
 				rArm = .72;
 				rZ = -.22;
 			}
+		}
+		if (sim.stage === 2 && elevator.adjusting && sim.anim === "idle" && !sim.line) {
+			rArm = 1.12;
+			rZ = -.08;
+			torsoX = -.16;
+			headX = -.04;
 		}
 		if (shot === 3) {
 			headY = Math.sin(t * 1.4) * .42;
@@ -5908,6 +7842,7 @@ function World() {
 }
 function Game() {
 	const cineOnce = (0, import_react.useRef)(false);
+	const stage = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
 		let frame = 0;
 		const tick = () => {
@@ -5927,86 +7862,63 @@ function Game() {
 	}, []);
 	(0, import_react.useEffect)(() => {
 		sim.reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const root = stage.current;
+		let phase = sim.phase;
 		let looking = false;
-		const onKeyDown = (event) => {
-			if (event.code === "Tab") {
-				event.preventDefault();
-				toggleMap();
-				return;
-			}
-			if (event.code === "Escape") {
-				event.preventDefault();
-				if (document.pointerLockElement) document.exitPointerLock();
-				togglePause();
-				return;
-			}
-			if (event.code === "KeyE") {
-				if (!event.repeat) queueInteract();
-				return;
-			}
-			if (event.code === "KeyQ") {
-				if (!event.repeat) queueScan();
-				return;
-			}
-			if (event.code === "Space" || event.code === "Enter") {
-				if (sim.phase === "title") {
-					event.preventDefault();
-					if (!event.repeat) startMission();
-					return;
-				}
-				if (event.code === "Space") {
-					event.preventDefault();
-					if (!event.repeat) queueJump();
-				}
-				return;
-			}
-			held.add(event.code);
-		};
-		const onKeyUp = (event) => {
-			held.delete(event.code);
-		};
-		const onBlur = () => {
-			held.clear();
-			looking = false;
-		};
+		const removeKeys = installControls({
+			held,
+			root,
+			getPhase: () => sim.phase,
+			start: () => {
+				startMission();
+				focusGame(root);
+			},
+			jump: queueJump,
+			interact: queueInteract,
+			scan: queueScan,
+			map: toggleMap,
+			pause: togglePause
+		});
+		const removeSub = subscribe(() => {
+			if (sim.phase === "play" && phase !== "play") focusGame(root);
+			phase = sim.phase;
+		});
 		const onDown = (event) => {
+			focusGame(root);
 			const target = event.target;
 			if (!(target instanceof Element)) return;
 			if (target.closest("[data-ui]")) return;
 			if (!(target instanceof HTMLCanvasElement)) return;
 			looking = true;
-			target.requestPointerLock?.();
+			const lock = target.requestPointerLock?.();
+			if (lock && typeof lock.catch === "function") lock.catch(() => {});
 		};
 		const onUp = () => {
 			looking = false;
 		};
 		const onMove = (event) => {
-			const target = event.target;
-			if (target instanceof Element && target.closest("[data-ui]")) return;
 			if (!document.pointerLockElement && !looking) return;
 			sim.lookDX += event.movementX;
 			sim.lookDY += event.movementY;
 		};
-		window.addEventListener("keydown", onKeyDown);
-		window.addEventListener("keyup", onKeyUp);
-		window.addEventListener("blur", onBlur);
-		window.addEventListener("pointerdown", onDown);
+		focusGame(root);
+		window.addEventListener("pointerdown", onDown, true);
 		window.addEventListener("pointerup", onUp);
 		window.addEventListener("pointercancel", onUp);
 		window.addEventListener("pointermove", onMove);
 		return () => {
-			window.removeEventListener("keydown", onKeyDown);
-			window.removeEventListener("keyup", onKeyUp);
-			window.removeEventListener("blur", onBlur);
-			window.removeEventListener("pointerdown", onDown);
+			removeKeys();
+			removeSub();
+			window.removeEventListener("pointerdown", onDown, true);
 			window.removeEventListener("pointerup", onUp);
 			window.removeEventListener("pointercancel", onUp);
 			window.removeEventListener("pointermove", onMove);
-			held.clear();
 		};
 	}, []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "stage",
+		ref: stage,
+		tabIndex: 0,
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Canvas, {
 			shadows: true,
 			dpr: [1, 1.6],
@@ -6043,6 +7955,7 @@ function Game() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FogTune, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Lights, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(World, {}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cargo, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dressing, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Crates, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Vectors, {}),

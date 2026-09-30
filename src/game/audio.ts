@@ -159,4 +159,11 @@ export const sfx = {
     if (!ctx) return;
     tone(480, ctx.currentTime, 0.02, 0.08);
   },
+  motor() {
+    if (!ctx) return;
+    tone(72, ctx.currentTime, 0.012, 0.1, "triangle");
+  },
+  cable() {
+    burst(160, 0.07, 0.022, 880);
+  },
 };

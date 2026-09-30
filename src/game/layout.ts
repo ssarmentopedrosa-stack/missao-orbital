@@ -71,6 +71,11 @@ export const BLOCKS: Block[] = [
   { minX: 5.3, maxX: 5.75, minZ: -63.1, maxZ: -48.7, h: 4.4, kind: "hidden" },
   { minX: -5.75, maxX: 5.75, minZ: -63.1, maxZ: -62.65, h: 4.4, kind: "hidden" },
   { minX: -5.75, maxX: 5.75, minZ: -49.15, maxZ: -48.7, h: 4.4, kind: "hidden" },
+  { minX: -4.05, maxX: -3.1, minZ: -54.95, maxZ: -54.05, h: 0.95, kind: "hidden" },
+  { minX: -4.05, maxX: -3.1, minZ: -57.15, maxZ: -56.25, h: 0.95, kind: "hidden" },
+  { minX: -4.05, maxX: -3.1, minZ: -59.35, maxZ: -58.45, h: 0.95, kind: "hidden" },
+  { minX: 2.85, maxX: 3.8, minZ: -52.6, maxZ: -51.85, h: 1.2, kind: "hidden" },
+  { minX: 3.7, maxX: 4.45, minZ: -56.7, maxZ: -56.1, h: 1.05, kind: "hidden" },
 ];
 
 export const CINE_LEN = 64;
@@ -78,7 +83,7 @@ export const CINE_LEN = 64;
 /** Campaign slots. Only stages 1 and 2 exist; 3 and 4 are reserved. */
 export const CAMPAIGN = [
   { stage: 1, id: "inercia", title: "Fundamentos e inércia" },
-  { stage: 2, id: "elevador", title: "O elevador da Newton-1" },
+  { stage: 2, id: "elevador", title: "A força invisível" },
   { stage: 3, id: "acao-reacao", title: "Ação e reação" },
   { stage: 4, id: "tres-leis", title: "Aplicações das três leis" },
 ] as const;
