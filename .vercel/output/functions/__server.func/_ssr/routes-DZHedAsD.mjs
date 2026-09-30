@@ -1,13 +1,13 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { O as require_jsx_runtime, k as require_react } from "../_libs/@react-three/fiber+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-pKHy8S8r.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DZHedAsD.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Home() {
 	const [Game, setGame] = (0, import_react.useState)(null);
 	(0, import_react.useEffect)(() => {
 		let live = true;
-		import("./Game-D39H1I_Z.mjs").then((mod) => {
+		import("./Game-DQOJr1iN.mjs").then((mod) => {
 			if (live) setGame(() => mod.Game);
 		});
 		return () => {

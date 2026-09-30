@@ -90,3 +90,39 @@ export function integrateVariable(
   if (!Number.isFinite(py) || !Number.isFinite(vy)) return { y: y0, v: 0, a: 0, hitTop: false, hitFloor: false };
   return { y: py, v: vy, a, hitTop, hitFloor };
 }
+
+/** Arrival band sits strictly below the shaft cap, so a clamped impact cannot pass as a landing. */
+export const ARRIVE_LO = 8.45;
+export const ARRIVE_HI = 9.02;
+
+export type ArrivalPhase = "rest" | "accel" | "coast" | "brake";
+
+export type ArrivalInput = {
+  phase: ArrivalPhase;
+  brakeValid: boolean;
+  brakeV: number;
+  y: number;
+  v: number;
+  hitTop: boolean;
+};
+
+/** Braking may begin only while the load is still climbing, before the arrival ceiling. */
+export function brakingGate(a: number, v: number, y: number): boolean {
+  return a < -0.15 && v > 0.12 && y > 2 && y < ARRIVE_HI && Number.isFinite(a) && Number.isFinite(v) && Number.isFinite(y);
+}
+
+/**
+ * Controlled arrival. A ceiling hit is never success, and rest/accel/coast cannot skip ahead.
+ * Speed must have fallen since braking started, inside the band, still not a collision.
+ */
+export function arrivalAllowed(input: ArrivalInput): boolean {
+  if (input.hitTop) return false;
+  if (input.phase !== "brake" || !input.brakeValid) return false;
+  if (!(input.brakeV > 0.12) || !Number.isFinite(input.brakeV)) return false;
+  if (!Number.isFinite(input.y) || !Number.isFinite(input.v)) return false;
+  if (!(input.v < input.brakeV - 0.08)) return false;
+  if (input.y < ARRIVE_LO || input.y > ARRIVE_HI) return false;
+  if (!(input.v >= -0.02 && input.v < 0.45)) return false;
+  return true;
+}
+

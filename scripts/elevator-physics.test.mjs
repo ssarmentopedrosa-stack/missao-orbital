@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, accelOf, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, weightOf, G_MOON } from "../src/game/hoist.ts";
+import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, accelOf, arrivalAllowed, brakingGate, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, weightOf, G_MOON } from "../src/game/hoist.ts";
 
 test("peso do contêiner é m·g", () => {
   assert.equal(HOIST_MASS, 40);
@@ -101,5 +101,83 @@ test("integração variável limita velocidade e não produz NaN", () => {
   const floor = integrateVariable(1.1, -4, 0, 40, 9.81, 0.5, false);
   assert.equal(floor.hitFloor, true);
   assert.equal(floor.y, 1.05);
+  const bad = integrateVariable(Number.NaN, Number.NaN, Number.NaN, Number.NaN, Number.NaN, Number.NaN, false);
+  assert.ok(Number.isFinite(bad.y) && Number.isFinite(bad.v) && Number.isFinite(bad.a));
+  assert.equal(bad.hitTop, false);
 });
+
+test("repouso: T = P mantém a carga parada", () => {
+  const P = weightOf(40);
+  const step = integrateVariable(1.2, 0, P, 40, 9.81, 0.5, false);
+  assert.ok(Math.abs(step.a) < 1e-9);
+  assert.equal(step.v, 0);
+  assert.equal(step.y, 1.2);
+});
+
+test("movimento uniforme: T = P conserva velocidade positiva", () => {
+  const P = weightOf(40);
+  const step = integrateVariable(5, 1.4, P, 40, 9.81, 0.25, false);
+  assert.ok(Math.abs(step.a) < 1e-9);
+  assert.ok(step.v > 1);
+  assert.ok(Math.abs(step.v - 1.4) < 1e-9);
+  assert.ok(step.y > 5);
+});
+
+test("frenagem: T < P com v > 0 reduz a velocidade", () => {
+  const P = weightOf(40);
+  const T = P - 80;
+  assert.ok(accelOf(T, 40) < 0);
+  const step = integrateVariable(6, 2, T, 40, 9.81, 0.05, false);
+  assert.ok(step.a < 0);
+  assert.ok(step.v < 2);
+  assert.ok(step.v > 0);
+});
+
+test("colisão no topo não é chegada válida", () => {
+  const hit = integrateVariable(9.05, 2.4, weightOf(40) + 400, 40, 9.81, 0.05, false);
+  assert.equal(hit.hitTop, true);
+  assert.equal(hit.v, 0);
+  assert.equal(
+    arrivalAllowed({ phase: "brake", brakeValid: true, brakeV: 2.4, y: hit.y, v: hit.v, hitTop: true }),
+    false,
+  );
+  assert.equal(
+    arrivalAllowed({ phase: "brake", brakeValid: true, brakeV: 2.4, y: 9.15, v: 0, hitTop: false }),
+    false,
+  );
+});
+
+test("protocolo incompleto não conclui", () => {
+  const near = { brakeValid: true, brakeV: 2, y: 8.7, v: 0.2, hitTop: false };
+  assert.equal(arrivalAllowed({ phase: "rest", ...near }), false);
+  assert.equal(arrivalAllowed({ phase: "accel", ...near }), false);
+  assert.equal(arrivalAllowed({ phase: "coast", ...near }), false);
+  assert.equal(arrivalAllowed({ phase: "brake", ...near, brakeValid: false }), false);
+  assert.equal(brakingGate(0.4, 1.5, 6), false);
+  assert.equal(brakingGate(-0.4, 0.05, 6), false);
+});
+
+test("protocolo completo pode concluir sem encostar no teto", () => {
+  assert.equal(brakingGate(-0.4, 1.8, 7.4), true);
+  assert.equal(brakingGate(-0.4, 1.8, 9.1), false);
+  assert.equal(
+    arrivalAllowed({ phase: "brake", brakeValid: true, brakeV: 2.31, y: 8.72, v: 0.28, hitTop: false }),
+    true,
+  );
+  assert.equal(
+    arrivalAllowed({ phase: "brake", brakeValid: true, brakeV: Number.NaN, y: 8.72, v: 0.28, hitTop: false }),
+    false,
+  );
+});
+
+test("mesma resultante de 100 N acelera 5 m/s² e 1 m/s²", () => {
+  const light = weightOf(20) + 100;
+  const heavy = weightOf(100) + 100;
+  assert.ok(Math.abs(netForceOf(light, 20) - 100) < 1e-6);
+  assert.ok(Math.abs(netForceOf(heavy, 100) - 100) < 1e-6);
+  assert.ok(Math.abs(accelOf(light, 20) - 5) < 1e-9);
+  assert.ok(Math.abs(accelOf(heavy, 100) - 1) < 1e-9);
+  assert.ok(accelOf(light, 20) > accelOf(heavy, 100));
+});
+
 

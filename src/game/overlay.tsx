@@ -207,6 +207,7 @@ function br(value: number, digits = 1): string {
 
 function HoistCard() {
   const h = hoistState();
+  const still = Math.abs(h.Fr) < 0.8;
   const arrow = (n: number) => (Math.abs(n) < 0.05 ? "" : n > 0 ? " ↑" : " ↓");
   return (
     <div className="panel readout hoist">
@@ -222,19 +223,19 @@ function HoistCard() {
         <em>T</em>
         <span>{br(h.T, 1)} N ↑</span>
         <em>Fr</em>
-        <span>
-          {br(h.Fr, 1)} N{arrow(h.Fr)}
-        </span>
+        <span>{still ? "0 N" : `${br(h.Fr, 1)} N${arrow(h.Fr)}`}</span>
         <em>a</em>
-        <span>
-          {br(h.a, 2)} m/s²{arrow(h.a)}
-        </span>
+        <span>{still ? "0 m/s²" : `${br(h.a, 2)} m/s²${arrow(h.a)}`}</span>
         <em>v</em>
         <span>
           {br(h.v, 2)} m/s{arrow(h.v)}
         </span>
       </div>
-      <p className="note">P = m·g · Fr = T − P · a = Fr/m</p>
+      <p className="note">
+        {still
+          ? "Resultante = 0 · aceleração = 0. A velocidade continua a que a carga já tem."
+          : "P = m·g · Fr = T − P · a = Fr/m"}
+      </p>
     </div>
   );
 }
@@ -271,8 +272,11 @@ function StageReport() {
     ["Massa", h.mastery.massa],
     ["Aceleração", h.mastery.aceleracao],
     ["2ª lei de Newton", h.mastery.newton],
+    ["Movimento com resultante zero", h.mastery.uniforme],
+    ["Mesma resultante, massas diferentes", h.mastery.mesmaFr],
     ["Peso e gravidade", h.mastery.gravidade],
   ];
+  const f = h.flight;
   return (
     <div className="modal" data-ui>
       <div className="panel sheet">
@@ -295,6 +299,30 @@ function StageReport() {
           <div>
             <span>Impactos</span>
             {h.tries}
+          </div>
+          <div>
+            <span>v máxima</span>
+            {br(f.vMax, 2)} m/s
+          </div>
+          <div>
+            <span>Frenagem</span>
+            {br(f.brakeY, 2)} m
+          </div>
+          <div>
+            <span>v na frenagem</span>
+            {br(f.brakeV, 2)} m/s
+          </div>
+          <div>
+            <span>v na chegada</span>
+            {br(f.arriveV, 2)} m/s
+          </div>
+          <div>
+            <span>Colisão na chegada</span>
+            {f.collided ? "SIM" : "NÃO"}
+          </div>
+          <div>
+            <span>Frenagem válida</span>
+            {f.brakeValid ? "SIM" : "NÃO"}
           </div>
         </div>
         <div className="row">

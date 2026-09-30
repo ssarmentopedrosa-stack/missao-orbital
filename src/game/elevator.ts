@@ -1,6 +1,8 @@
 import { sfx } from "./audio";
 import {
   accelOf,
+  arrivalAllowed,
+  brakingGate,
   G_MOON,
   HOIST_G,
   HOIST_MASS,
@@ -53,10 +55,22 @@ export const elevator = {
   labUp: false,
   labDown: false,
   labBalance: false,
+  labCoast: false,
   labHold: 0,
+  coastHold: 0,
   proto: 0,
   protoHold: 0,
   braking: false,
+  flight: {
+    vMax: 0,
+    brakeY: 0,
+    brakeV: 0,
+    arriveV: 0,
+    collided: false,
+    brakeValid: false,
+    impacts: 0,
+  },
+  samples: [] as { mass: number; Fr: number; a: number }[],
   cheer: 0,
   finale: 0,
   prevE: false,
@@ -69,6 +83,8 @@ export const elevator = {
   saidG: false,
   saidWait: false,
   saidSame: false,
+  saidCoast: false,
+  saidPair: false,
   lineQueue: [] as Line[],
   mastery: {
     peso: false,
@@ -78,6 +94,8 @@ export const elevator = {
     aceleracao: false,
     newton: false,
     gravidade: false,
+    uniforme: false,
+    mesmaFr: false,
   },
 };
 
@@ -103,10 +121,14 @@ function resetMotion(): void {
   elevator.labUp = false;
   elevator.labDown = false;
   elevator.labBalance = false;
+  elevator.labCoast = false;
   elevator.labHold = 0;
+  elevator.coastHold = 0;
   elevator.proto = 0;
   elevator.protoHold = 0;
   elevator.braking = false;
+  elevator.flight = { vMax: 0, brakeY: 0, brakeV: 0, arriveV: 0, collided: false, brakeValid: false, impacts: 0 };
+  elevator.samples = [];
   elevator.cheer = 0;
   elevator.finale = 0;
   elevator.prevE = false;
@@ -118,6 +140,8 @@ function resetMotion(): void {
   elevator.saidG = false;
   elevator.saidWait = false;
   elevator.saidSame = false;
+  elevator.saidCoast = false;
+  elevator.saidPair = false;
   elevator.lineQueue = [];
   elevator.mastery = {
     peso: false,
@@ -127,6 +151,8 @@ function resetMotion(): void {
     aceleracao: false,
     newton: false,
     gravidade: false,
+    uniforme: false,
+    mesmaFr: false,
   };
 }
 
@@ -188,6 +214,7 @@ export function hoistState() {
     elapsed: Math.max(0, sim.time - elevator.t0),
     mastery: elevator.mastery,
     moon: g < 5,
+    flight: elevator.flight,
   };
 }
 
@@ -294,9 +321,12 @@ function enterLab(): void {
   elevator.labUp = false;
   elevator.labDown = false;
   elevator.labBalance = false;
+  elevator.labCoast = false;
   elevator.labHold = 0;
+  elevator.coastHold = 0;
+  elevator.samples = [];
   elevator.alarm = false;
-  queue("Laboratório de forças. Três cargas: 20, 50 e 100 kg. Escolha uma com E e produza subida, equilíbrio e descida.", 6.2);
+  queue("Laboratório de forças. Escolha 20, 50 ou 100 kg. Suba, equilibre parado, desça — e também siga em movimento com a resultante zero.", 6.6);
   queue("O simulador à direita troca a gravidade entre a estação e a Lua. A massa não muda. O peso, sim.", 5.4);
 }
 
@@ -311,6 +341,7 @@ function enterProtocol(): void {
   elevator.proto = 0;
   elevator.protoHold = 0;
   elevator.braking = false;
+  elevator.flight = { vMax: 0, brakeY: 0, brakeV: 0, arriveV: 0, collided: false, brakeValid: false, impacts: 0 };
   elevator.mastery.newton = true;
   sfx.ui();
   queue("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
@@ -319,6 +350,8 @@ function enterProtocol(): void {
 
 function finish(): void {
   if (elevator.done) return;
+  elevator.flight.arriveV = elevator.v;
+  elevator.flight.collided = false;
   elevator.done = true;
   elevator.goal = "done";
   elevator.alarm = false;
@@ -475,12 +508,23 @@ export function tickElevator(dt: number): void {
     sfx.fail();
     queue("Impacto no piso. A velocidade estava grande. Aumente a tração antes do fim da descida.", 4.4);
   }
-  if (step.hitTop && elevator.goal === "protocol" && elevator.proto < 3 && !(elevator.braking && Math.abs(prevV) < 0.55)) {
+  let crashed = false;
+  if (step.hitTop && elevator.goal === "protocol" && prevV > 0.05) {
+    crashed = true;
     elevator.tries += 1;
-    elevator.y = 6.15;
-    elevator.v = 0.22;
+    elevator.flight.impacts += 1;
+    elevator.flight.collided = true;
+    elevator.flight.brakeValid = false;
+    elevator.braking = false;
+    elevator.y = 7.05;
+    elevator.v = 0.4;
+    elevator.alarmT = Math.max(elevator.alarmT, 1.2);
+    sim.shake = Math.max(sim.shake, 0.22);
     sfx.fail();
-    queue("A plataforma chegou cedo demais. Desacelere no caminho: tração menor que o peso enquanto a carga ainda sobe.", 5.2);
+    queue(
+      "Impacto! Você chegou ao limite antes de reduzir a velocidade. Para frear, a aceleração precisa apontar para baixo enquanto a carga ainda sobe.",
+      6.2,
+    );
   }
 
   const { P, T, Fr, a } = readForces();
@@ -585,22 +629,58 @@ export function tickElevator(dt: number): void {
     } else {
       if (a > 0.3 && elevator.v > 0.1) elevator.labUp = true;
       if (a < -0.3 && elevator.v < -0.1) elevator.labDown = true;
-      if (Math.abs(Fr) <= 8) elevator.labHold += hdt;
+      if (Math.abs(Fr) <= 8 && Math.abs(elevator.v) < 0.2) elevator.labHold += hdt;
       else elevator.labHold = 0;
       if (elevator.labHold > 0.65) elevator.labBalance = true;
+      if (Math.abs(Fr) <= 8 && elevator.v > 0.22) elevator.coastHold += hdt;
+      else elevator.coastHold = 0;
+      if (elevator.coastHold > 0.7) {
+        elevator.labCoast = true;
+        elevator.mastery.uniforme = true;
+        elevator.mastery.resultante = true;
+        if (!elevator.saidCoast) {
+          elevator.saidCoast = true;
+          queueAs("TIGRÃO", "Então força resultante zero não significa necessariamente objeto parado?", 3.6);
+          queue("Exatamente. Resultante zero significa aceleração zero. Observe: a força resultante é zero, mas a carga continua em movimento.", 6.2);
+        }
+      }
+      if (Math.abs(a) > 0.35 && Math.abs(Fr) > 30) {
+        const known = elevator.samples.find((item) => item.mass === elevator.mass);
+        if (known) {
+          known.Fr = Fr;
+          known.a = a;
+        } else elevator.samples.push({ mass: elevator.mass, Fr, a });
+        if (!elevator.saidPair && elevator.samples.length >= 2) {
+          const [first, second] = elevator.samples;
+          if (first && second && Math.abs(first.Fr - second.Fr) < 25 && Math.abs(first.mass - second.mass) > 10) {
+            elevator.saidPair = true;
+            elevator.mastery.mesmaFr = true;
+            const heavy = first.mass > second.mass ? first : second;
+            const light = first.mass > second.mass ? second : first;
+            queue(
+              `Resultante parecida, perto de ${comma(light.Fr, 0)} N. ${comma(light.mass, 0)} kg acelerou ${comma(light.a, 2)} m/s²; ${comma(heavy.mass, 0)} kg acelerou ${comma(heavy.a, 2)} m/s². A massa maior acelera menos.`,
+              6.4,
+            );
+          }
+        }
+      }
       const missing = [
         elevator.labUp ? "" : "subida",
         elevator.labBalance ? "" : "equilíbrio",
         elevator.labDown ? "" : "descida",
+        elevator.labCoast ? "" : "resultante zero em movimento",
       ].filter(Boolean);
-      elevator.hint = missing.length ? `Com ${comma(elevator.mass, 0)} kg falta: ${missing.join(", ")}.` : "As três situações estão registradas.";
-      if (elevator.labUp && elevator.labDown && elevator.labBalance) enterProtocol();
+      elevator.hint = missing.length
+        ? `Com ${comma(elevator.mass, 0)} kg falta: ${missing.join(", ")}.`
+        : "As quatro situações estão registradas. Troque a massa e repita uma resultante parecida.";
+      if (elevator.labUp && elevator.labDown && elevator.labBalance && elevator.labCoast) enterProtocol();
     }
   } else if (elevator.goal === "protocol") {
     sim.objective = "7 · Protocolo Newton";
+    if (elevator.v > elevator.flight.vMax) elevator.flight.vMax = elevator.v;
     if (elevator.proto === 0) {
-      elevator.hint = "Mantenha a carga parada: tração igual ao peso, velocidade zero.";
-      if (Math.abs(Fr) < 12 && Math.abs(elevator.v) < 0.18 && elevator.y < 2.2) elevator.protoHold += hdt;
+      elevator.hint = "Repouso: tração igual ao peso, resultante zero, velocidade zero.";
+      if (Math.abs(Fr) < 12 && Math.abs(a) < 0.08 && Math.abs(elevator.v) < 0.18 && elevator.y < 2.2) elevator.protoHold += hdt;
       else elevator.protoHold = 0;
       if (elevator.protoHold > 0.85) {
         elevator.proto = 1;
@@ -608,7 +688,7 @@ export function tickElevator(dt: number): void {
         queue("Parada, com forças presentes. Agora faça a carga subir acelerando.", 4);
       }
     } else if (elevator.proto === 1) {
-      elevator.hint = "Aceleração para cima. Passe da metade do poço ainda ganhando velocidade.";
+      elevator.hint = "Aceleração para cima: tração maior que o peso, velocidade crescendo.";
       if (elevator.y > 3.6 && a > 0.28 && elevator.v > 0.2) {
         elevator.proto = 2;
         elevator.protoHold = 0;
@@ -619,18 +699,37 @@ export function tickElevator(dt: number): void {
         Math.abs(elevator.v) < 0.12
           ? "A velocidade zerou. Aumente um pouco a tração e, no meio da subida, iguale de novo."
           : "Resultante perto de zero e velocidade para cima. Segure assim por um instante.";
-      if (Math.abs(Fr) <= 10 && elevator.v > 0.22) elevator.protoHold += hdt;
+      if (Math.abs(Fr) <= 10 && Math.abs(a) < 0.08 && elevator.v > 0.22) elevator.protoHold += hdt;
       else elevator.protoHold = 0;
       if (elevator.protoHold > 0.8) {
         elevator.proto = 3;
-        queue("Força resultante zero, velocidade conservada. Desacelere antes da plataforma.", 4.6);
+        queue("Força resultante zero, velocidade conservada. Desacelere antes da plataforma: tração menor que o peso, ainda subindo.", 5.4);
       }
-    } else {
-      elevator.hint = elevator.braking
-        ? "Quase lá. Chegue à plataforma de cima com velocidade baixa."
+    } else if (!crashed) {
+      if (!elevator.flight.brakeValid && brakingGate(a, elevator.v, elevator.y)) {
+        elevator.flight.brakeValid = true;
+        elevator.flight.brakeY = elevator.y;
+        elevator.flight.brakeV = elevator.v;
+        elevator.braking = true;
+      } else if (elevator.flight.brakeValid && elevator.v > elevator.flight.brakeV - 0.04 && a > -0.05) {
+        elevator.flight.brakeValid = false;
+        elevator.braking = false;
+      }
+      elevator.hint = elevator.flight.brakeValid
+        ? "Frenagem válida. A velocidade precisa cair antes do limite — bater no topo não conta."
         : "Tração abaixo do peso, ainda subindo, para a velocidade cair antes do topo.";
-      if (a < -0.15 && elevator.v > 0.12 && elevator.y < 8.5) elevator.braking = true;
-      if (elevator.braking && elevator.y > 8.55 && Math.abs(elevator.v) < 0.45) finish();
+      if (
+        arrivalAllowed({
+          phase: "brake",
+          brakeValid: elevator.flight.brakeValid,
+          brakeV: elevator.flight.brakeV,
+          y: elevator.y,
+          v: elevator.v,
+          hitTop: step.hitTop,
+        })
+      ) {
+        finish();
+      }
     }
   } else {
     sim.objective = "Etapa 2 concluída · força resultante";
