@@ -26,6 +26,12 @@ test("trabalho nulo: força perpendicular ou sem deslocamento", () => {
   assert.equal(workOf(0, 4, 0), 0);
 });
 
+test("ângulo de 45°: 100 N por 5 m", () => {
+  const expected = 100 * 5 * Math.cos(Math.PI / 4);
+  assert.ok(Math.abs(workOf(100, 5, 45) - expected) < 1e-9);
+  assert.ok(Math.abs(expected - 353.5533905932738) < 1e-9);
+});
+
 test("ângulo reduz o trabalho: 0° máximo, 90° nulo, 180° mínimo", () => {
   const full = workOf(100, 5, 0);
   assert.ok(workOf(100, 5, 30) < full);

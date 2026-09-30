@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-CfaqlrnX.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-iH7xKo_j.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -897,6 +897,11 @@ var sfx = {
 	},
 	cable() {
 		burst(160, .07, .022, 880);
+	},
+	alert() {
+		if (!ctx) return;
+		tone(740, ctx.currentTime, .02, .07, "square");
+		tone(520, ctx.currentTime + .08, .016, .1, "square");
 	}
 };
 /** Vertical hoist math. g matches layout.ts. The fixed-mass helpers stay for stage-1-era tests. */
@@ -3764,8 +3769,10 @@ function workEnergyDelta(initialKinetic, finalKinetic) {
 	const w = finite(finalKinetic) - finite(initialKinetic);
 	return Number.isFinite(w) ? w : 0;
 }
+/** Relative band used by the stage-3 fall. Discrete steps are not exact. */
+var ENERGY_TOL = .18;
 /** True when mechanical energy is unchanged within a relative tolerance. */
-function mechanicallyConserved(initial, final, tol = .08) {
+function mechanicallyConserved(initial, final, tol = ENERGY_TOL) {
 	const a = finite(initial);
 	const b = finite(final);
 	const scale = Math.max(1, Math.abs(a), Math.abs(b));
@@ -3843,6 +3850,13 @@ function stepFall(h, v, mass, g, mu, dt) {
 	};
 }
 var INVULN_TIME = 1.8;
+var GUARD_STEPS = [
+	"guard-work",
+	"guard-kinetic",
+	"guard-potential",
+	"guard-save",
+	"guard-heat"
+];
 var CHECKPOINTS = [
 	{
 		id: 1,
@@ -3928,6 +3942,7 @@ function freshAliens() {
 			span: 2.4,
 			mode: "patrol",
 			t: 0,
+			wind: 0,
 			disabled: false
 		},
 		{
@@ -3940,6 +3955,7 @@ function freshAliens() {
 			span: 0,
 			mode: "patrol",
 			t: 0,
+			wind: 0,
 			disabled: false
 		},
 		{
@@ -3952,22 +3968,25 @@ function freshAliens() {
 			span: 0,
 			mode: "patrol",
 			t: 0,
+			wind: 0,
 			disabled: false
 		}
 	];
 }
 function takeDamage(crew, source) {
-	if (crew.over || crew.invuln > 0 || crew.lives <= 0) return {
+	const livesNow = Number.isFinite(crew.lives) ? Math.max(0, Math.min(3, crew.lives)) : 0;
+	if (crew.over || crew.invuln > 0 || livesNow <= 0) return {
 		...crew,
+		lives: livesNow,
 		applied: false
 	};
-	const lives = Math.max(0, crew.lives - 1);
+	const lives = livesNow - 1;
 	return {
 		...crew,
 		lives,
 		invuln: INVULN_TIME,
 		over: lives <= 0,
-		score: Math.max(0, crew.score - 25),
+		score: Math.max(0, Number.isFinite(crew.score) ? crew.score - 25 : 0),
 		flash: .45,
 		source,
 		applied: true
@@ -4016,6 +4035,10 @@ function addScore(crew, amount) {
 	};
 }
 function reachCheckpoint(crew, id) {
+	if (id !== 1 && id !== 2 && id !== 3 && id !== 4) return {
+		...crew,
+		fresh: false
+	};
 	if (id <= crew.checkpoint) return {
 		...crew,
 		fresh: false
@@ -4026,6 +4049,13 @@ function reachCheckpoint(crew, id) {
 		score: crew.score + 100,
 		fresh: true
 	};
+}
+function guardianEnergy(solved) {
+	const done = GUARD_STEPS.filter((id) => solved[id]).length;
+	return Math.max(0, 100 - done * 20);
+}
+function guardianAsleep(solved) {
+	return GUARD_STEPS.every((id) => Boolean(solved[id]));
 }
 function challengeOf(id) {
 	if (id === "work") {
@@ -4100,7 +4130,43 @@ function challengeOf(id) {
 			hint: "Mesma direção e mesmo sentido: o cosseno vale 1."
 		};
 	}
-	if (id === "guard-energy") {
+	if (id === "guard-kinetic") {
+		const answer = kineticEnergy(4, 5);
+		return {
+			id,
+			title: "Guardião · energia cinética",
+			prompt: "4 kg a 5 m/s. Qual é a energia cinética que o núcleo compara?",
+			facts: "Ec = ½mv². O sinal da velocidade não muda o resultado.",
+			options: [
+				20,
+				answer,
+				100,
+				10
+			],
+			answer,
+			explain: "Ec = ½ × 4 × 5² = 50 J. A velocidade entra ao quadrado.",
+			hint: "Quadrado da velocidade primeiro. Depois multiplique por metade da massa."
+		};
+	}
+	if (id === "guard-potential") {
+		const answer = potentialEnergy(5, 9.8, 4);
+		return {
+			id,
+			title: "Guardião · energia potencial",
+			prompt: "5 kg elevados 4 m, com g = 9,8 m/s². Qual é a energia potencial?",
+			facts: "Epg = mgh",
+			options: [
+				49,
+				98,
+				answer,
+				392
+			],
+			answer,
+			explain: "Epg = 5 × 9,8 × 4 = 196 J. Altura e massa entram juntas.",
+			hint: "Não esqueça a gravidade no meio da conta."
+		};
+	}
+	if (id === "guard-save") {
 		const answer = mechanicalEnergy(0, potentialEnergy(2, 9.81, 10));
 		return {
 			id,
@@ -4142,15 +4208,29 @@ function gradeChallenge(id, picked) {
 		spec
 	};
 }
+var ALERT_DELAY = .35;
+var STRIKE = .34;
+var COOLDOWN = .7;
+var DETECT = 3.1;
+function seesAhead(alien, px) {
+	const facing = Math.cos(alien.t * .8) >= 0 ? 1 : -1;
+	const dx = px - alien.x;
+	return Math.abs(dx) < .45 || Math.sign(dx || 1) === facing;
+}
+function striking(alien) {
+	return !alien.disabled && alien.mode === "attack" && alien.wind > 0 && alien.wind <= .12;
+}
 function stepAlien(alien, px, pz, dt, asleep) {
 	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
 	const next = {
 		...alien,
-		t: alien.t + step
+		t: alien.t + step,
+		wind: Math.max(0, (Number.isFinite(alien.wind) ? alien.wind : 0) - step)
 	};
 	if (asleep || next.disabled) {
 		next.disabled = true;
 		next.mode = "sleep";
+		next.wind = 0;
 		next.x += (next.homeX - next.x) * Math.min(1, step * 2);
 		next.z += (next.homeZ + 1.2 - next.z) * Math.min(1, step * 2);
 		return next;
@@ -4161,26 +4241,70 @@ function stepAlien(alien, px, pz, dt, asleep) {
 		return next;
 	}
 	if (next.kind === "guardian") {
-		next.mode = dist < 1.7 ? "attack" : "patrol";
+		if (dist >= 2.4) {
+			if (next.mode === "cooldown" && next.wind > 0) return next;
+			next.mode = "patrol";
+			return next;
+		}
+		if (next.mode === "cooldown") {
+			if (next.wind <= 0) {
+				next.mode = "attack";
+				next.wind = STRIKE;
+			}
+			return next;
+		}
+		if (next.mode !== "attack") {
+			next.mode = "attack";
+			next.wind = STRIKE;
+			return next;
+		}
+		if (next.wind <= 0) {
+			next.mode = "cooldown";
+			next.wind = COOLDOWN;
+		}
 		return next;
 	}
-	if (dist < .85) next.mode = "attack";
-	else if (dist < 3.1) next.mode = "chase";
-	else if (next.mode === "chase" || next.mode === "attack" || next.mode === "alert") next.mode = "return";
-	else next.mode = dist < 4.2 ? "alert" : "patrol";
-	if (next.mode === "chase" || next.mode === "attack") {
+	if (next.mode === "cooldown") {
+		if (next.wind <= 0) next.mode = "return";
+		return next;
+	}
+	if (next.mode === "attack") {
+		if (next.wind <= 0) {
+			next.mode = "cooldown";
+			next.wind = COOLDOWN;
+		}
+		return next;
+	}
+	if (next.mode === "alert") {
+		if (dist > 3.9000000000000004) {
+			next.mode = "patrol";
+			return next;
+		}
+		if (next.wind <= 0) next.mode = "chase";
+		return next;
+	}
+	if (next.mode === "chase") {
 		const len = Math.max(.001, dist);
-		const speed = 1.55;
-		next.x += (px - next.x) / len * speed * step;
-		next.z += (pz - next.z) / len * speed * step;
-	} else if (next.mode === "return") {
+		next.x += (px - next.x) / len * 1.7 * step;
+		next.z += (pz - next.z) / len * 1.7 * step;
+		if (dist < .9) {
+			next.mode = "attack";
+			next.wind = STRIKE;
+		} else if (dist > 4.8) next.mode = "return";
+		return next;
+	}
+	if (next.mode === "return") {
 		next.x += (next.homeX - next.x) * Math.min(1, step * 1.4);
 		next.z += (next.homeZ - next.z) * Math.min(1, step * 1.4);
 		if (Math.hypot(next.homeX - next.x, next.homeZ - next.z) < .3) next.mode = "patrol";
-	} else {
-		next.x = next.homeX + Math.sin(next.t * .8) * next.span;
-		next.z = next.homeZ;
-		next.mode = "patrol";
+		return next;
+	}
+	next.x = next.homeX + Math.sin(next.t * .8) * next.span;
+	next.z = next.homeZ;
+	next.mode = "patrol";
+	if (dist < DETECT && seesAhead(next, px)) {
+		next.mode = "alert";
+		next.wind = ALERT_DELAY;
 	}
 	return next;
 }
@@ -4192,17 +4316,17 @@ function hazardHits(aliens, px, pz, time, shield) {
 	for (const alien of aliens) {
 		if (alien.disabled || alien.mode === "sleep") continue;
 		const dist = Math.hypot(px - alien.x, pz - alien.z);
-		if (alien.kind === "patrol" && alien.mode === "attack" && dist < .85) return {
+		if (alien.kind === "patrol" && striking(alien) && dist < .9) return {
 			source: "drone de patrulha",
 			ox: alien.x,
 			oz: alien.z
 		};
-		if (alien.kind === "energy" && dist < 1.35) return {
+		if (alien.kind === "energy" && dist < 1.35 && Math.sin(alien.t * 3) > .55) return {
 			source: "campo do alien de energia",
 			ox: alien.x,
 			oz: alien.z
 		};
-		if (alien.kind === "guardian" && alien.mode === "attack" && dist < 1.15) return {
+		if (alien.kind === "guardian" && striking(alien) && dist < 1.25) return {
 			source: "guardião do núcleo",
 			ox: alien.x,
 			oz: alien.z
@@ -4289,7 +4413,8 @@ var vault = {
 	quizNote: "",
 	banner: "",
 	bannerT: 0,
-	guardianSleep: false
+	guardianSleep: false,
+	bossIntro: -1
 };
 function resetVault() {
 	vault.active = false;
@@ -4334,6 +4459,7 @@ function resetVault() {
 	vault.banner = "";
 	vault.bannerT = 0;
 	vault.guardianSleep = false;
+	vault.bossIntro = -1;
 	sim.downed = false;
 }
 function queue(text, seconds = 3.6) {
@@ -4471,7 +4597,9 @@ function tickThreats(hdt) {
 	if (vault.bannerT <= 0) vault.banner = "";
 	const asleepField = Boolean(vault.crew.solved.work);
 	const asleepGuard = vault.guardianSleep;
+	const before = vault.aliens.map((alien) => alien.mode);
 	vault.aliens = vault.aliens.map((alien) => stepAlien(alien, sim.x, sim.z, hdt, alien.kind === "energy" && asleepField || alien.kind === "guardian" && asleepGuard));
+	if (vault.aliens.some((alien, index) => alien.mode === "alert" && before[index] !== "alert")) sfx.alert();
 	vault.crew = tickCrew(vault.crew, hdt);
 	if (!vault.quiz && vault.goal !== "done") {
 		const hit = hazardHits(vault.aliens, sim.x, sim.z, sim.time, false);
@@ -4503,6 +4631,7 @@ function tickThreats(hdt) {
 	}
 	for (const item of PICKUPS) {
 		if (vault.crew.picked[item.id]) continue;
+		if (item.kind !== "core" && vault.crew.lives >= 3) continue;
 		if (Math.hypot(sim.x - item.x, sim.z - item.z) > .8) continue;
 		vault.crew = {
 			...vault.crew,
@@ -4532,7 +4661,8 @@ function tickThreats(hdt) {
 	}
 }
 function answerChallenge(index) {
-	if (!vault.quiz || sim.stage !== 3) return;
+	if (!vault.quiz || sim.stage !== 3 || vault.crew.over) return;
+	if (vault.crew.solved[vault.quiz]) return;
 	const spec = challengeOf(vault.quiz);
 	const picked = spec.options[index];
 	if (picked == null) return;
@@ -4543,45 +4673,46 @@ function answerChallenge(index) {
 		};
 		vault.quizNote = spec.hint;
 		sfx.fail();
+		publishNow();
 		return;
 	}
 	const first = vault.crew.tries === 0;
+	const id = vault.quiz;
 	vault.crew = addScore({
 		...vault.crew,
 		tries: 0,
 		solved: {
 			...vault.crew.solved,
-			[vault.quiz]: true
+			[id]: true
 		}
 	}, first ? 150 : 100);
 	vault.quizNote = spec.explain;
 	sfx.success();
-	const order = [
-		"guard-work",
-		"guard-energy",
-		"guard-heat"
-	];
-	if (vault.quiz === "work") {
+	if (id === "work") {
 		vault.crew = addCore(vault.crew);
 		vault.quiz = null;
 		banner("Campo desligado · 300 J transferidos");
+		publishNow();
 		return;
 	}
-	const guardIndex = order.indexOf(vault.quiz);
-	if (guardIndex >= 0 && guardIndex < order.length - 1) {
-		vault.quiz = order[guardIndex + 1] ?? null;
+	const guardIndex = GUARD_STEPS.indexOf(id);
+	if (guardIndex >= 0 && guardIndex < GUARD_STEPS.length - 1) {
+		vault.quiz = GUARD_STEPS[guardIndex + 1] ?? null;
+		publishNow();
 		return;
 	}
-	if (vault.quiz === "guard-heat") {
+	if (id === "guard-heat") {
 		vault.crew = addCore(vault.crew);
 		vault.quiz = null;
-		vault.guardianSleep = true;
-		banner("O guardião recuou. O núcleo pode receber a energia.");
-		queue("O guardião não foi destruído. Sem energia para sustentar o campo, ele apenas dorme.", 4);
+		vault.guardianSleep = guardianAsleep(vault.crew.solved);
+		banner("Guardião desativado");
+		queue("O guardião não foi destruído. A energia que o sustentava acabou, e ele apenas dorme.", 4.2);
+		publishNow();
 		return;
 	}
 	vault.quiz = null;
 	banner("Cálculo confirmado");
+	publishNow();
 }
 function openChallenge(id) {
 	if (vault.crew.solved[id] || vault.crew.over) return;
@@ -4631,6 +4762,7 @@ function tickVault(dt) {
 		return;
 	}
 	tickThreats(hdt);
+	if (vault.bossIntro > 0) vault.bossIntro = Math.max(0, vault.bossIntro - hdt);
 	if (vault.crew.over) {
 		sim.downed = true;
 		pumpLines();
@@ -4704,7 +4836,7 @@ function tickVault(dt) {
 			queue("A escotilha não cede. Existe força. Não existe deslocamento.", 3.8);
 		}
 	} else if (vault.goal === "null") {
-		sim.objective = "2 · Trabalho nulo";
+		sim.objective = "Neutralize o campo e entenda o trabalho nulo";
 		vault.hint = near(HATCH) ? "Segure E. A força existe. O deslocamento continua zero." : "Volte à escotilha travada.";
 		vault.note = "W = F·d·cosθ. Se d = 0, W = 0.";
 		if (near(HATCH) && e) vault.hold += hdt;
@@ -4722,7 +4854,7 @@ function tickVault(dt) {
 			queue("Agora eleve a carga de 20 kg. Tração e deslocamento apontam para cima: o trabalho é positivo.", 4.4);
 		}
 	} else if (vault.goal === "positive") {
-		sim.objective = "3 · Trabalho positivo";
+		sim.objective = "Eleve a carga · trabalho positivo";
 		vault.hint = atHoist ? "E aumenta a tração. Shift+E diminui. A carga precisa subir." : "O guincho está no centro da sala.";
 		vault.note = "θ = 0° · cos 0° = 1 · W = F·d";
 		if (vault.sawUp && s.dy > 1.15 && s.tensionWork > 180) {
@@ -4736,7 +4868,7 @@ function tickVault(dt) {
 			queue("Agora a carga desce e a tração continua para cima. Isso é trabalho negativo — a frenagem da etapa anterior.", 4.6);
 		}
 	} else if (vault.goal === "negative") {
-		sim.objective = "4 · Trabalho negativo";
+		sim.objective = "Freie a descida · trabalho negativo";
 		vault.hint = "Deixe descer. Se quiser, Shift+E reduz ainda mais a tração. O trabalho da tração fica negativo.";
 		vault.note = "θ = 180° · a força de sustentação aponta contra o deslocamento.";
 		if (s.dy < -.9 && s.tensionWork < -80 && vault.v < -.05) {
@@ -4748,7 +4880,7 @@ function tickVault(dt) {
 			queue("No trilho ao fundo, gire o ângulo com E. 0° transfere, 90° não, 180° retira.", 4.4);
 		}
 	} else if (vault.goal === "angle") {
-		sim.objective = "5 · O ângulo importa";
+		sim.objective = "Compare 0°, 90° e 180°";
 		vault.hint = near(DIAL) ? `Ângulo ${vault.angle}°. E troca o ângulo. Falta: ${[
 			vault.ang0 ? "" : "0°",
 			vault.ang90 ? "" : "90°",
@@ -4764,7 +4896,7 @@ function tickVault(dt) {
 			queue("A energia cinética não dobra. Ela quadruplica. Ec = ½mv².", 3.8);
 		}
 	} else if (vault.goal === "kinetic") {
-		sim.objective = "6 · Energia cinética";
+		sim.objective = "A velocidade ao quadrado muda a energia";
 		vault.hint = near(TRACK) ? "E alterna 2 m/s e 4 m/s. A massa fica em 50 kg. Compare as duas energias." : "A bancada de velocidade está no trilho.";
 		vault.note = "Ec = ½mv². Dobrar v multiplica a energia por quatro.";
 		if (vault.kinSlow && vault.kinFast) {
@@ -4778,7 +4910,7 @@ function tickVault(dt) {
 			}
 		}
 	} else if (vault.goal === "theorem") {
-		sim.objective = "7 · Trabalho e energia cinética";
+		sim.objective = "O trabalho da resultante vira energia cinética";
 		const scale = Math.max(1, Math.abs(s.cartW), Math.abs(s.cartDelta));
 		const close = Math.abs(s.cartW - s.cartDelta) < .08 * scale;
 		vault.hint = "A força empurra o carrinho. Compare o trabalho com a variação da energia cinética.";
@@ -4797,7 +4929,7 @@ function tickVault(dt) {
 			queue("Agora eleve 10 kg até cerca de 5 m. A energia potencial é mgh.", 4);
 		}
 	} else if (vault.goal === "potential") {
-		sim.objective = "8 · Energia potencial";
+		sim.objective = "Erga 10 kg até 5 m";
 		const h = Math.max(0, vault.y - 1.05);
 		vault.hint = atHoist ? "E aumenta a tração. A altura de referência é o piso do guincho. Alvo: 5 m." : "Volte ao guincho. Carga de 10 kg.";
 		vault.note = "Epg = mgh. Mais alto, mais energia armazenada no campo gravitacional.";
@@ -4813,7 +4945,7 @@ function tickVault(dt) {
 			queue("Solte a carga. A potencial deve virar cinética. A mecânica fica quase constante.", 4.2);
 		}
 	} else if (vault.goal === "fall") {
-		sim.objective = "9 · Conservação";
+		sim.objective = "Observe a conservação na queda";
 		vault.hint = "Observe a queda sem atrito. Uma barra desce, a outra sobe, a soma quase não muda.";
 		vault.note = "Em = Ec + Epg. Sem dissipação, Em inicial ≈ Em final.";
 		const dropped = vault.em0 - s.fallEpg > 80 && s.fallEc > 60;
@@ -4829,7 +4961,7 @@ function tickVault(dt) {
 			queue("Agora o trilho tem atrito. A mecânica diminui. A energia não desaparece.", 4.2);
 		}
 	} else if (vault.goal === "friction") {
-		sim.objective = "10 · Atrito e dissipação";
+		sim.objective = "Atrito transforma mecânica em calor";
 		vault.hint = "A energia térmica sobe enquanto a mecânica desce. Nada some: muda de forma.";
 		vault.note = "Em final < Em inicial. A diferença foi para energia térmica.";
 		if (vault.h < 1.3 && vault.h > .15 && vault.thermal > 20 && s.fallEm < vault.em0 - 15) {
@@ -4839,9 +4971,14 @@ function tickVault(dt) {
 			queue("Sim. Vá até o núcleo e confirme. Ele só abre depois dessa sequência real.", 3.8);
 		}
 	} else if (vault.goal === "core") {
-		sim.objective = "11 · Restaurar o núcleo";
-		vault.hint = near(CORE) ? "Segure E depois que o guardião dormir. Os três cálculos abrem o núcleo." : "O núcleo está no fim da sala, à direita.";
-		vault.note = "Força → resultante → aceleração → deslocamento → trabalho → energia.";
+		sim.objective = "Desative o guardião e restaure o núcleo";
+		vault.hint = near(CORE) ? "Segure E só depois que a energia do guardião chegar a zero." : "O núcleo está no fim da sala, à direita.";
+		vault.note = "Força → deslocamento → trabalho → energia → conservação.";
+		if (vault.bossIntro < 0) {
+			vault.bossIntro = 1.15;
+			queue("O guardião está usando a energia armazenada. Não atire. Calcule.", 3.6);
+			sfx.cable();
+		}
 		if (!vault.guardianSleep && !vault.quiz && !vault.crew.solved["guard-heat"]) openChallenge("guard-work");
 		if (near(CORE) && e && vault.guardianSleep) vault.hold += hdt;
 		else if (!vault.guardianSleep) vault.hold = 0;
@@ -4868,6 +5005,9 @@ function Vault() {
 	const drone = (0, import_react.useRef)(null);
 	const field = (0, import_react.useRef)(null);
 	const guard = (0, import_react.useRef)(null);
+	const guardCore = (0, import_react.useRef)(null);
+	const rings = (0, import_react.useRef)(null);
+	const loot = (0, import_react.useRef)(null);
 	const screen = (0, import_react.useMemo)(() => M.emit.clone(), []);
 	useFrame(() => {
 		if (hoist.current) hoist.current.position.y = vault.active ? vault.y : 1.2;
@@ -4878,14 +5018,36 @@ function Vault() {
 		const fieldA = vault.aliens.find((item) => item.id === "field");
 		const guardA = vault.aliens.find((item) => item.id === "guardian");
 		if (drone.current && droneA) {
-			drone.current.position.set(droneA.x, .55, droneA.z);
-			drone.current.rotation.y = sim.time * (droneA.mode === "chase" ? 2.4 : .8);
+			const bob = Math.sin(sim.time * 3) * .06;
+			const rush = droneA.mode === "chase" || droneA.mode === "attack" ? .18 : 0;
+			drone.current.position.set(droneA.x, .62 + bob + rush, droneA.z);
+			drone.current.rotation.z = droneA.mode === "chase" ? .35 : droneA.mode === "attack" ? .15 : 0;
 		}
-		if (field.current && fieldA) field.current.position.set(fieldA.x, .7, fieldA.z);
+		if (field.current && fieldA) {
+			const pulse = fieldA.mode === "sleep" ? .35 : .9 + Math.sin(sim.time * 3) * .12;
+			field.current.position.set(fieldA.x, .72, fieldA.z);
+			field.current.scale.setScalar(pulse);
+		}
 		if (guard.current && guardA) {
-			guard.current.position.set(guardA.x, guardA.mode === "sleep" ? .25 : .85, guardA.z);
-			guard.current.scale.setScalar(guardA.mode === "sleep" ? .65 : 1);
+			const energy = guardianEnergy(vault.crew.solved);
+			guard.current.position.set(guardA.x, (guardA.mode === "sleep" ? .35 : .9) + Math.sin(sim.time * 1.6) * .05, guardA.z);
+			guard.current.scale.setScalar(guardA.mode === "sleep" ? .55 : 1);
+			if (guardCore.current) {
+				guardCore.current.emissive.set(energy > 60 ? "#e07a4a" : energy > 20 ? "#e0a23a" : "#7eb8cc");
+				guardCore.current.emissiveIntensity = guardA.mode === "attack" ? 1.4 : .55;
+			}
 		}
+		rings.current?.children.forEach((child) => {
+			const id = Number(child.name.replace("cp-", ""));
+			const on = vault.crew.checkpoint >= id;
+			child.scale.setScalar(on ? 1.2 : .85);
+		});
+		loot.current?.children.forEach((child, index) => {
+			const item = PICKUPS[index];
+			child.visible = item ? !vault.crew.picked[item.id] : true;
+			child.rotation.y += .02;
+			child.position.y = .42 + Math.sin(sim.time * 2 + index) * .05;
+		});
 		if (crate.current) crate.current.position.set(18.5, .35, crateZ(sim.time));
 		if (core.current) {
 			const live = sim.stage === 3 && vault.active;
@@ -5151,43 +5313,104 @@ function Vault() {
 				.55
 			] })
 		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				23.2,
+				.42,
+				-51.15
+			],
+			rotation: [
+				0,
+				.2,
+				-.42
+			],
+			material: M.hull,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				2.6,
+				.08,
+				.7
+			] })
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 			ref: drone,
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-					material: M.suitBlue,
+					material: M.hullDark,
 					dispose: null,
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-						.28,
-						14,
-						12
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.42,
+						.22,
+						.28
 					] })
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 					position: [
+						.22,
+						0,
+						0
+					],
+					material: M.suitBlue,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
 						.16,
+						.06,
+						.2
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.22,
+						0,
+						0
+					],
+					material: M.suitBlue,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.16,
+						.06,
+						.2
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.1,
 						.08,
 						.12
 					],
 					material: M.emit,
 					dispose: null,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-						.07,
-						10,
+						.05,
+						8,
 						8
 					] })
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
 					position: [
-						-.16,
+						-.1,
 						.08,
 						.12
 					],
 					material: M.emit,
 					dispose: null,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.05,
+						8,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						-.02,
+						0
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
 						.07,
-						10,
+						8,
 						8
 					] })
 				})
@@ -5195,79 +5418,229 @@ function Vault() {
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 			ref: field,
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-				material: M.hull,
-				dispose: null,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
-					.16,
-					.35,
-					4,
-					8
-				] })
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-				material: M.emit,
-				dispose: null,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.72,
-					16,
-					12
-				] })
-			})]
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.hull,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+						.18,
+						.42,
+						4,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						.28,
+						.08
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.06,
+						8,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.1,
+						.28,
+						.08
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.045,
+						8,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.62,
+						16,
+						12
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.28,
+						.05,
+						0
+					],
+					rotation: [
+						0,
+						0,
+						.6
+					],
+					material: M.suit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.28,
+						.06,
+						.06
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.28,
+						.05,
+						0
+					],
+					rotation: [
+						0,
+						0,
+						-.6
+					],
+					material: M.suit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.28,
+						.06,
+						.06
+					] })
+				})
+			]
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
 			ref: guard,
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-				material: M.hullDark,
-				dispose: null,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.46,
-					16,
-					12
-				] })
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-				position: [
-					0,
-					.22,
-					.28
-				],
-				material: M.emit,
-				dispose: null,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
-					.12,
-					10,
-					8
-				] })
-			})]
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.hullDark,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.7,
+						.55,
+						.45
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						0,
+						.42,
+						0
+					],
+					material: M.hull,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.36,
+						.22,
+						.28
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.1,
+						.48,
+						.12
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.05,
+						8,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.1,
+						.48,
+						.12
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.05,
+						8,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.42,
+						.05,
+						0
+					],
+					material: M.stripe,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.34,
+						.08,
+						.08
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.42,
+						.05,
+						0
+					],
+					material: M.stripe,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.34,
+						.08,
+						.08
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+					dispose: null,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.16,
+						12,
+						10
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshStandardMaterial", {
+						ref: guardCore,
+						color: "#1a2430",
+						emissive: "#e07a4a",
+						emissiveIntensity: .7,
+						roughness: .3,
+						metalness: .4
+					})]
+				})
+			]
 		}),
-		CHECKPOINTS.map((point) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-			position: [
-				point.x,
-				.04,
-				point.z
-			],
-			rotation: [
-				-Math.PI / 2,
-				0,
-				0
-			],
-			material: M.suitBlue,
-			dispose: null,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ringGeometry", { args: [
-				.45,
-				.62,
-				20
-			] })
-		}, point.id)),
-		PICKUPS.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
-			position: [
-				item.x,
-				.35,
-				item.z
-			],
-			material: item.kind === "core" ? M.emit : M.gold,
-			dispose: null,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("octahedronGeometry", { args: [.16, 0] })
-		}, item.id)),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
+			ref: rings,
+			children: CHECKPOINTS.map((point) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				name: `cp-${point.id}`,
+				position: [
+					point.x,
+					.04,
+					point.z
+				],
+				rotation: [
+					-Math.PI / 2,
+					0,
+					0
+				],
+				material: M.suitBlue,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ringGeometry", { args: [
+					.42,
+					.62,
+					20
+				] })
+			}, point.id))
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
+			ref: loot,
+			children: PICKUPS.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					item.x,
+					.42,
+					item.z
+				],
+				material: item.kind === "core" ? M.emit : M.gold,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("octahedronGeometry", { args: [item.kind === "core" ? .18 : .14, 0] })
+			}, item.id))
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 			position: [
 				CORE.x,
@@ -5471,7 +5844,7 @@ function Overlay() {
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "vignette" }),
 			snap.scanner && snap.phase === "play" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "scanner-tint" }) : null,
-			elevator.alarm ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "alarm-tint" }) : null,
+			elevator.alarm || sim.stage === 3 && vault.crew.flash > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "alarm-tint" }) : null,
 			snap.phase === "play" && !snap.solved ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bearing, {}) : null,
 			snap.phase === "title" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Title, { best: snap.best }) : null,
 			snap.phase === "play" || snap.phase === "cinema" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PlayHud, { snap }) : null,
@@ -5806,22 +6179,40 @@ function ForceStrip() {
 }
 function LifeRow() {
 	const hearts = Array.from({ length: 3 }, (_, i) => i < vault.crew.lives ? "♥" : "♡");
+	const guard = guardianEnergy(vault.crew.solved);
+	const spot = CHECKPOINTS.find((item) => item.id === vault.crew.checkpoint);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "panel force-strip",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
-			"Vidas ",
-			hearts.join(" "),
-			" ",
-			vault.crew.lives,
-			"/3 · Núcleos ",
-			vault.crew.cores,
-			"/5 · ",
-			vault.crew.score,
-			" pts"
-		] }), vault.banner ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "note",
-			children: vault.banner
-		}) : null]
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Vidas ",
+				hearts.join(" "),
+				" ",
+				vault.crew.lives,
+				"/3"
+			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Núcleos ",
+				vault.crew.cores,
+				"/5 · ",
+				vault.crew.score,
+				" pts",
+				spot ? ` · ${spot.name}` : ""
+			] }),
+			vault.goal === "core" || guard < 100 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Energia do guardião ",
+				guard,
+				"%",
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+					className: "guard-bar",
+					style: { width: `${guard}%` }
+				})
+			] }) : null,
+			vault.banner ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note",
+				children: vault.banner
+			}) : null
+		]
 	});
 }
 function ChallengePanel() {
@@ -5878,7 +6269,7 @@ function ChallengePanel() {
 	});
 }
 function Downed() {
-	const spot = vault.crew.checkpoint;
+	const spot = CHECKPOINTS.find((item) => item.id === vault.crew.checkpoint);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "modal",
 		"data-ui": true,
@@ -5890,9 +6281,13 @@ function Downed() {
 					children: "Sistema crítico"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Tigrão foi derrotado" }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 					className: "sub",
-					children: "O módulo de energia continua instável. O progresso dos desafios fica no último checkpoint."
+					children: [
+						"O módulo de energia continua instável. Checkpoint: ",
+						spot?.name ?? "entrada",
+						"."
+					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "row",
@@ -5905,7 +6300,7 @@ function Downed() {
 						className: "btn ghost",
 						type: "button",
 						onClick: () => resumeCheckpoint(),
-						children: ["Voltar ao checkpoint ", spot]
+						children: ["Voltar ao checkpoint ", spot?.id ?? 1]
 					})]
 				})
 			]
@@ -5942,8 +6337,19 @@ function EnergyStrip() {
 				s.goal === "angle" ? ` · θ ${s.angle}° · W ${br(s.benchW, 0)} J` : "",
 				s.goal === "kinetic" ? ` · v ${br(s.kinV, 0)} m/s · Ec ${br(s.kinEc, 0)} J` : "",
 				s.goal === "theorem" ? ` · W ${br(s.cartW, 0)} J · ΔEc ${br(s.cartDelta, 0)} J` : "",
-				showWork && s.goal !== "angle" ? ` · W ${br(s.tensionWork, 0)} J · d ${br(s.dy, 2)} m` : ""
+				showWork && s.goal !== "angle" ? ` · W ${br(s.tensionWork, 0)} J · ${s.tensionWork > 1 ? "positivo" : s.tensionWork < -1 ? "negativo" : "nulo"}` : ""
 			] }),
+			s.goal === "fall" || s.goal === "friction" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Em inicial ",
+				br(s.em0, 0),
+				" J · atual ",
+				br(s.fallEm, 0),
+				" J · Δ ",
+				br(s.em0 - s.fallEm, 0),
+				" J ·",
+				" ",
+				mechanicallyConserved(s.em0, s.fallEm, .18) ? "conservada na tolerância" : "há dissipação"
+			] }) : null,
 			showPot ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
 				"Ec ",
 				br(s.goal === "fall" || s.goal === "friction" ? s.fallEc : s.ec, 0),
@@ -6632,6 +7038,11 @@ function Lights() {
 	] });
 }
 function scripted(dt, camera) {
+	if (sim.stage === 3 && vault.bossIntro > 0) {
+		desired.set(CORE.x - 3.1, 2.15, CORE.z + 2.2);
+		look.set(25.2, 1.15, -56.8);
+		return true;
+	}
 	if (sim.stage === 3 && vault.finale > 0) {
 		desired.set(CORE.x - 2.4, 2.5, CORE.z + 3.2);
 		look.set(CORE.x, 1.4, CORE.z);

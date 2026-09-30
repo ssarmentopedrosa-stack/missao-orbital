@@ -374,6 +374,12 @@
 .energy-bars i.heat {
   background: #e07a4a;
 }
+.guard-bar {
+  display: block;
+  height: 4px;
+  margin-top: 0.2rem;
+  background: #e07a4a;
+}
 .report-list {
   list-style: none;
   padding: 0;

@@ -5,7 +5,7 @@ import { HoloLabel, Solid } from "./bits";
 import { M } from "./materials";
 import { sim } from "./sim";
 import { CORE, DIAL, HATCH, HOIST, TRACK, vault } from "./vault";
-import { CHECKPOINTS, crateZ, PICKUPS } from "./survival";
+import { CHECKPOINTS, crateZ, guardianEnergy, PICKUPS } from "./survival";
 
 export function Vault() {
   const hoist = useRef<Group>(null);
@@ -17,6 +17,9 @@ export function Vault() {
   const drone = useRef<Group>(null);
   const field = useRef<Group>(null);
   const guard = useRef<Group>(null);
+  const guardCore = useRef<MeshStandardMaterial>(null);
+  const rings = useRef<Group>(null);
+  const loot = useRef<Group>(null);
   const screen = useMemo(() => M.emit.clone(), []);
 
   useFrame(() => {
@@ -28,14 +31,36 @@ export function Vault() {
     const fieldA = vault.aliens.find((item) => item.id === "field");
     const guardA = vault.aliens.find((item) => item.id === "guardian");
     if (drone.current && droneA) {
-      drone.current.position.set(droneA.x, 0.55, droneA.z);
-      drone.current.rotation.y = sim.time * (droneA.mode === "chase" ? 2.4 : 0.8);
+      const bob = Math.sin(sim.time * 3) * 0.06;
+      const rush = droneA.mode === "chase" || droneA.mode === "attack" ? 0.18 : 0;
+      drone.current.position.set(droneA.x, 0.62 + bob + rush, droneA.z);
+      drone.current.rotation.z = droneA.mode === "chase" ? 0.35 : droneA.mode === "attack" ? 0.15 : 0;
     }
-    if (field.current && fieldA) field.current.position.set(fieldA.x, 0.7, fieldA.z);
+    if (field.current && fieldA) {
+      const pulse = fieldA.mode === "sleep" ? 0.35 : 0.9 + Math.sin(sim.time * 3) * 0.12;
+      field.current.position.set(fieldA.x, 0.72, fieldA.z);
+      field.current.scale.setScalar(pulse);
+    }
     if (guard.current && guardA) {
-      guard.current.position.set(guardA.x, guardA.mode === "sleep" ? 0.25 : 0.85, guardA.z);
-      guard.current.scale.setScalar(guardA.mode === "sleep" ? 0.65 : 1);
+      const energy = guardianEnergy(vault.crew.solved);
+      guard.current.position.set(guardA.x, (guardA.mode === "sleep" ? 0.35 : 0.9) + Math.sin(sim.time * 1.6) * 0.05, guardA.z);
+      guard.current.scale.setScalar(guardA.mode === "sleep" ? 0.55 : 1);
+      if (guardCore.current) {
+        guardCore.current.emissive.set(energy > 60 ? "#e07a4a" : energy > 20 ? "#e0a23a" : "#7eb8cc");
+        guardCore.current.emissiveIntensity = guardA.mode === "attack" ? 1.4 : 0.55;
+      }
     }
+    rings.current?.children.forEach((child) => {
+      const id = Number(child.name.replace("cp-", ""));
+      const on = vault.crew.checkpoint >= id;
+      child.scale.setScalar(on ? 1.2 : 0.85);
+    });
+    loot.current?.children.forEach((child, index) => {
+      const item = PICKUPS[index];
+      child.visible = item ? !vault.crew.picked[item.id] : true;
+      child.rotation.y += 0.02;
+      child.position.y = 0.42 + Math.sin(sim.time * 2 + index) * 0.05;
+    });
     if (crate.current) crate.current.position.set(18.5, 0.35, crateZ(sim.time));
     if (core.current) {
       const live = sim.stage === 3 && vault.active;
@@ -91,43 +116,87 @@ export function Vault() {
       <mesh ref={crate} position={[18.5, 0.35, -52.6]} material={M.stripe} dispose={null}>
         <boxGeometry args={[0.55, 0.55, 0.55]} />
       </mesh>
+      <mesh position={[23.2, 0.42, -51.15]} rotation={[0, 0.2, -0.42]} material={M.hull} dispose={null}>
+        <boxGeometry args={[2.6, 0.08, 0.7]} />
+      </mesh>
       <group ref={drone}>
-        <mesh material={M.suitBlue} dispose={null}>
-          <sphereGeometry args={[0.28, 14, 12]} />
+        <mesh material={M.hullDark} dispose={null}>
+          <boxGeometry args={[0.42, 0.22, 0.28]} />
         </mesh>
-        <mesh position={[0.16, 0.08, 0.12]} material={M.emit} dispose={null}>
-          <sphereGeometry args={[0.07, 10, 8]} />
+        <mesh position={[0.22, 0, 0]} material={M.suitBlue} dispose={null}>
+          <boxGeometry args={[0.16, 0.06, 0.2]} />
         </mesh>
-        <mesh position={[-0.16, 0.08, 0.12]} material={M.emit} dispose={null}>
-          <sphereGeometry args={[0.07, 10, 8]} />
+        <mesh position={[-0.22, 0, 0]} material={M.suitBlue} dispose={null}>
+          <boxGeometry args={[0.16, 0.06, 0.2]} />
+        </mesh>
+        <mesh position={[0.1, 0.08, 0.12]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.05, 8, 8]} />
+        </mesh>
+        <mesh position={[-0.1, 0.08, 0.12]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.05, 8, 8]} />
+        </mesh>
+        <mesh position={[0, -0.02, 0]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.07, 8, 8]} />
         </mesh>
       </group>
       <group ref={field}>
         <mesh material={M.hull} dispose={null}>
-          <capsuleGeometry args={[0.16, 0.35, 4, 8]} />
+          <capsuleGeometry args={[0.18, 0.42, 4, 8]} />
+        </mesh>
+        <mesh position={[0, 0.28, 0.08]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.06, 8, 8]} />
+        </mesh>
+        <mesh position={[0.1, 0.28, 0.08]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.045, 8, 8]} />
         </mesh>
         <mesh material={M.emit} dispose={null}>
-          <sphereGeometry args={[0.72, 16, 12]} />
+          <sphereGeometry args={[0.62, 16, 12]} />
+        </mesh>
+        <mesh position={[0.28, 0.05, 0]} rotation={[0, 0, 0.6]} material={M.suit} dispose={null}>
+          <boxGeometry args={[0.28, 0.06, 0.06]} />
+        </mesh>
+        <mesh position={[-0.28, 0.05, 0]} rotation={[0, 0, -0.6]} material={M.suit} dispose={null}>
+          <boxGeometry args={[0.28, 0.06, 0.06]} />
         </mesh>
       </group>
       <group ref={guard}>
         <mesh material={M.hullDark} dispose={null}>
-          <sphereGeometry args={[0.46, 16, 12]} />
+          <boxGeometry args={[0.7, 0.55, 0.45]} />
         </mesh>
-        <mesh position={[0, 0.22, 0.28]} material={M.emit} dispose={null}>
-          <sphereGeometry args={[0.12, 10, 8]} />
+        <mesh position={[0, 0.42, 0]} material={M.hull} dispose={null}>
+          <boxGeometry args={[0.36, 0.22, 0.28]} />
+        </mesh>
+        <mesh position={[0.1, 0.48, 0.12]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.05, 8, 8]} />
+        </mesh>
+        <mesh position={[-0.1, 0.48, 0.12]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.05, 8, 8]} />
+        </mesh>
+        <mesh position={[0.42, 0.05, 0]} material={M.stripe} dispose={null}>
+          <boxGeometry args={[0.34, 0.08, 0.08]} />
+        </mesh>
+        <mesh position={[-0.42, 0.05, 0]} material={M.stripe} dispose={null}>
+          <boxGeometry args={[0.34, 0.08, 0.08]} />
+        </mesh>
+        <mesh dispose={null}>
+          <sphereGeometry args={[0.16, 12, 10]} />
+          <meshStandardMaterial ref={guardCore} color="#1a2430" emissive="#e07a4a" emissiveIntensity={0.7} roughness={0.3} metalness={0.4} />
         </mesh>
       </group>
-      {CHECKPOINTS.map((point) => (
-        <mesh key={point.id} position={[point.x, 0.04, point.z]} rotation={[-Math.PI / 2, 0, 0]} material={M.suitBlue} dispose={null}>
-          <ringGeometry args={[0.45, 0.62, 20]} />
-        </mesh>
-      ))}
-      {PICKUPS.map((item) => (
-        <mesh key={item.id} position={[item.x, 0.35, item.z]} material={item.kind === "core" ? M.emit : M.gold} dispose={null}>
-          <octahedronGeometry args={[0.16, 0]} />
-        </mesh>
-      ))}
+      <group ref={rings}>
+        {CHECKPOINTS.map((point) => (
+          <mesh key={point.id} name={`cp-${point.id}`} position={[point.x, 0.04, point.z]} rotation={[-Math.PI / 2, 0, 0]} material={M.suitBlue} dispose={null}>
+            <ringGeometry args={[0.42, 0.62, 20]} />
+          </mesh>
+        ))}
+      </group>
+      <group ref={loot}>
+        {PICKUPS.map((item) => (
+          <mesh key={item.id} position={[item.x, 0.42, item.z]} material={item.kind === "core" ? M.emit : M.gold} dispose={null}>
+            <octahedronGeometry args={[item.kind === "core" ? 0.18 : 0.14, 0]} />
+          </mesh>
+        ))}
+      </group>
       <mesh position={[CORE.x, 1.15, CORE.z]} dispose={null}>
         <cylinderGeometry args={[0.55, 0.7, 1.5, 16]} />
         <meshStandardMaterial ref={core} color="#123044" emissive="#7eb8cc" emissiveIntensity={0.08} roughness={0.35} metalness={0.45} />

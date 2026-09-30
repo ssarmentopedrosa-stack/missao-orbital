@@ -17,7 +17,8 @@ import {
 } from "./sim";
 import { shotIndex } from "./layout";
 import { beginStage2, elevator, hoistState } from "./elevator";
-import { challengeOf } from "./survival";
+import { ENERGY_TOL, mechanicallyConserved } from "./energy";
+import { challengeOf, CHECKPOINTS, guardianEnergy } from "./survival";
 import { beginStage3, answerChallenge, openChallenge, resumeCheckpoint, vault, vaultState } from "./vault";
 import { FORCE_SCAN, SPEED_REST } from "./hoist";
 
@@ -36,7 +37,7 @@ export function Overlay() {
     <div className="hud">
       <div className="vignette" />
       {snap.scanner && snap.phase === "play" ? <div className="scanner-tint" /> : null}
-      {elevator.alarm ? <div className="alarm-tint" /> : null}
+      {elevator.alarm || (sim.stage === 3 && vault.crew.flash > 0) ? <div className="alarm-tint" /> : null}
       {snap.phase === "play" && !snap.solved ? <Bearing /> : null}
 
       {snap.phase === "title" ? <Title best={snap.best} /> : null}
@@ -279,11 +280,23 @@ function ForceStrip() {
 
 function LifeRow() {
   const hearts = Array.from({ length: 3 }, (_, i) => (i < vault.crew.lives ? "♥" : "♡"));
+  const guard = guardianEnergy(vault.crew.solved);
+  const spot = CHECKPOINTS.find((item) => item.id === vault.crew.checkpoint);
   return (
     <div className="panel force-strip">
       <p>
-        Vidas {hearts.join(" ")} {vault.crew.lives}/3 · Núcleos {vault.crew.cores}/5 · {vault.crew.score} pts
+        Vidas {hearts.join(" ")} {vault.crew.lives}/3
       </p>
+      <p>
+        Núcleos {vault.crew.cores}/5 · {vault.crew.score} pts
+        {spot ? ` · ${spot.name}` : ""}
+      </p>
+      {vault.goal === "core" || guard < 100 ? (
+        <p>
+          Energia do guardião {guard}%
+          <i className="guard-bar" style={{ width: `${guard}%` }} />
+        </p>
+      ) : null}
       {vault.banner ? <p className="note">{vault.banner}</p> : null}
     </div>
   );
@@ -338,19 +351,19 @@ function ChallengePanel() {
 }
 
 function Downed() {
-  const spot = vault.crew.checkpoint;
+  const spot = CHECKPOINTS.find((item) => item.id === vault.crew.checkpoint);
   return (
     <div className="modal" data-ui>
       <div className="panel sheet">
         <p className="kicker">Sistema crítico</p>
         <h2>Tigrão foi derrotado</h2>
-        <p className="sub">O módulo de energia continua instável. O progresso dos desafios fica no último checkpoint.</p>
+        <p className="sub">O módulo de energia continua instável. Checkpoint: {spot?.name ?? "entrada"}.</p>
         <div className="row">
           <button className="btn" type="button" onClick={() => beginStage3()}>
             Tentar novamente
           </button>
           <button className="btn ghost" type="button" onClick={() => resumeCheckpoint()}>
-            Voltar ao checkpoint {spot}
+            Voltar ao checkpoint {spot?.id ?? 1}
           </button>
         </div>
       </div>
@@ -384,8 +397,14 @@ function EnergyStrip() {
         {s.goal === "angle" ? ` · θ ${s.angle}° · W ${br(s.benchW, 0)} J` : ""}
         {s.goal === "kinetic" ? ` · v ${br(s.kinV, 0)} m/s · Ec ${br(s.kinEc, 0)} J` : ""}
         {s.goal === "theorem" ? ` · W ${br(s.cartW, 0)} J · ΔEc ${br(s.cartDelta, 0)} J` : ""}
-        {showWork && s.goal !== "angle" ? ` · W ${br(s.tensionWork, 0)} J · d ${br(s.dy, 2)} m` : ""}
+        {showWork && s.goal !== "angle" ? ` · W ${br(s.tensionWork, 0)} J · ${s.tensionWork > 1 ? "positivo" : s.tensionWork < -1 ? "negativo" : "nulo"}` : ""}
       </p>
+      {s.goal === "fall" || s.goal === "friction" ? (
+        <p>
+          Em inicial {br(s.em0, 0)} J · atual {br(s.fallEm, 0)} J · Δ {br(s.em0 - s.fallEm, 0)} J ·{" "}
+          {mechanicallyConserved(s.em0, s.fallEm, ENERGY_TOL) ? "conservada na tolerância" : "há dissipação"}
+        </p>
+      ) : null}
       {showPot ? (
         <p>
           Ec {br(s.goal === "fall" || s.goal === "friction" ? s.fallEc : s.ec, 0)} J · Epg{" "}

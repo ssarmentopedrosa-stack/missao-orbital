@@ -148,6 +148,11 @@ export function Lights() {
 }
 
 function scripted(dt: number, camera: THREE.PerspectiveCamera): boolean {
+  if (sim.stage === 3 && vault.bossIntro > 0) {
+    desired.set(CORE.x - 3.1, 2.15, CORE.z + 2.2);
+    look.set(25.2, 1.15, -56.8);
+    return true;
+  }
   if (sim.stage === 3 && vault.finale > 0) {
     desired.set(CORE.x - 2.4, 2.5, CORE.z + 3.2);
     look.set(CORE.x, 1.4, CORE.z);

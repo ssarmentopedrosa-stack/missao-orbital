@@ -5,8 +5,18 @@ export const INVULN_TIME = 1.8;
 export const CORE_GOAL = 5;
 
 export type CheckpointId = 1 | 2 | 3 | 4;
-export type AlienMode = "patrol" | "alert" | "chase" | "attack" | "return" | "sleep";
-export type ChallengeId = "work" | "kinetic" | "potential" | "guard-work" | "guard-energy" | "guard-heat";
+export type AlienMode = "patrol" | "alert" | "chase" | "attack" | "cooldown" | "return" | "sleep";
+export type ChallengeId =
+  | "work"
+  | "kinetic"
+  | "potential"
+  | "guard-work"
+  | "guard-kinetic"
+  | "guard-potential"
+  | "guard-save"
+  | "guard-heat";
+
+export const GUARD_STEPS: ChallengeId[] = ["guard-work", "guard-kinetic", "guard-potential", "guard-save", "guard-heat"];
 
 export type Crew = {
   lives: number;
@@ -32,6 +42,7 @@ export type Alien = {
   span: number;
   mode: AlienMode;
   t: number;
+  wind: number;
   disabled: boolean;
 };
 
@@ -68,21 +79,22 @@ export function freshCrew(): Crew {
 
 export function freshAliens(): Alien[] {
   return [
-    { id: "drone", kind: "patrol", x: 19.2, z: -62.2, homeX: 19.2, homeZ: -62.2, span: 2.4, mode: "patrol", t: 0, disabled: false },
-    { id: "field", kind: "energy", x: 19.4, z: -61.2, homeX: 19.4, homeZ: -61.2, span: 0, mode: "patrol", t: 0, disabled: false },
-    { id: "guardian", kind: "guardian", x: 25.2, z: -56.8, homeX: 25.2, homeZ: -56.8, span: 0, mode: "patrol", t: 0, disabled: false },
+    { id: "drone", kind: "patrol", x: 19.2, z: -62.2, homeX: 19.2, homeZ: -62.2, span: 2.4, mode: "patrol", t: 0, wind: 0, disabled: false },
+    { id: "field", kind: "energy", x: 19.4, z: -61.2, homeX: 19.4, homeZ: -61.2, span: 0, mode: "patrol", t: 0, wind: 0, disabled: false },
+    { id: "guardian", kind: "guardian", x: 25.2, z: -56.8, homeX: 25.2, homeZ: -56.8, span: 0, mode: "patrol", t: 0, wind: 0, disabled: false },
   ];
 }
 
 export function takeDamage(crew: Crew, source: string): Crew & { applied: boolean } {
-  if (crew.over || crew.invuln > 0 || crew.lives <= 0) return { ...crew, applied: false };
-  const lives = Math.max(0, crew.lives - 1);
+  const livesNow = Number.isFinite(crew.lives) ? Math.max(0, Math.min(MAX_LIVES, crew.lives)) : 0;
+  if (crew.over || crew.invuln > 0 || livesNow <= 0) return { ...crew, lives: livesNow, applied: false };
+  const lives = livesNow - 1;
   return {
     ...crew,
     lives,
     invuln: INVULN_TIME,
     over: lives <= 0,
-    score: Math.max(0, crew.score - 25),
+    score: Math.max(0, Number.isFinite(crew.score) ? crew.score - 25 : 0),
     flash: 0.45,
     source,
     applied: true,
@@ -117,8 +129,18 @@ export function addScore(crew: Crew, amount: number): Crew {
 }
 
 export function reachCheckpoint(crew: Crew, id: CheckpointId): Crew & { fresh: boolean } {
+  if (id !== 1 && id !== 2 && id !== 3 && id !== 4) return { ...crew, fresh: false };
   if (id <= crew.checkpoint) return { ...crew, fresh: false };
   return { ...crew, checkpoint: id, score: crew.score + 100, fresh: true };
+}
+
+export function guardianEnergy(solved: Record<string, boolean>): number {
+  const done = GUARD_STEPS.filter((id) => solved[id]).length;
+  return Math.max(0, 100 - done * 20);
+}
+
+export function guardianAsleep(solved: Record<string, boolean>): boolean {
+  return GUARD_STEPS.every((id) => Boolean(solved[id]));
 }
 
 export type ChallengeSpec = {
@@ -185,7 +207,33 @@ export function challengeOf(id: ChallengeId): ChallengeSpec {
       hint: "Mesma direção e mesmo sentido: o cosseno vale 1.",
     };
   }
-  if (id === "guard-energy") {
+  if (id === "guard-kinetic") {
+    const answer = kineticEnergy(4, 5);
+    return {
+      id,
+      title: "Guardião · energia cinética",
+      prompt: "4 kg a 5 m/s. Qual é a energia cinética que o núcleo compara?",
+      facts: "Ec = ½mv². O sinal da velocidade não muda o resultado.",
+      options: [20, answer, 100, 10],
+      answer,
+      explain: "Ec = ½ × 4 × 5² = 50 J. A velocidade entra ao quadrado.",
+      hint: "Quadrado da velocidade primeiro. Depois multiplique por metade da massa.",
+    };
+  }
+  if (id === "guard-potential") {
+    const answer = potentialEnergy(5, 9.8, 4);
+    return {
+      id,
+      title: "Guardião · energia potencial",
+      prompt: "5 kg elevados 4 m, com g = 9,8 m/s². Qual é a energia potencial?",
+      facts: "Epg = mgh",
+      options: [49, 98, answer, 392],
+      answer,
+      explain: "Epg = 5 × 9,8 × 4 = 196 J. Altura e massa entram juntas.",
+      hint: "Não esqueça a gravidade no meio da conta.",
+    };
+  }
+  if (id === "guard-save") {
     const answer = mechanicalEnergy(0, potentialEnergy(2, 9.81, 10));
     return {
       id,
@@ -216,12 +264,28 @@ export function gradeChallenge(id: ChallengeId, picked: number): { ok: boolean; 
   return { ok: Number.isFinite(picked) && Math.abs(picked - spec.answer) < 0.05, spec };
 }
 
+const ALERT_DELAY = 0.35;
+const STRIKE = 0.34;
+const COOLDOWN = 0.7;
+const DETECT = 3.1;
+
+function seesAhead(alien: Alien, px: number): boolean {
+  const facing = Math.cos(alien.t * 0.8) >= 0 ? 1 : -1;
+  const dx = px - alien.x;
+  return Math.abs(dx) < 0.45 || Math.sign(dx || 1) === facing;
+}
+
+export function striking(alien: Alien): boolean {
+  return !alien.disabled && alien.mode === "attack" && alien.wind > 0 && alien.wind <= 0.12;
+}
+
 export function stepAlien(alien: Alien, px: number, pz: number, dt: number, asleep: boolean): Alien {
   const step = Math.min(0.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
-  const next = { ...alien, t: alien.t + step };
+  const next = { ...alien, t: alien.t + step, wind: Math.max(0, (Number.isFinite(alien.wind) ? alien.wind : 0) - step) };
   if (asleep || next.disabled) {
     next.disabled = true;
     next.mode = "sleep";
+    next.wind = 0;
     next.x += (next.homeX - next.x) * Math.min(1, step * 2);
     next.z += (next.homeZ + 1.2 - next.z) * Math.min(1, step * 2);
     return next;
@@ -232,26 +296,70 @@ export function stepAlien(alien: Alien, px: number, pz: number, dt: number, asle
     return next;
   }
   if (next.kind === "guardian") {
-    next.mode = dist < 1.7 ? "attack" : "patrol";
+    if (dist >= 2.4) {
+      if (next.mode === "cooldown" && next.wind > 0) return next;
+      next.mode = "patrol";
+      return next;
+    }
+    if (next.mode === "cooldown") {
+      if (next.wind <= 0) {
+        next.mode = "attack";
+        next.wind = STRIKE;
+      }
+      return next;
+    }
+    if (next.mode !== "attack") {
+      next.mode = "attack";
+      next.wind = STRIKE;
+      return next;
+    }
+    if (next.wind <= 0) {
+      next.mode = "cooldown";
+      next.wind = COOLDOWN;
+    }
     return next;
   }
-  if (dist < 0.85) next.mode = "attack";
-  else if (dist < 3.1) next.mode = "chase";
-  else if (next.mode === "chase" || next.mode === "attack" || next.mode === "alert") next.mode = "return";
-  else next.mode = dist < 4.2 ? "alert" : "patrol";
-  if (next.mode === "chase" || next.mode === "attack") {
+  if (next.mode === "cooldown") {
+    if (next.wind <= 0) next.mode = "return";
+    return next;
+  }
+  if (next.mode === "attack") {
+    if (next.wind <= 0) {
+      next.mode = "cooldown";
+      next.wind = COOLDOWN;
+    }
+    return next;
+  }
+  if (next.mode === "alert") {
+    if (dist > DETECT + 0.8) {
+      next.mode = "patrol";
+      return next;
+    }
+    if (next.wind <= 0) next.mode = "chase";
+    return next;
+  }
+  if (next.mode === "chase") {
     const len = Math.max(0.001, dist);
-    const speed = 1.55;
-    next.x += ((px - next.x) / len) * speed * step;
-    next.z += ((pz - next.z) / len) * speed * step;
-  } else if (next.mode === "return") {
+    next.x += ((px - next.x) / len) * 1.7 * step;
+    next.z += ((pz - next.z) / len) * 1.7 * step;
+    if (dist < 0.9) {
+      next.mode = "attack";
+      next.wind = STRIKE;
+    } else if (dist > 4.8) next.mode = "return";
+    return next;
+  }
+  if (next.mode === "return") {
     next.x += (next.homeX - next.x) * Math.min(1, step * 1.4);
     next.z += (next.homeZ - next.z) * Math.min(1, step * 1.4);
     if (Math.hypot(next.homeX - next.x, next.homeZ - next.z) < 0.3) next.mode = "patrol";
-  } else {
-    next.x = next.homeX + Math.sin(next.t * 0.8) * next.span;
-    next.z = next.homeZ;
-    next.mode = "patrol";
+    return next;
+  }
+  next.x = next.homeX + Math.sin(next.t * 0.8) * next.span;
+  next.z = next.homeZ;
+  next.mode = "patrol";
+  if (dist < DETECT && seesAhead(next, px)) {
+    next.mode = "alert";
+    next.wind = ALERT_DELAY;
   }
   return next;
 }
@@ -267,9 +375,9 @@ export function hazardHits(aliens: Alien[], px: number, pz: number, time: number
   for (const alien of aliens) {
     if (alien.disabled || alien.mode === "sleep") continue;
     const dist = Math.hypot(px - alien.x, pz - alien.z);
-    if (alien.kind === "patrol" && alien.mode === "attack" && dist < 0.85) return { source: "drone de patrulha", ox: alien.x, oz: alien.z };
-    if (alien.kind === "energy" && dist < 1.35) return { source: "campo do alien de energia", ox: alien.x, oz: alien.z };
-    if (alien.kind === "guardian" && alien.mode === "attack" && dist < 1.15) return { source: "guardião do núcleo", ox: alien.x, oz: alien.z };
+    if (alien.kind === "patrol" && striking(alien) && dist < 0.9) return { source: "drone de patrulha", ox: alien.x, oz: alien.z };
+    if (alien.kind === "energy" && dist < 1.35 && Math.sin(alien.t * 3) > 0.55) return { source: "campo do alien de energia", ox: alien.x, oz: alien.z };
+    if (alien.kind === "guardian" && striking(alien) && dist < 1.25) return { source: "guardião do núcleo", ox: alien.x, oz: alien.z };
   }
   const cz = crateZ(time);
   if (Math.hypot(px - 18.5, pz - cz) < 0.55) return { source: "caixa em movimento", ox: 18.5, oz: cz };

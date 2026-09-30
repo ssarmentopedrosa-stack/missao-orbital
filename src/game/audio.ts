@@ -166,4 +166,9 @@ export const sfx = {
   cable() {
     burst(160, 0.07, 0.022, 880);
   },
+  alert() {
+    if (!ctx) return;
+    tone(740, ctx.currentTime, 0.02, 0.07, "square");
+    tone(520, ctx.currentTime + 0.08, 0.016, 0.1, "square");
+  },
 };

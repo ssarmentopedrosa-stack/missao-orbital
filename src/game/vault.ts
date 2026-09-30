@@ -1,5 +1,6 @@
 import { sfx } from "./audio";
 import {
+  ENERGY_TOL,
   kineticEnergy,
   mechanicallyConserved,
   potentialEnergy,
@@ -20,6 +21,8 @@ import {
   freshAliens,
   freshCrew,
   gradeChallenge,
+  guardianAsleep,
+  GUARD_STEPS,
   hazardHits,
   heal,
   PICKUPS,
@@ -99,6 +102,7 @@ export const vault = {
   banner: "",
   bannerT: 0,
   guardianSleep: false,
+  bossIntro: -1,
 };
 
 function resetVault(): void {
@@ -144,6 +148,7 @@ function resetVault(): void {
   vault.banner = "";
   vault.bannerT = 0;
   vault.guardianSleep = false;
+  vault.bossIntro = -1;
   sim.downed = false;
 }
 
@@ -283,6 +288,7 @@ function tickThreats(hdt: number): void {
   if (vault.bannerT <= 0) vault.banner = "";
   const asleepField = Boolean(vault.crew.solved.work);
   const asleepGuard = vault.guardianSleep;
+  const before = vault.aliens.map((alien) => alien.mode);
   vault.aliens = vault.aliens.map((alien) =>
     stepAlien(
       alien,
@@ -292,6 +298,7 @@ function tickThreats(hdt: number): void {
       (alien.kind === "energy" && asleepField) || (alien.kind === "guardian" && asleepGuard),
     ),
   );
+  if (vault.aliens.some((alien, index) => alien.mode === "alert" && before[index] !== "alert")) sfx.alert();
   vault.crew = tickCrew(vault.crew, hdt);
   if (!vault.quiz && vault.goal !== "done") {
     const hit = hazardHits(vault.aliens, sim.x, sim.z, sim.time, false);
@@ -323,6 +330,7 @@ function tickThreats(hdt: number): void {
   }
   for (const item of PICKUPS) {
     if (vault.crew.picked[item.id]) continue;
+    if (item.kind !== "core" && vault.crew.lives >= 3) continue;
     if (Math.hypot(sim.x - item.x, sim.z - item.z) > 0.8) continue;
     vault.crew = { ...vault.crew, picked: { ...vault.crew.picked, [item.id]: true } };
     if (item.kind === "core") {
@@ -347,7 +355,8 @@ function tickThreats(hdt: number): void {
 }
 
 export function answerChallenge(index: number): void {
-  if (!vault.quiz || sim.stage !== 3) return;
+  if (!vault.quiz || sim.stage !== 3 || vault.crew.over) return;
+  if (vault.crew.solved[vault.quiz]) return;
   const spec = challengeOf(vault.quiz);
   const picked = spec.options[index];
   if (picked == null) return;
@@ -356,34 +365,39 @@ export function answerChallenge(index: number): void {
     vault.crew = { ...vault.crew, tries: vault.crew.tries + 1 };
     vault.quizNote = spec.hint;
     sfx.fail();
+    publishNow();
     return;
   }
   const first = vault.crew.tries === 0;
-  vault.crew = addScore({ ...vault.crew, tries: 0, solved: { ...vault.crew.solved, [vault.quiz]: true } }, first ? 150 : 100);
+  const id = vault.quiz;
+  vault.crew = addScore({ ...vault.crew, tries: 0, solved: { ...vault.crew.solved, [id]: true } }, first ? 150 : 100);
   vault.quizNote = spec.explain;
   sfx.success();
-  const order: ChallengeId[] = ["guard-work", "guard-energy", "guard-heat"];
-  if (vault.quiz === "work") {
+  if (id === "work") {
     vault.crew = addCore(vault.crew);
     vault.quiz = null;
     banner("Campo desligado · 300 J transferidos");
+    publishNow();
     return;
   }
-  const guardIndex = order.indexOf(vault.quiz);
-  if (guardIndex >= 0 && guardIndex < order.length - 1) {
-    vault.quiz = order[guardIndex + 1] ?? null;
+  const guardIndex = GUARD_STEPS.indexOf(id);
+  if (guardIndex >= 0 && guardIndex < GUARD_STEPS.length - 1) {
+    vault.quiz = GUARD_STEPS[guardIndex + 1] ?? null;
+    publishNow();
     return;
   }
-  if (vault.quiz === "guard-heat") {
+  if (id === "guard-heat") {
     vault.crew = addCore(vault.crew);
     vault.quiz = null;
-    vault.guardianSleep = true;
-    banner("O guardião recuou. O núcleo pode receber a energia.");
-    queue("O guardião não foi destruído. Sem energia para sustentar o campo, ele apenas dorme.", 4);
+    vault.guardianSleep = guardianAsleep(vault.crew.solved);
+    banner("Guardião desativado");
+    queue("O guardião não foi destruído. A energia que o sustentava acabou, e ele apenas dorme.", 4.2);
+    publishNow();
     return;
   }
   vault.quiz = null;
   banner("Cálculo confirmado");
+  publishNow();
 }
 
 export function openChallenge(id: ChallengeId): void {
@@ -427,6 +441,7 @@ export function tickVault(dt: number): void {
     return;
   }
   tickThreats(hdt);
+  if (vault.bossIntro > 0) vault.bossIntro = Math.max(0, vault.bossIntro - hdt);
   if (vault.crew.over) {
     sim.downed = true;
     pumpLines();
@@ -507,7 +522,7 @@ export function tickVault(dt: number): void {
       queue("A escotilha não cede. Existe força. Não existe deslocamento.", 3.8);
     }
   } else if (vault.goal === "null") {
-    sim.objective = "2 · Trabalho nulo";
+    sim.objective = "Neutralize o campo e entenda o trabalho nulo";
     vault.hint = near(HATCH) ? "Segure E. A força existe. O deslocamento continua zero." : "Volte à escotilha travada.";
     vault.note = "W = F·d·cosθ. Se d = 0, W = 0.";
     if (near(HATCH) && e) vault.hold += hdt;
@@ -525,7 +540,7 @@ export function tickVault(dt: number): void {
       queue("Agora eleve a carga de 20 kg. Tração e deslocamento apontam para cima: o trabalho é positivo.", 4.4);
     }
   } else if (vault.goal === "positive") {
-    sim.objective = "3 · Trabalho positivo";
+    sim.objective = "Eleve a carga · trabalho positivo";
     vault.hint = atHoist ? "E aumenta a tração. Shift+E diminui. A carga precisa subir." : "O guincho está no centro da sala.";
     vault.note = "θ = 0° · cos 0° = 1 · W = F·d";
     if (vault.sawUp && s.dy > 1.15 && s.tensionWork > 180) {
@@ -539,7 +554,7 @@ export function tickVault(dt: number): void {
       queue("Agora a carga desce e a tração continua para cima. Isso é trabalho negativo — a frenagem da etapa anterior.", 4.6);
     }
   } else if (vault.goal === "negative") {
-    sim.objective = "4 · Trabalho negativo";
+    sim.objective = "Freie a descida · trabalho negativo";
     vault.hint = "Deixe descer. Se quiser, Shift+E reduz ainda mais a tração. O trabalho da tração fica negativo.";
     vault.note = "θ = 180° · a força de sustentação aponta contra o deslocamento.";
     if (s.dy < -0.9 && s.tensionWork < -80 && vault.v < -0.05) {
@@ -551,7 +566,7 @@ export function tickVault(dt: number): void {
       queue("No trilho ao fundo, gire o ângulo com E. 0° transfere, 90° não, 180° retira.", 4.4);
     }
   } else if (vault.goal === "angle") {
-    sim.objective = "5 · O ângulo importa";
+    sim.objective = "Compare 0°, 90° e 180°";
     vault.hint = near(DIAL)
       ? `Ângulo ${vault.angle}°. E troca o ângulo. Falta: ${[vault.ang0 ? "" : "0°", vault.ang90 ? "" : "90°", vault.ang180 ? "" : "180°"].filter(Boolean).join(", ") || "nada"}.`
       : "O disco de ângulo está no fundo da sala.";
@@ -565,7 +580,7 @@ export function tickVault(dt: number): void {
       queue("A energia cinética não dobra. Ela quadruplica. Ec = ½mv².", 3.8);
     }
   } else if (vault.goal === "kinetic") {
-    sim.objective = "6 · Energia cinética";
+    sim.objective = "A velocidade ao quadrado muda a energia";
     vault.hint = near(TRACK) ? "E alterna 2 m/s e 4 m/s. A massa fica em 50 kg. Compare as duas energias." : "A bancada de velocidade está no trilho.";
     vault.note = "Ec = ½mv². Dobrar v multiplica a energia por quatro.";
     if (vault.kinSlow && vault.kinFast) {
@@ -580,7 +595,7 @@ export function tickVault(dt: number): void {
       }
     }
   } else if (vault.goal === "theorem") {
-    sim.objective = "7 · Trabalho e energia cinética";
+    sim.objective = "O trabalho da resultante vira energia cinética";
     const scale = Math.max(1, Math.abs(s.cartW), Math.abs(s.cartDelta));
     const close = Math.abs(s.cartW - s.cartDelta) < 0.08 * scale;
     vault.hint = "A força empurra o carrinho. Compare o trabalho com a variação da energia cinética.";
@@ -599,7 +614,7 @@ export function tickVault(dt: number): void {
       queue("Agora eleve 10 kg até cerca de 5 m. A energia potencial é mgh.", 4);
     }
   } else if (vault.goal === "potential") {
-    sim.objective = "8 · Energia potencial";
+    sim.objective = "Erga 10 kg até 5 m";
     const h = Math.max(0, vault.y - 1.05);
     vault.hint = atHoist ? "E aumenta a tração. A altura de referência é o piso do guincho. Alvo: 5 m." : "Volte ao guincho. Carga de 10 kg.";
     vault.note = "Epg = mgh. Mais alto, mais energia armazenada no campo gravitacional.";
@@ -615,11 +630,11 @@ export function tickVault(dt: number): void {
       queue("Solte a carga. A potencial deve virar cinética. A mecânica fica quase constante.", 4.2);
     }
   } else if (vault.goal === "fall") {
-    sim.objective = "9 · Conservação";
+    sim.objective = "Observe a conservação na queda";
     vault.hint = "Observe a queda sem atrito. Uma barra desce, a outra sobe, a soma quase não muda.";
     vault.note = "Em = Ec + Epg. Sem dissipação, Em inicial ≈ Em final.";
     const dropped = vault.em0 - s.fallEpg > 80 && s.fallEc > 60;
-    if (vault.h < 1.15 && vault.h > 0.2 && vault.fallV < -0.8 && dropped && mechanicallyConserved(vault.em0, s.fallEm, 0.18)) {
+    if (vault.h < 1.15 && vault.h > 0.2 && vault.fallV < -0.8 && dropped && mechanicallyConserved(vault.em0, s.fallEm, ENERGY_TOL)) {
       mark("friction", 7);
       vault.h = 5;
       vault.fallV = 0;
@@ -631,7 +646,7 @@ export function tickVault(dt: number): void {
       queue("Agora o trilho tem atrito. A mecânica diminui. A energia não desaparece.", 4.2);
     }
   } else if (vault.goal === "friction") {
-    sim.objective = "10 · Atrito e dissipação";
+    sim.objective = "Atrito transforma mecânica em calor";
     vault.hint = "A energia térmica sobe enquanto a mecânica desce. Nada some: muda de forma.";
     vault.note = "Em final < Em inicial. A diferença foi para energia térmica.";
     if (vault.h < 1.3 && vault.h > 0.15 && vault.thermal > 20 && s.fallEm < vault.em0 - 15) {
@@ -641,9 +656,14 @@ export function tickVault(dt: number): void {
       queue("Sim. Vá até o núcleo e confirme. Ele só abre depois dessa sequência real.", 3.8);
     }
   } else if (vault.goal === "core") {
-    sim.objective = "11 · Restaurar o núcleo";
-    vault.hint = near(CORE) ? "Segure E depois que o guardião dormir. Os três cálculos abrem o núcleo." : "O núcleo está no fim da sala, à direita.";
-    vault.note = "Força → resultante → aceleração → deslocamento → trabalho → energia.";
+    sim.objective = "Desative o guardião e restaure o núcleo";
+    vault.hint = near(CORE) ? "Segure E só depois que a energia do guardião chegar a zero." : "O núcleo está no fim da sala, à direita.";
+    vault.note = "Força → deslocamento → trabalho → energia → conservação.";
+    if (vault.bossIntro < 0) {
+      vault.bossIntro = 1.15;
+      queue("O guardião está usando a energia armazenada. Não atire. Calcule.", 3.6);
+      sfx.cable();
+    }
     if (!vault.guardianSleep && !vault.quiz && !vault.crew.solved["guard-heat"]) openChallenge("guard-work");
     if (near(CORE) && e && vault.guardianSleep) vault.hold += hdt;
     else if (!vault.guardianSleep) vault.hold = 0;

@@ -59,8 +59,11 @@ export function workEnergyDelta(initialKinetic: number, finalKinetic: number): n
   return Number.isFinite(w) ? w : 0;
 }
 
+/** Relative band used by the stage-3 fall. Discrete steps are not exact. */
+export const ENERGY_TOL = 0.18;
+
 /** True when mechanical energy is unchanged within a relative tolerance. */
-export function mechanicallyConserved(initial: number, final: number, tol = 0.08): boolean {
+export function mechanicallyConserved(initial: number, final: number, tol = ENERGY_TOL): boolean {
   const a = finite(initial);
   const b = finite(final);
   const scale = Math.max(1, Math.abs(a), Math.abs(b));
