@@ -1,17 +1,24 @@
 import { sfx } from "./audio";
 import {
-  accelOf,
+  ACCEL_SETTLE,
+  ACCEL_STILL,
   ARRIVE_HI,
   ARRIVE_LO,
   arrivalAllowed,
   brakingGate,
+  FORCE_COAST,
+  FORCE_EQ,
+  FORCE_REST,
+  FORCE_SCAN,
+  forcesOf,
   G_MOON,
   HOIST_G,
   HOIST_MASS,
   HOIST_V_MAX,
   HOIST_Y_MIN,
   integrateVariable,
-  netForceOf,
+  SPEED_MOVE,
+  SPEED_REST,
   weightOf,
 } from "./hoist";
 import { held, sim, speak } from "./sim";
@@ -198,20 +205,15 @@ function loadName(): string {
 }
 
 export function hoistState() {
-  const mass = elevator.mass;
-  const g = elevator.g;
-  const T = elevator.tension;
-  const P = weightOf(mass, g);
-  const Fr = netForceOf(T, mass, g);
-  const a = accelOf(T, mass, g);
-  const state = Math.abs(Fr) < 0.8 ? "EQUILÍBRIO" : Fr > 0 ? "ACELERANDO ↑" : "ACELERANDO ↓";
+  const f = forcesOf(elevator.tension, elevator.mass, elevator.g);
+  const state = Math.abs(f.Fr) < FORCE_SCAN ? "EQUILÍBRIO" : f.Fr > 0 ? "ACELERANDO ↑" : "ACELERANDO ↓";
   return {
-    mass,
-    g,
-    P,
-    T,
-    Fr,
-    a,
+    mass: f.mass,
+    g: f.g,
+    P: f.P,
+    T: f.T,
+    Fr: f.Fr,
+    a: f.a,
     v: elevator.v,
     y: elevator.y,
     state,
@@ -227,7 +229,7 @@ export function hoistState() {
     tries: elevator.tries,
     elapsed: Math.max(0, sim.time - elevator.t0),
     mastery: elevator.mastery,
-    moon: g < 5,
+    moon: f.g < 5,
     flight: elevator.flight,
   };
 }
@@ -263,10 +265,10 @@ function clampTension(value: number): number {
 }
 
 function physicsNote(P: number, T: number, Fr: number, a: number, v: number): string {
-  if (Math.abs(Fr) < 8 && Math.abs(v) > 0.22) return "Resultante nula — e a carga continua em movimento.";
-  if (Math.abs(Fr) < 8) return "Forças equilibradas. A resultante é nula.";
-  if (T > P + 8 && a > 0.05) return "Tração maior que o peso. A carga acelera para cima.";
-  if (T < P - 8 && a < -0.05) return "Peso maior que a tração. A aceleração aponta para baixo.";
+  if (Math.abs(Fr) < FORCE_EQ && Math.abs(v) > SPEED_MOVE) return "Resultante nula — e a carga continua em movimento.";
+  if (Math.abs(Fr) < FORCE_EQ) return "Forças equilibradas. A resultante é nula.";
+  if (T > P + FORCE_EQ && a > 0.05) return "Tração maior que o peso. A carga acelera para cima.";
+  if (T < P - FORCE_EQ && a < -0.05) return "Peso maior que a tração. A aceleração aponta para baixo.";
   if (a > 0.05) return "A aceleração aponta para cima.";
   if (a < -0.05) return "A aceleração aponta para baixo.";
   return "Observe o peso, a tração e a diferença entre eles.";
@@ -279,8 +281,8 @@ function bumpTension(dir: number, amount: number): void {
 
 function applyLoad(load: (typeof LOADS)[number]): void {
   const prevM = elevator.mass;
-  const prevA = accelOf(elevator.tension, prevM, elevator.g);
-  const nextA = accelOf(elevator.tension, load.mass, elevator.g);
+  const prevA = forcesOf(elevator.tension, prevM, elevator.g).a;
+  const nextA = forcesOf(elevator.tension, load.mass, elevator.g).a;
   elevator.mass = load.mass;
   elevator.loadId = load.id;
   elevator.mastery.massa = true;
@@ -422,17 +424,19 @@ export function beginStage2(): void {
 }
 
 function readForces() {
-  const P = weightOf(elevator.mass, elevator.g);
-  const T = elevator.tension;
-  const Fr = netForceOf(T, elevator.mass, elevator.g);
-  const a = accelOf(T, elevator.mass, elevator.g);
-  return { P, T, Fr, a };
+  const f = forcesOf(elevator.tension, elevator.mass, elevator.g);
+  return { P: f.P, T: f.T, Fr: f.Fr, a: f.a };
 }
 
 export function tickElevator(dt: number): void {
   const tap = sim.actEdge;
   sim.actEdge = false;
   const hdt = Math.min(0.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+  if (!(elevator.mass >= 0.5) || !Number.isFinite(elevator.mass)) elevator.mass = HOIST_MASS;
+  if (!(elevator.g >= 0) || !Number.isFinite(elevator.g)) elevator.g = HOIST_G;
+  if (!Number.isFinite(elevator.tension)) elevator.tension = clampTension(weightOf(elevator.mass, elevator.g));
+  if (!Number.isFinite(elevator.y)) elevator.y = Y_START;
+  if (!Number.isFinite(elevator.v)) elevator.v = 0;
 
   if (sim.stage !== 2) {
     elevator.active = false;
@@ -546,7 +550,7 @@ export function tickElevator(dt: number): void {
   elevator.note = physicsNote(P, T, Fr, a, elevator.v);
   if (elevator.prevFr * Fr < -1 && Math.abs(Fr) > 4 && Math.abs(elevator.prevFr) > 4) sfx.cable();
   elevator.prevFr = Fr;
-  if (Math.abs(Fr) < 8) elevator.mastery.resultante = true;
+  if (Math.abs(Fr) < FORCE_EQ) elevator.mastery.resultante = true;
 
   if (Math.abs(elevator.v) > 0.22) {
     elevator.motorT += hdt;
@@ -592,7 +596,7 @@ export function tickElevator(dt: number): void {
     elevator.hint =
       Fr > 8
         ? "Tração maior que o peso. A resultante aponta para cima."
-        : Math.abs(Fr) <= 8
+        : Math.abs(Fr) <= FORCE_EQ
           ? "Forças equilibradas. Se a carga estava parada, ela continua parada."
           : "A tração ainda não supera o peso.";
     if (elevator.y > Y_START + 0.55 && elevator.v > 0.14 && Fr > 0) {
@@ -603,7 +607,7 @@ export function tickElevator(dt: number): void {
     }
   } else if (elevator.goal === "balance") {
     sim.objective = "5 · Pare a aceleração";
-    if (Math.abs(Fr) <= 8) {
+    if (Math.abs(Fr) <= FORCE_EQ) {
       elevator.balanceHold += hdt;
       elevator.hint =
         Math.abs(elevator.v) > 0.35
@@ -624,7 +628,7 @@ export function tickElevator(dt: number): void {
       if (a < -0.12 && elevator.v < -0.18) elevator.drop = 1;
     } else if (elevator.drop === 1) {
       elevator.hint = "Iguale a tração ao peso sem parar a carga. Resultante zero não apaga a velocidade.";
-      if (Math.abs(Fr) <= 8 && elevator.v < -0.12) elevator.dropHold += hdt;
+      if (Math.abs(Fr) <= FORCE_EQ && elevator.v < -0.12) elevator.dropHold += hdt;
       else elevator.dropHold = 0;
       if (elevator.dropHold > 0.75) {
         elevator.drop = 2;
@@ -632,8 +636,13 @@ export function tickElevator(dt: number): void {
         queue("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
       }
     } else {
-      elevator.hint = "Freie antes do piso. Tração um pouco maior que o peso, até a velocidade chegar perto de zero.";
-      const heldSafe = elevator.y > 1.7 && elevator.y < 8.2 && Math.abs(elevator.v) < 0.28 && a > -0.08;
+      elevator.hint = "Freie antes do piso. Para frear na descida, a aceleração precisa apontar para cima, contra o movimento.";
+      const heldSafe =
+        elevator.y > 1.7 &&
+        elevator.y < 8.2 &&
+        Math.abs(elevator.v) < 0.28 &&
+        Math.abs(a) <= ACCEL_SETTLE &&
+        a > -ACCEL_STILL;
       if (heldSafe) enterLab();
     }
   } else if (elevator.goal === "lab") {
@@ -644,10 +653,10 @@ export function tickElevator(dt: number): void {
     } else {
       if (a > 0.3 && elevator.v > 0.1) elevator.labUp = true;
       if (a < -0.3 && elevator.v < -0.1) elevator.labDown = true;
-      if (Math.abs(Fr) <= 8 && Math.abs(elevator.v) < 0.2) elevator.labHold += hdt;
+      if (Math.abs(Fr) <= FORCE_EQ && Math.abs(elevator.v) < 0.2) elevator.labHold += hdt;
       else elevator.labHold = 0;
       if (elevator.labHold > 0.65) elevator.labBalance = true;
-      if (Math.abs(Fr) <= 8 && elevator.v > 0.22) elevator.coastHold += hdt;
+      if (Math.abs(Fr) <= FORCE_EQ && elevator.v > SPEED_MOVE) elevator.coastHold += hdt;
       else elevator.coastHold = 0;
       if (elevator.coastHold > 0.7) {
         elevator.labCoast = true;
@@ -659,7 +668,7 @@ export function tickElevator(dt: number): void {
           queue("Exatamente. Resultante zero significa aceleração zero. Observe: a força resultante é zero, mas a carga continua em movimento.", 6.2);
         }
       }
-      if (Math.abs(a) > 0.35 && Math.abs(Fr) > 30) {
+      if (Math.abs(a) > ACCEL_SETTLE && Math.abs(Fr) > 30) {
         const known = elevator.samples.find((item) => item.mass === elevator.mass);
         if (known) {
           known.Fr = Fr;
@@ -700,7 +709,7 @@ export function tickElevator(dt: number): void {
     }
     if (elevator.proto === 0) {
       elevator.hint = "Repouso: tração igual ao peso, resultante zero, velocidade zero.";
-      if (Math.abs(Fr) < 12 && Math.abs(a) < 0.08 && Math.abs(elevator.v) < 0.18 && elevator.y < 2.2) elevator.protoHold += hdt;
+      if (Math.abs(Fr) < FORCE_REST && Math.abs(a) < ACCEL_STILL && Math.abs(elevator.v) < SPEED_REST && elevator.y < 2.2) elevator.protoHold += hdt;
       else elevator.protoHold = 0;
       if (elevator.protoHold > 0.85) {
         elevator.proto = 1;
@@ -720,7 +729,7 @@ export function tickElevator(dt: number): void {
         Math.abs(elevator.v) < 0.12
           ? "A velocidade zerou. Aumente um pouco a tração e, no meio da subida, iguale de novo."
           : "Resultante perto de zero e velocidade para cima. Segure assim por um instante.";
-      if (Math.abs(Fr) <= 10 && Math.abs(a) < 0.08 && elevator.v > 0.22) elevator.protoHold += hdt;
+      if (Math.abs(Fr) <= FORCE_COAST && Math.abs(a) < ACCEL_STILL && elevator.v > SPEED_MOVE) elevator.protoHold += hdt;
       else elevator.protoHold = 0;
       if (elevator.protoHold > 0.8) {
         elevator.proto = 3;
@@ -761,6 +770,7 @@ export function tickElevator(dt: number): void {
           y: elevator.y,
           v: elevator.v,
           hitTop: step.hitTop,
+          brakeDur: elevator.flight.brakeDur,
         })
       ) {
         finish();

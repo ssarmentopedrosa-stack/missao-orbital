@@ -17,6 +17,7 @@ import {
 } from "./sim";
 import { shotIndex } from "./layout";
 import { beginStage2, elevator, hoistState } from "./elevator";
+import { FORCE_SCAN, SPEED_REST } from "./hoist";
 
 function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -207,7 +208,7 @@ function br(value: number, digits = 1): string {
 
 function HoistCard() {
   const h = hoistState();
-  const still = Math.abs(h.Fr) < 0.8;
+  const still = Math.abs(h.Fr) < FORCE_SCAN;
   const arrow = (n: number) => (Math.abs(n) < 0.05 ? "" : n > 0 ? " ↑" : " ↓");
   return (
     <div className="panel readout hoist">
@@ -238,8 +239,8 @@ function HoistCard() {
 }
 
 function relation(h: ReturnType<typeof hoistState>): string {
-  if (Math.abs(h.Fr) < 0.8) {
-    return Math.abs(h.v) < 0.08
+  if (Math.abs(h.Fr) < FORCE_SCAN) {
+    return Math.abs(h.v) < SPEED_REST
       ? "T ≈ P · Fr ≈ 0 · a ≈ 0 · repouso"
       : "T ≈ P · Fr ≈ 0 · a ≈ 0 · a velocidade se conserva";
   }

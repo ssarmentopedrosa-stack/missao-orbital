@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-Dd9pBq0T.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-0_wacniK.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -911,19 +911,34 @@ var HOIST_V_MAX = 5.6;
 function finite(n, fallback) {
 	return Number.isFinite(n) ? n : fallback;
 }
+/** Smallest mass the formula will divide by. Stops a bad load from producing Infinity. */
+var MASS_MIN = .5;
+/** Scanner label only: "equilíbrio" when the two forces are visually the same. */
+var FORCE_SCAN = .8;
+/** The only place P, Fr and a are computed. HUD, vectors and the integrator all read this. */
+function forcesOf(tension, mass, g = HOIST_G) {
+	const m = Math.max(MASS_MIN, finite(mass, 40));
+	const grav = Math.max(0, finite(g, HOIST_G));
+	const T = finite(tension, 0);
+	const P = m * grav;
+	const Fr = T - P;
+	const a = Fr / m;
+	return {
+		mass: m,
+		g: grav,
+		T,
+		P,
+		Fr,
+		a: Number.isFinite(a) ? a : 0
+	};
+}
 /** P = m·g. Defaults match the station gravity used by stage 1. */
 function weightOf(mass, g = HOIST_G) {
-	return finite(mass, 40) * finite(g, HOIST_G);
+	return forcesOf(0, mass, g).P;
 }
-/** Positive upward: FR = T − P. */
-function netForceOf(tension, mass, g = HOIST_G) {
-	return finite(tension, 0) - weightOf(mass, g);
-}
-/** a = FR / m. The value the HUD shows is the value that is integrated. */
+/** a = Fr / m. The value the HUD shows is the value that is integrated. */
 function accelOf(tension, mass, g = HOIST_G) {
-	const m = Math.max(.5, finite(mass, 40));
-	const a = netForceOf(tension, m, g) / m;
-	return Number.isFinite(a) ? a : 0;
+	return forcesOf(tension, mass, g).a;
 }
 function integrateVariable(y, v, tension, mass, g, dt, locked, yMin = HOIST_Y_MIN, yMax = HOIST_Y_MAX) {
 	const step = Math.min(.05, Math.max(0, finite(dt, 0)));
@@ -973,6 +988,7 @@ function brakingGate(a, v, y) {
 /**
 * Controlled arrival. A ceiling hit is never success, and rest/accel/coast cannot skip ahead.
 * Speed must have fallen since braking started, inside the band, still not a collision.
+* brakeDur, when supplied by the mission, must show the brake was held.
 */
 function arrivalAllowed(input) {
 	if (input.hitTop) return false;
@@ -980,6 +996,7 @@ function arrivalAllowed(input) {
 	if (!(input.brakeV > .12) || !Number.isFinite(input.brakeV)) return false;
 	if (!Number.isFinite(input.y) || !Number.isFinite(input.v)) return false;
 	if (!(input.v < input.brakeV - .08)) return false;
+	if (input.brakeDur != null && !(input.brakeDur >= .4)) return false;
 	if (input.y < 8.45 || input.y > 9.02) return false;
 	if (!(input.v >= -.02 && input.v < .45)) return false;
 	return true;
@@ -1649,8 +1666,8 @@ function resolveCircle(x, z, radius) {
 	for (const block of BLOCKS) {
 		const cx = Math.max(block.minX, Math.min(x, block.maxX));
 		const cz = Math.max(block.minZ, Math.min(z, block.maxZ));
-		let dx = x - cx;
-		let dz = z - cz;
+		const dx = x - cx;
+		const dz = z - cz;
 		const d2 = dx * dx + dz * dz;
 		if (d2 >= radius * radius) continue;
 		if (d2 < 1e-8) {
@@ -2342,20 +2359,15 @@ function loadName() {
 	return "Contêiner de manutenção";
 }
 function hoistState() {
-	const mass = elevator.mass;
-	const g = elevator.g;
-	const T = elevator.tension;
-	const P = weightOf(mass, g);
-	const Fr = netForceOf(T, mass, g);
-	const a = accelOf(T, mass, g);
-	const state = Math.abs(Fr) < .8 ? "EQUILÍBRIO" : Fr > 0 ? "ACELERANDO ↑" : "ACELERANDO ↓";
+	const f = forcesOf(elevator.tension, elevator.mass, elevator.g);
+	const state = Math.abs(f.Fr) < .8 ? "EQUILÍBRIO" : f.Fr > 0 ? "ACELERANDO ↑" : "ACELERANDO ↓";
 	return {
-		mass,
-		g,
-		P,
-		T,
-		Fr,
-		a,
+		mass: f.mass,
+		g: f.g,
+		P: f.P,
+		T: f.T,
+		Fr: f.Fr,
+		a: f.a,
 		v: elevator.v,
 		y: elevator.y,
 		state,
@@ -2371,7 +2383,7 @@ function hoistState() {
 		tries: elevator.tries,
 		elapsed: Math.max(0, sim.time - elevator.t0),
 		mastery: elevator.mastery,
-		moon: g < 5,
+		moon: f.g < 5,
 		flight: elevator.flight
 	};
 }
@@ -2415,8 +2427,8 @@ function bumpTension(dir, amount) {
 }
 function applyLoad(load) {
 	const prevM = elevator.mass;
-	const prevA = accelOf(elevator.tension, prevM, elevator.g);
-	const nextA = accelOf(elevator.tension, load.mass, elevator.g);
+	const prevA = forcesOf(elevator.tension, prevM, elevator.g).a;
+	const nextA = forcesOf(elevator.tension, load.mass, elevator.g).a;
 	elevator.mass = load.mass;
 	elevator.loadId = load.id;
 	elevator.mastery.massa = true;
@@ -2560,19 +2572,23 @@ function beginStage2() {
 	else sfx.ui();
 }
 function readForces() {
-	const P = weightOf(elevator.mass, elevator.g);
-	const T = elevator.tension;
+	const f = forcesOf(elevator.tension, elevator.mass, elevator.g);
 	return {
-		P,
-		T,
-		Fr: netForceOf(T, elevator.mass, elevator.g),
-		a: accelOf(T, elevator.mass, elevator.g)
+		P: f.P,
+		T: f.T,
+		Fr: f.Fr,
+		a: f.a
 	};
 }
 function tickElevator(dt) {
 	const tap = sim.actEdge;
 	sim.actEdge = false;
 	const hdt = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	if (!(elevator.mass >= .5) || !Number.isFinite(elevator.mass)) elevator.mass = 40;
+	if (!(elevator.g >= 0) || !Number.isFinite(elevator.g)) elevator.g = HOIST_G;
+	if (!Number.isFinite(elevator.tension)) elevator.tension = clampTension(weightOf(elevator.mass, elevator.g));
+	if (!Number.isFinite(elevator.y)) elevator.y = Y_START;
+	if (!Number.isFinite(elevator.v)) elevator.v = 0;
 	if (sim.stage !== 2) {
 		elevator.active = false;
 		elevator.alarm = false;
@@ -2745,8 +2761,8 @@ function tickElevator(dt) {
 				queue("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
 			}
 		} else {
-			elevator.hint = "Freie antes do piso. Tração um pouco maior que o peso, até a velocidade chegar perto de zero.";
-			if (elevator.y > 1.7 && elevator.y < 8.2 && Math.abs(elevator.v) < .28 && a > -.08) enterLab();
+			elevator.hint = "Freie antes do piso. Para frear na descida, a aceleração precisa apontar para cima, contra o movimento.";
+			if (elevator.y > 1.7 && elevator.y < 8.2 && Math.abs(elevator.v) < .28 && Math.abs(a) <= .35 && a > -.08) enterLab();
 		}
 	} else if (elevator.goal === "lab") {
 		sim.objective = "Laboratório · subida, equilíbrio e descida";
@@ -2862,7 +2878,8 @@ function tickElevator(dt) {
 				brakeV: elevator.flight.brakeV,
 				y: elevator.y,
 				v: elevator.v,
-				hitTop: step.hitTop
+				hitTop: step.hitTop,
+				brakeDur: elevator.flight.brakeDur
 			})) finish();
 		}
 	} else {
@@ -4042,7 +4059,7 @@ function br(value, digits = 1) {
 }
 function HoistCard() {
 	const h = hoistState();
-	const still = Math.abs(h.Fr) < .8;
+	const still = Math.abs(h.Fr) < FORCE_SCAN;
 	const arrow = (n) => Math.abs(n) < .05 ? "" : n > 0 ? " ↑" : " ↓";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "panel readout hoist",
@@ -4087,7 +4104,7 @@ function HoistCard() {
 	});
 }
 function relation(h) {
-	if (Math.abs(h.Fr) < .8) return Math.abs(h.v) < .08 ? "T ≈ P · Fr ≈ 0 · a ≈ 0 · repouso" : "T ≈ P · Fr ≈ 0 · a ≈ 0 · a velocidade se conserva";
+	if (Math.abs(h.Fr) < .8) return Math.abs(h.v) < .18 ? "T ≈ P · Fr ≈ 0 · a ≈ 0 · repouso" : "T ≈ P · Fr ≈ 0 · a ≈ 0 · a velocidade se conserva";
 	return h.T > h.P ? "T > P · aceleração para cima" : "T < P · aceleração para baixo";
 }
 function ForceStrip() {

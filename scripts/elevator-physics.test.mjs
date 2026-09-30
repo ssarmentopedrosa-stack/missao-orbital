@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, accelOf, arrivalAllowed, brakingGate, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, vectorLength, weightOf, G_MOON } from "../src/game/hoist.ts";
+import { HOIST_MASS, HOIST_WEIGHT, HOIST_Y_MIN, T_ACCEL, T_TOL, BRAKE_MIN_HOLD, accelOf, arrivalAllowed, brakingGate, forcesOf, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, stateIsFinite, vectorLength, weightOf, G_MOON } from "../src/game/hoist.ts";
 
 test("peso do contêiner é m·g", () => {
   assert.equal(HOIST_MASS, 40);
@@ -192,5 +192,63 @@ test("mesma resultante de 100 N acelera 5 m/s² e 1 m/s²", () => {
   assert.ok(Math.abs(accelOf(heavy, 100) - 1) < 1e-9);
   assert.ok(accelOf(light, 20) > accelOf(heavy, 100));
 });
+
+test("casos determinísticos de P, Fr e a", () => {
+  const near = (got, expected) => assert.ok(Math.abs(got - expected) < 1e-9, `${got} !== ${expected}`);
+  const a = forcesOf(392.4, 40, 9.81);
+  near(a.P, 392.4);
+  near(a.Fr, 0);
+  near(a.a, 0);
+  const b = forcesOf(492.4, 40, 9.81);
+  near(b.P, 392.4);
+  near(b.Fr, 100);
+  near(b.a, 2.5);
+  const c = forcesOf(981, 100, 9.81);
+  near(c.P, 981);
+  near(c.Fr, 0);
+  near(c.a, 0);
+  const d = forcesOf(1081, 100, 9.81);
+  near(d.P, 981);
+  near(d.Fr, 100);
+  near(d.a, 1);
+  const e = forcesOf(162, 100, 1.62);
+  near(e.P, 162);
+  near(e.Fr, 0);
+  near(e.a, 0);
+  assert.equal(e.mass, 100);
+  const f = forcesOf(262, 100, 1.62);
+  near(f.P, 162);
+  near(f.Fr, 100);
+  near(f.a, 1);
+  assert.equal(f.mass, 100);
+});
+
+test("massa e gravidade inválidas não produzem NaN", () => {
+  const neg = forcesOf(100, -20, -5);
+  assert.ok(neg.mass >= 0.5);
+  assert.ok(neg.g >= 0);
+  assert.ok(stateIsFinite({ mass: neg.mass, g: neg.g, tension: neg.T, y: 2, v: 0 }));
+  assert.equal(stateIsFinite({ mass: 40, g: 9.81, tension: 400, y: Number.NaN, v: 0 }), false);
+  const boom = forcesOf(Number.POSITIVE_INFINITY, Number.NaN, Number.NaN);
+  assert.ok(Number.isFinite(boom.P) && Number.isFinite(boom.Fr) && Number.isFinite(boom.a));
+});
+
+test("um Δt enorme não teletransporta a carga", () => {
+  const P = weightOf(40);
+  const coast = integrateVariable(4, 1, P, 40, 9.81, 5, false);
+  assert.ok(coast.y - 4 < 0.3);
+  assert.ok(Math.abs(coast.v - 1) < 1e-9);
+  const floor = integrateVariable(1.2, -8, 0, 40, 9.81, 3, false);
+  assert.equal(floor.hitFloor, true);
+  assert.ok(floor.y >= HOIST_Y_MIN - 1e-9);
+  assert.equal(floor.v, 0);
+});
+
+test("frenagem de um único frame não conclui o protocolo", () => {
+  const base = { phase: "brake", brakeValid: true, brakeV: 2.31, y: 8.72, v: 0.28, hitTop: false };
+  assert.equal(arrivalAllowed({ ...base, brakeDur: 0.05 }), false);
+  assert.equal(arrivalAllowed({ ...base, brakeDur: BRAKE_MIN_HOLD }), true);
+});
+
 
 
