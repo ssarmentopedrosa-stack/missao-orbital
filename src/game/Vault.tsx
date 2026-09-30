@@ -5,6 +5,7 @@ import { HoloLabel, Solid } from "./bits";
 import { M } from "./materials";
 import { sim } from "./sim";
 import { CORE, DIAL, HATCH, HOIST, TRACK, vault } from "./vault";
+import { CHECKPOINTS, crateZ, PICKUPS } from "./survival";
 
 export function Vault() {
   const hoist = useRef<Group>(null);
@@ -12,6 +13,10 @@ export function Vault() {
   const cart = useRef<Mesh>(null);
   const core = useRef<MeshStandardMaterial>(null);
   const drop = useRef<Mesh>(null);
+  const crate = useRef<Mesh>(null);
+  const drone = useRef<Group>(null);
+  const field = useRef<Group>(null);
+  const guard = useRef<Group>(null);
   const screen = useMemo(() => M.emit.clone(), []);
 
   useFrame(() => {
@@ -19,6 +24,19 @@ export function Vault() {
     if (arm.current) arm.current.rotation.z = ((vault.angle || 0) * Math.PI) / 180;
     if (cart.current) cart.current.position.x = TRACK.x - 1.2 + Math.min(2.4, vault.cartX * 0.4);
     if (drop.current) drop.current.position.y = 0.35 + (vault.goal === "fall" || vault.goal === "friction" ? vault.h * 0.55 : 2.4);
+    const droneA = vault.aliens.find((item) => item.id === "drone");
+    const fieldA = vault.aliens.find((item) => item.id === "field");
+    const guardA = vault.aliens.find((item) => item.id === "guardian");
+    if (drone.current && droneA) {
+      drone.current.position.set(droneA.x, 0.55, droneA.z);
+      drone.current.rotation.y = sim.time * (droneA.mode === "chase" ? 2.4 : 0.8);
+    }
+    if (field.current && fieldA) field.current.position.set(fieldA.x, 0.7, fieldA.z);
+    if (guard.current && guardA) {
+      guard.current.position.set(guardA.x, guardA.mode === "sleep" ? 0.25 : 0.85, guardA.z);
+      guard.current.scale.setScalar(guardA.mode === "sleep" ? 0.65 : 1);
+    }
+    if (crate.current) crate.current.position.set(18.5, 0.35, crateZ(sim.time));
     if (core.current) {
       const live = sim.stage === 3 && vault.active;
       core.current.emissiveIntensity = live ? 0.25 + vault.modules * 0.22 : 0.05;
@@ -70,6 +88,46 @@ export function Vault() {
       <mesh ref={drop} position={[24.1, 2.4, -56]} material={M.stripe} dispose={null}>
         <boxGeometry args={[0.42, 0.42, 0.42]} />
       </mesh>
+      <mesh ref={crate} position={[18.5, 0.35, -52.6]} material={M.stripe} dispose={null}>
+        <boxGeometry args={[0.55, 0.55, 0.55]} />
+      </mesh>
+      <group ref={drone}>
+        <mesh material={M.suitBlue} dispose={null}>
+          <sphereGeometry args={[0.28, 14, 12]} />
+        </mesh>
+        <mesh position={[0.16, 0.08, 0.12]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.07, 10, 8]} />
+        </mesh>
+        <mesh position={[-0.16, 0.08, 0.12]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.07, 10, 8]} />
+        </mesh>
+      </group>
+      <group ref={field}>
+        <mesh material={M.hull} dispose={null}>
+          <capsuleGeometry args={[0.16, 0.35, 4, 8]} />
+        </mesh>
+        <mesh material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.72, 16, 12]} />
+        </mesh>
+      </group>
+      <group ref={guard}>
+        <mesh material={M.hullDark} dispose={null}>
+          <sphereGeometry args={[0.46, 16, 12]} />
+        </mesh>
+        <mesh position={[0, 0.22, 0.28]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.12, 10, 8]} />
+        </mesh>
+      </group>
+      {CHECKPOINTS.map((point) => (
+        <mesh key={point.id} position={[point.x, 0.04, point.z]} rotation={[-Math.PI / 2, 0, 0]} material={M.suitBlue} dispose={null}>
+          <ringGeometry args={[0.45, 0.62, 20]} />
+        </mesh>
+      ))}
+      {PICKUPS.map((item) => (
+        <mesh key={item.id} position={[item.x, 0.35, item.z]} material={item.kind === "core" ? M.emit : M.gold} dispose={null}>
+          <octahedronGeometry args={[0.16, 0]} />
+        </mesh>
+      ))}
       <mesh position={[CORE.x, 1.15, CORE.z]} dispose={null}>
         <cylinderGeometry args={[0.55, 0.7, 1.5, 16]} />
         <meshStandardMaterial ref={core} color="#123044" emissive="#7eb8cc" emissiveIntensity={0.08} roughness={0.35} metalness={0.45} />

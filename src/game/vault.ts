@@ -10,7 +10,24 @@ import {
   workOf,
 } from "./energy";
 import { HOIST_G, integrateVariable } from "./hoist";
-import { held, sim, speak } from "./sim";
+import { held, publishNow, sim, speak } from "./sim";
+import {
+  addCore,
+  addScore,
+  type ChallengeId,
+  challengeOf,
+  CHECKPOINTS,
+  freshAliens,
+  freshCrew,
+  gradeChallenge,
+  hazardHits,
+  heal,
+  PICKUPS,
+  reachCheckpoint,
+  stepAlien,
+  takeDamage,
+  tickCrew,
+} from "./survival";
 
 export const VAULT = { x: 20, z: -56 };
 export const HATCH = { x: 15.4, z: -60.2 };
@@ -75,6 +92,13 @@ export const vault = {
   t0: 0,
   lineQueue: [] as Line[],
   modules: 0,
+  crew: freshCrew(),
+  aliens: freshAliens(),
+  quiz: null as ChallengeId | null,
+  quizNote: "",
+  banner: "",
+  bannerT: 0,
+  guardianSleep: false,
 };
 
 function resetVault(): void {
@@ -113,6 +137,14 @@ function resetVault(): void {
   vault.finale = 0;
   vault.lineQueue = [];
   vault.modules = 0;
+  vault.crew = freshCrew();
+  vault.aliens = freshAliens();
+  vault.quiz = null;
+  vault.quizNote = "";
+  vault.banner = "";
+  vault.bannerT = 0;
+  vault.guardianSleep = false;
+  sim.downed = false;
 }
 
 function queue(text: string, seconds = 3.6): void {
@@ -241,6 +273,145 @@ function finish(): void {
   queueAs("TIGRÃO", "A energia não sumiu. Só mudou de endereço.", 3.2);
 }
 
+function banner(text: string): void {
+  vault.banner = text;
+  vault.bannerT = 1.6;
+}
+
+function tickThreats(hdt: number): void {
+  vault.bannerT = Math.max(0, vault.bannerT - hdt);
+  if (vault.bannerT <= 0) vault.banner = "";
+  const asleepField = Boolean(vault.crew.solved.work);
+  const asleepGuard = vault.guardianSleep;
+  vault.aliens = vault.aliens.map((alien) =>
+    stepAlien(
+      alien,
+      sim.x,
+      sim.z,
+      hdt,
+      (alien.kind === "energy" && asleepField) || (alien.kind === "guardian" && asleepGuard),
+    ),
+  );
+  vault.crew = tickCrew(vault.crew, hdt);
+  if (!vault.quiz && vault.goal !== "done") {
+    const hit = hazardHits(vault.aliens, sim.x, sim.z, sim.time, false);
+    if (hit) {
+      const next = takeDamage(vault.crew, hit.source);
+      vault.crew = next;
+      if (next.applied) {
+        const len = Math.hypot(sim.x - hit.ox, sim.z - hit.oz) || 1;
+        sim.vx += ((sim.x - hit.ox) / len) * 3.4;
+        sim.vz += ((sim.z - hit.oz) / len) * 3.4;
+        sim.shake = Math.max(sim.shake, 0.28);
+        sfx.hit();
+        if (next.over) {
+          sim.downed = true;
+          sfx.fail();
+        }
+        publishNow();
+      }
+    }
+  }
+  for (const point of CHECKPOINTS) {
+    if (Math.hypot(sim.x - point.x, sim.z - point.z) > 1.35) continue;
+    const next = reachCheckpoint(vault.crew, point.id);
+    vault.crew = next;
+    if (next.fresh) {
+      banner(`Checkpoint ativado · ${point.name}`);
+      sfx.ui();
+    }
+  }
+  for (const item of PICKUPS) {
+    if (vault.crew.picked[item.id]) continue;
+    if (Math.hypot(sim.x - item.x, sim.z - item.z) > 0.8) continue;
+    vault.crew = { ...vault.crew, picked: { ...vault.crew.picked, [item.id]: true } };
+    if (item.kind === "core") {
+      const next = addCore(vault.crew);
+      vault.crew = next;
+      if (next.gained) {
+        banner("Núcleo de energia +1");
+        sfx.success();
+      }
+    } else if (item.kind === "cell") {
+      const next = heal(vault.crew, 1);
+      vault.crew = next;
+      banner(next.gained ? "Célula de energia · +1 vida" : "Vidas já estão no máximo");
+      sfx.ui();
+    } else {
+      const next = heal(vault.crew, 3);
+      vault.crew = next;
+      banner(next.gained ? "Recuperação completa" : "Vidas já estão no máximo");
+      sfx.success();
+    }
+  }
+}
+
+export function answerChallenge(index: number): void {
+  if (!vault.quiz || sim.stage !== 3) return;
+  const spec = challengeOf(vault.quiz);
+  const picked = spec.options[index];
+  if (picked == null) return;
+  const graded = gradeChallenge(vault.quiz, picked);
+  if (!graded.ok) {
+    vault.crew = { ...vault.crew, tries: vault.crew.tries + 1 };
+    vault.quizNote = spec.hint;
+    sfx.fail();
+    return;
+  }
+  const first = vault.crew.tries === 0;
+  vault.crew = addScore({ ...vault.crew, tries: 0, solved: { ...vault.crew.solved, [vault.quiz]: true } }, first ? 150 : 100);
+  vault.quizNote = spec.explain;
+  sfx.success();
+  const order: ChallengeId[] = ["guard-work", "guard-energy", "guard-heat"];
+  if (vault.quiz === "work") {
+    vault.crew = addCore(vault.crew);
+    vault.quiz = null;
+    banner("Campo desligado · 300 J transferidos");
+    return;
+  }
+  const guardIndex = order.indexOf(vault.quiz);
+  if (guardIndex >= 0 && guardIndex < order.length - 1) {
+    vault.quiz = order[guardIndex + 1] ?? null;
+    return;
+  }
+  if (vault.quiz === "guard-heat") {
+    vault.crew = addCore(vault.crew);
+    vault.quiz = null;
+    vault.guardianSleep = true;
+    banner("O guardião recuou. O núcleo pode receber a energia.");
+    queue("O guardião não foi destruído. Sem energia para sustentar o campo, ele apenas dorme.", 4);
+    return;
+  }
+  vault.quiz = null;
+  banner("Cálculo confirmado");
+}
+
+export function openChallenge(id: ChallengeId): void {
+  if (vault.crew.solved[id] || vault.crew.over) return;
+  vault.quiz = id;
+  vault.quizNote = "";
+  vault.crew = { ...vault.crew, tries: 0 };
+  sfx.ui();
+}
+
+export function resumeCheckpoint(): void {
+  const spot = CHECKPOINTS.find((item) => item.id === vault.crew.checkpoint) ?? CHECKPOINTS[0];
+  if (!spot) return;
+  sim.downed = false;
+  sim.paused = false;
+  sim.x = spot.x;
+  sim.y = 0;
+  sim.z = spot.z;
+  sim.vx = 0;
+  sim.vy = 0;
+  sim.vz = 0;
+  sim.speed = 0;
+  vault.crew = { ...vault.crew, lives: 3, invuln: 1.8, over: false, flash: 0 };
+  vault.quiz = null;
+  banner(`Retorno · ${spot.name}`);
+  sfx.ui();
+}
+
 export function tickVault(dt: number): void {
   if (sim.stage !== 3) {
     if (vault.active && vault.goal !== "done") vault.active = false;
@@ -252,6 +423,12 @@ export function tickVault(dt: number): void {
   if (!vault.active) return;
   if (sim.transit > 0) {
     sim.transit = Math.max(0, sim.transit - hdt);
+    pumpLines();
+    return;
+  }
+  tickThreats(hdt);
+  if (vault.crew.over) {
+    sim.downed = true;
     pumpLines();
     return;
   }
@@ -465,11 +642,13 @@ export function tickVault(dt: number): void {
     }
   } else if (vault.goal === "core") {
     sim.objective = "11 · Restaurar o núcleo";
-    vault.hint = near(CORE) ? "Segure E. O núcleo confere trabalho, queda e dissipação." : "O núcleo está no fim da sala, à direita.";
+    vault.hint = near(CORE) ? "Segure E depois que o guardião dormir. Os três cálculos abrem o núcleo." : "O núcleo está no fim da sala, à direita.";
     vault.note = "Força → resultante → aceleração → deslocamento → trabalho → energia.";
-    if (near(CORE) && e) vault.hold += hdt;
+    if (!vault.guardianSleep && !vault.quiz && !vault.crew.solved["guard-heat"]) openChallenge("guard-work");
+    if (near(CORE) && e && vault.guardianSleep) vault.hold += hdt;
+    else if (!vault.guardianSleep) vault.hold = 0;
     else vault.hold = 0;
-    if (vault.hold > 1.4 && vault.modules >= 7) finish();
+    if (vault.hold > 1.4 && vault.modules >= 7 && vault.guardianSleep) finish();
   } else {
     sim.objective = "Etapa 3 concluída · trabalho e energia";
     vault.hint = "Tração e peso continuam. O deslocamento é que decide o trabalho.";

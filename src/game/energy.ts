@@ -47,6 +47,12 @@ export function mechanicalEnergy(kinetic: number, potential: number): number {
   return Number.isFinite(e) ? e : 0;
 }
 
+/** Energy that left the mechanical account. Never negative: a gain is not dissipation. */
+export function dissipatedEnergy(initialMechanical: number, finalMechanical: number): number {
+  const lost = finite(initialMechanical) - finite(finalMechanical);
+  return lost > 0 && Number.isFinite(lost) ? lost : 0;
+}
+
 /** W_resultante = Ec_final − Ec_inicial. */
 export function workEnergyDelta(initialKinetic: number, finalKinetic: number): number {
   const w = finite(finalKinetic) - finite(initialKinetic);

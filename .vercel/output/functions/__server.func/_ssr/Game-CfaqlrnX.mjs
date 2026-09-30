@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-D5agJvLm.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-CfaqlrnX.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -1420,6 +1420,7 @@ var sim = {
 	cinemaT: 0,
 	t0: 0,
 	shake: 0,
+	downed: false,
 	integrity: 100,
 	cell: 100,
 	pushes: 0,
@@ -1683,6 +1684,7 @@ function restart(toTitle) {
 	sim.animLock = null;
 	sim.anim = "idle";
 	sim.shake = 0;
+	sim.downed = false;
 	sim.cinemaT = 0;
 	sim.sawHall = false;
 	sim.sawBay = false;
@@ -1895,7 +1897,7 @@ function step(dt) {
 		sim.scanEdge = false;
 		toggleScanner();
 	}
-	if (sim.paused || sim.mapOpen) {
+	if (sim.paused || sim.mapOpen || sim.downed) {
 		sim.vx = 0;
 		sim.vz = 0;
 		sim.speed = 0;
@@ -3752,6 +3754,11 @@ function mechanicalEnergy(kinetic, potential) {
 	const e = finite(kinetic) + finite(potential);
 	return Number.isFinite(e) ? e : 0;
 }
+/** Energy that left the mechanical account. Never negative: a gain is not dissipation. */
+function dissipatedEnergy(initialMechanical, finalMechanical) {
+	const lost = finite(initialMechanical) - finite(finalMechanical);
+	return lost > 0 && Number.isFinite(lost) ? lost : 0;
+}
 /** W_resultante = Ec_final − Ec_inicial. */
 function workEnergyDelta(initialKinetic, finalKinetic) {
 	const w = finite(finalKinetic) - finite(initialKinetic);
@@ -3835,6 +3842,380 @@ function stepFall(h, v, mass, g, mu, dt) {
 		em: mechanicalEnergy(ec, epg)
 	};
 }
+var INVULN_TIME = 1.8;
+var CHECKPOINTS = [
+	{
+		id: 1,
+		x: 14.2,
+		z: -56,
+		name: "Entrada do módulo"
+	},
+	{
+		id: 2,
+		x: 17.2,
+		z: -56.8,
+		name: "Laboratório de energia"
+	},
+	{
+		id: 3,
+		x: 22.4,
+		z: -54.2,
+		name: "Câmara das rampas"
+	},
+	{
+		id: 4,
+		x: 24.4,
+		z: -56,
+		name: "Núcleo de energia"
+	}
+];
+var PICKUPS = [
+	{
+		id: "core-a",
+		kind: "core",
+		x: 18.6,
+		z: -54.4
+	},
+	{
+		id: "core-b",
+		kind: "core",
+		x: 23.5,
+		z: -55.4
+	},
+	{
+		id: "core-c",
+		kind: "core",
+		x: 21.4,
+		z: -61.1
+	},
+	{
+		id: "cell",
+		kind: "cell",
+		x: 14.9,
+		z: -53.4
+	},
+	{
+		id: "full",
+		kind: "full",
+		x: 26.4,
+		z: -53.1
+	}
+];
+function freshCrew() {
+	return {
+		lives: 3,
+		invuln: 0,
+		score: 0,
+		cores: 0,
+		checkpoint: 1,
+		over: false,
+		flash: 0,
+		source: "",
+		tries: 0,
+		solved: {},
+		picked: {}
+	};
+}
+function freshAliens() {
+	return [
+		{
+			id: "drone",
+			kind: "patrol",
+			x: 19.2,
+			z: -62.2,
+			homeX: 19.2,
+			homeZ: -62.2,
+			span: 2.4,
+			mode: "patrol",
+			t: 0,
+			disabled: false
+		},
+		{
+			id: "field",
+			kind: "energy",
+			x: 19.4,
+			z: -61.2,
+			homeX: 19.4,
+			homeZ: -61.2,
+			span: 0,
+			mode: "patrol",
+			t: 0,
+			disabled: false
+		},
+		{
+			id: "guardian",
+			kind: "guardian",
+			x: 25.2,
+			z: -56.8,
+			homeX: 25.2,
+			homeZ: -56.8,
+			span: 0,
+			mode: "patrol",
+			t: 0,
+			disabled: false
+		}
+	];
+}
+function takeDamage(crew, source) {
+	if (crew.over || crew.invuln > 0 || crew.lives <= 0) return {
+		...crew,
+		applied: false
+	};
+	const lives = Math.max(0, crew.lives - 1);
+	return {
+		...crew,
+		lives,
+		invuln: INVULN_TIME,
+		over: lives <= 0,
+		score: Math.max(0, crew.score - 25),
+		flash: .45,
+		source,
+		applied: true
+	};
+}
+function tickCrew(crew, dt) {
+	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	return {
+		...crew,
+		lives: Math.max(0, Math.min(3, crew.lives)),
+		invuln: Math.max(0, crew.invuln - step),
+		flash: Math.max(0, crew.flash - step),
+		score: Math.max(0, crew.score),
+		cores: Math.max(0, Math.min(5, crew.cores))
+	};
+}
+function heal(crew, amount) {
+	if (crew.lives >= 3 || amount <= 0) return {
+		...crew,
+		lives: Math.min(3, crew.lives),
+		gained: false
+	};
+	return {
+		...crew,
+		lives: Math.min(3, crew.lives + amount),
+		gained: true
+	};
+}
+function addCore(crew) {
+	if (crew.cores >= 5) return {
+		...crew,
+		gained: false
+	};
+	return {
+		...crew,
+		cores: crew.cores + 1,
+		score: crew.score + 150,
+		gained: true
+	};
+}
+function addScore(crew, amount) {
+	const next = crew.score + (Number.isFinite(amount) ? amount : 0);
+	return {
+		...crew,
+		score: Math.max(0, Math.min(99999, next))
+	};
+}
+function reachCheckpoint(crew, id) {
+	if (id <= crew.checkpoint) return {
+		...crew,
+		fresh: false
+	};
+	return {
+		...crew,
+		checkpoint: id,
+		score: crew.score + 100,
+		fresh: true
+	};
+}
+function challengeOf(id) {
+	if (id === "work") {
+		const answer = workOf(50, 6, 0);
+		return {
+			id,
+			title: "Trabalho",
+			prompt: "Um alien de energia trava a plataforma. A força de 50 N acompanha 6 m de deslocamento.",
+			facts: "F = 50 N · d = 6 m · θ = 0°",
+			options: [
+				50,
+				100,
+				answer,
+				600
+			],
+			answer,
+			explain: "A força está no mesmo sentido do deslocamento. W = 50 × 6 × cos 0° = 300 J.",
+			hint: "Observe o ângulo. Se θ = 0°, cos θ = 1 e W = F·d."
+		};
+	}
+	if (id === "kinetic") {
+		const answer = kineticEnergy(10, 6);
+		return {
+			id,
+			title: "Energia cinética",
+			prompt: "O mecanismo pede a energia de uma carga de 10 kg a 6 m/s.",
+			facts: "m = 10 kg · v = 6 m/s · Ec = ½mv²",
+			options: [
+				60,
+				answer,
+				360,
+				90
+			],
+			answer,
+			explain: "Ec = ½ × 10 × 6² = 180 J. A velocidade entra ao quadrado.",
+			hint: "Eleve a velocidade ao quadrado antes de multiplicar pela metade da massa."
+		};
+	}
+	if (id === "potential") {
+		const answer = potentialEnergy(20, 9.8, 5);
+		return {
+			id,
+			title: "Energia potencial",
+			prompt: "A plataforma pede a energia para erguer 20 kg por 5 m.",
+			facts: "m = 20 kg · g = 9,8 m/s² · h = 5 m",
+			options: [
+				100,
+				490,
+				answer,
+				1960
+			],
+			answer,
+			explain: "Epg = mgh = 20 × 9,8 × 5 = 980 J. Mais alto, mais energia armazenada.",
+			hint: "Multiplique massa, gravidade e altura. Nenhum desses três pode faltar."
+		};
+	}
+	if (id === "guard-work") {
+		const answer = workOf(100, 5, 0);
+		return {
+			id,
+			title: "Guardião · trabalho",
+			prompt: "O núcleo exige 500 J. Uma força de 100 N age por 5 m, no mesmo sentido.",
+			facts: "F = 100 N · d = 5 m · θ = 0°",
+			options: [
+				20,
+				105,
+				answer,
+				250
+			],
+			answer,
+			explain: "W = 100 × 5 = 500 J. Esse trabalho é a energia que o núcleo aceita.",
+			hint: "Mesma direção e mesmo sentido: o cosseno vale 1."
+		};
+	}
+	if (id === "guard-energy") {
+		const answer = mechanicalEnergy(0, potentialEnergy(2, 9.81, 10));
+		return {
+			id,
+			title: "Guardião · conservação",
+			prompt: "Uma carga de 2 kg parte do repouso a 10 m. Qual é a energia mecânica?",
+			facts: "v = 0 · h = 10 m · Em = Ec + Epg",
+			options: [
+				98.1,
+				answer,
+				392.4,
+				20
+			],
+			answer,
+			explain: "No alto, Ec = 0 e Epg = 2 × 9,81 × 10 = 196,2 J. Em é essa soma.",
+			hint: "Se a velocidade é zero, a cinética é zero. Resta o mgh."
+		};
+	}
+	const lost = dissipatedEnergy(490.5, 320);
+	return {
+		id,
+		title: "Guardião · dissipação",
+		prompt: "A mecânica caiu de 490,5 J para 320 J. Quanto virou calor?",
+		facts: "Em não desaparece. A diferença foi dissipada.",
+		options: [
+			120,
+			lost,
+			490.5,
+			810.5
+		],
+		answer: lost,
+		explain: "490,5 − 320 = 170,5 J deixaram de ser energia mecânica. Viraram calor no atrito.",
+		hint: "Subtraia a energia mecânica final da inicial. O que saiu não sumiu."
+	};
+}
+function gradeChallenge(id, picked) {
+	const spec = challengeOf(id);
+	return {
+		ok: Number.isFinite(picked) && Math.abs(picked - spec.answer) < .05,
+		spec
+	};
+}
+function stepAlien(alien, px, pz, dt, asleep) {
+	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	const next = {
+		...alien,
+		t: alien.t + step
+	};
+	if (asleep || next.disabled) {
+		next.disabled = true;
+		next.mode = "sleep";
+		next.x += (next.homeX - next.x) * Math.min(1, step * 2);
+		next.z += (next.homeZ + 1.2 - next.z) * Math.min(1, step * 2);
+		return next;
+	}
+	const dist = Math.hypot(px - next.x, pz - next.z);
+	if (next.kind === "energy") {
+		next.mode = dist < 3.4 ? "alert" : "patrol";
+		return next;
+	}
+	if (next.kind === "guardian") {
+		next.mode = dist < 1.7 ? "attack" : "patrol";
+		return next;
+	}
+	if (dist < .85) next.mode = "attack";
+	else if (dist < 3.1) next.mode = "chase";
+	else if (next.mode === "chase" || next.mode === "attack" || next.mode === "alert") next.mode = "return";
+	else next.mode = dist < 4.2 ? "alert" : "patrol";
+	if (next.mode === "chase" || next.mode === "attack") {
+		const len = Math.max(.001, dist);
+		const speed = 1.55;
+		next.x += (px - next.x) / len * speed * step;
+		next.z += (pz - next.z) / len * speed * step;
+	} else if (next.mode === "return") {
+		next.x += (next.homeX - next.x) * Math.min(1, step * 1.4);
+		next.z += (next.homeZ - next.z) * Math.min(1, step * 1.4);
+		if (Math.hypot(next.homeX - next.x, next.homeZ - next.z) < .3) next.mode = "patrol";
+	} else {
+		next.x = next.homeX + Math.sin(next.t * .8) * next.span;
+		next.z = next.homeZ;
+		next.mode = "patrol";
+	}
+	return next;
+}
+function crateZ(time) {
+	return -52.6 + Math.sin(time * .9) * 1.1;
+}
+function hazardHits(aliens, px, pz, time, shield) {
+	if (shield) return null;
+	for (const alien of aliens) {
+		if (alien.disabled || alien.mode === "sleep") continue;
+		const dist = Math.hypot(px - alien.x, pz - alien.z);
+		if (alien.kind === "patrol" && alien.mode === "attack" && dist < .85) return {
+			source: "drone de patrulha",
+			ox: alien.x,
+			oz: alien.z
+		};
+		if (alien.kind === "energy" && dist < 1.35) return {
+			source: "campo do alien de energia",
+			ox: alien.x,
+			oz: alien.z
+		};
+		if (alien.kind === "guardian" && alien.mode === "attack" && dist < 1.15) return {
+			source: "guardião do núcleo",
+			ox: alien.x,
+			oz: alien.z
+		};
+	}
+	const cz = crateZ(time);
+	if (Math.hypot(px - 18.5, pz - cz) < .55) return {
+		source: "caixa em movimento",
+		ox: 18.5,
+		oz: cz
+	};
+	return null;
+}
 var HATCH = {
 	x: 15.4,
 	z: -60.2
@@ -3901,7 +4282,14 @@ var vault = {
 	finale: 0,
 	t0: 0,
 	lineQueue: [],
-	modules: 0
+	modules: 0,
+	crew: freshCrew(),
+	aliens: freshAliens(),
+	quiz: null,
+	quizNote: "",
+	banner: "",
+	bannerT: 0,
+	guardianSleep: false
 };
 function resetVault() {
 	vault.active = false;
@@ -3939,6 +4327,14 @@ function resetVault() {
 	vault.finale = 0;
 	vault.lineQueue = [];
 	vault.modules = 0;
+	vault.crew = freshCrew();
+	vault.aliens = freshAliens();
+	vault.quiz = null;
+	vault.quizNote = "";
+	vault.banner = "";
+	vault.bannerT = 0;
+	vault.guardianSleep = false;
+	sim.downed = false;
 }
 function queue(text, seconds = 3.6) {
 	vault.lineQueue.push({
@@ -4066,6 +4462,160 @@ function finish() {
 	queue("Recebeu trabalho, transformação e o que o atrito tinha espalhado em calor.", 4.2);
 	queueAs("TIGRÃO", "A energia não sumiu. Só mudou de endereço.", 3.2);
 }
+function banner(text) {
+	vault.banner = text;
+	vault.bannerT = 1.6;
+}
+function tickThreats(hdt) {
+	vault.bannerT = Math.max(0, vault.bannerT - hdt);
+	if (vault.bannerT <= 0) vault.banner = "";
+	const asleepField = Boolean(vault.crew.solved.work);
+	const asleepGuard = vault.guardianSleep;
+	vault.aliens = vault.aliens.map((alien) => stepAlien(alien, sim.x, sim.z, hdt, alien.kind === "energy" && asleepField || alien.kind === "guardian" && asleepGuard));
+	vault.crew = tickCrew(vault.crew, hdt);
+	if (!vault.quiz && vault.goal !== "done") {
+		const hit = hazardHits(vault.aliens, sim.x, sim.z, sim.time, false);
+		if (hit) {
+			const next = takeDamage(vault.crew, hit.source);
+			vault.crew = next;
+			if (next.applied) {
+				const len = Math.hypot(sim.x - hit.ox, sim.z - hit.oz) || 1;
+				sim.vx += (sim.x - hit.ox) / len * 3.4;
+				sim.vz += (sim.z - hit.oz) / len * 3.4;
+				sim.shake = Math.max(sim.shake, .28);
+				sfx.hit();
+				if (next.over) {
+					sim.downed = true;
+					sfx.fail();
+				}
+				publishNow();
+			}
+		}
+	}
+	for (const point of CHECKPOINTS) {
+		if (Math.hypot(sim.x - point.x, sim.z - point.z) > 1.35) continue;
+		const next = reachCheckpoint(vault.crew, point.id);
+		vault.crew = next;
+		if (next.fresh) {
+			banner(`Checkpoint ativado · ${point.name}`);
+			sfx.ui();
+		}
+	}
+	for (const item of PICKUPS) {
+		if (vault.crew.picked[item.id]) continue;
+		if (Math.hypot(sim.x - item.x, sim.z - item.z) > .8) continue;
+		vault.crew = {
+			...vault.crew,
+			picked: {
+				...vault.crew.picked,
+				[item.id]: true
+			}
+		};
+		if (item.kind === "core") {
+			const next = addCore(vault.crew);
+			vault.crew = next;
+			if (next.gained) {
+				banner("Núcleo de energia +1");
+				sfx.success();
+			}
+		} else if (item.kind === "cell") {
+			const next = heal(vault.crew, 1);
+			vault.crew = next;
+			banner(next.gained ? "Célula de energia · +1 vida" : "Vidas já estão no máximo");
+			sfx.ui();
+		} else {
+			const next = heal(vault.crew, 3);
+			vault.crew = next;
+			banner(next.gained ? "Recuperação completa" : "Vidas já estão no máximo");
+			sfx.success();
+		}
+	}
+}
+function answerChallenge(index) {
+	if (!vault.quiz || sim.stage !== 3) return;
+	const spec = challengeOf(vault.quiz);
+	const picked = spec.options[index];
+	if (picked == null) return;
+	if (!gradeChallenge(vault.quiz, picked).ok) {
+		vault.crew = {
+			...vault.crew,
+			tries: vault.crew.tries + 1
+		};
+		vault.quizNote = spec.hint;
+		sfx.fail();
+		return;
+	}
+	const first = vault.crew.tries === 0;
+	vault.crew = addScore({
+		...vault.crew,
+		tries: 0,
+		solved: {
+			...vault.crew.solved,
+			[vault.quiz]: true
+		}
+	}, first ? 150 : 100);
+	vault.quizNote = spec.explain;
+	sfx.success();
+	const order = [
+		"guard-work",
+		"guard-energy",
+		"guard-heat"
+	];
+	if (vault.quiz === "work") {
+		vault.crew = addCore(vault.crew);
+		vault.quiz = null;
+		banner("Campo desligado · 300 J transferidos");
+		return;
+	}
+	const guardIndex = order.indexOf(vault.quiz);
+	if (guardIndex >= 0 && guardIndex < order.length - 1) {
+		vault.quiz = order[guardIndex + 1] ?? null;
+		return;
+	}
+	if (vault.quiz === "guard-heat") {
+		vault.crew = addCore(vault.crew);
+		vault.quiz = null;
+		vault.guardianSleep = true;
+		banner("O guardião recuou. O núcleo pode receber a energia.");
+		queue("O guardião não foi destruído. Sem energia para sustentar o campo, ele apenas dorme.", 4);
+		return;
+	}
+	vault.quiz = null;
+	banner("Cálculo confirmado");
+}
+function openChallenge(id) {
+	if (vault.crew.solved[id] || vault.crew.over) return;
+	vault.quiz = id;
+	vault.quizNote = "";
+	vault.crew = {
+		...vault.crew,
+		tries: 0
+	};
+	sfx.ui();
+}
+function resumeCheckpoint() {
+	const spot = CHECKPOINTS.find((item) => item.id === vault.crew.checkpoint) ?? CHECKPOINTS[0];
+	if (!spot) return;
+	sim.downed = false;
+	sim.paused = false;
+	sim.x = spot.x;
+	sim.y = 0;
+	sim.z = spot.z;
+	sim.vx = 0;
+	sim.vy = 0;
+	sim.vz = 0;
+	sim.speed = 0;
+	vault.crew = {
+		...vault.crew,
+		lives: 3,
+		invuln: 1.8,
+		over: false,
+		flash: 0
+	};
+	vault.quiz = null;
+	banner(`Retorno · ${spot.name}`);
+	sfx.ui();
+}
 function tickVault(dt) {
 	if (sim.stage !== 3) {
 		if (vault.active && vault.goal !== "done") vault.active = false;
@@ -4077,6 +4627,12 @@ function tickVault(dt) {
 	if (!vault.active) return;
 	if (sim.transit > 0) {
 		sim.transit = Math.max(0, sim.transit - hdt);
+		pumpLines();
+		return;
+	}
+	tickThreats(hdt);
+	if (vault.crew.over) {
+		sim.downed = true;
 		pumpLines();
 		return;
 	}
@@ -4284,11 +4840,13 @@ function tickVault(dt) {
 		}
 	} else if (vault.goal === "core") {
 		sim.objective = "11 · Restaurar o núcleo";
-		vault.hint = near(CORE) ? "Segure E. O núcleo confere trabalho, queda e dissipação." : "O núcleo está no fim da sala, à direita.";
+		vault.hint = near(CORE) ? "Segure E depois que o guardião dormir. Os três cálculos abrem o núcleo." : "O núcleo está no fim da sala, à direita.";
 		vault.note = "Força → resultante → aceleração → deslocamento → trabalho → energia.";
-		if (near(CORE) && e) vault.hold += hdt;
+		if (!vault.guardianSleep && !vault.quiz && !vault.crew.solved["guard-heat"]) openChallenge("guard-work");
+		if (near(CORE) && e && vault.guardianSleep) vault.hold += hdt;
+		else if (!vault.guardianSleep) vault.hold = 0;
 		else vault.hold = 0;
-		if (vault.hold > 1.4 && vault.modules >= 7) finish();
+		if (vault.hold > 1.4 && vault.modules >= 7 && vault.guardianSleep) finish();
 	} else {
 		sim.objective = "Etapa 3 concluída · trabalho e energia";
 		vault.hint = "Tração e peso continuam. O deslocamento é que decide o trabalho.";
@@ -4306,12 +4864,29 @@ function Vault() {
 	const cart = (0, import_react.useRef)(null);
 	const core = (0, import_react.useRef)(null);
 	const drop = (0, import_react.useRef)(null);
+	const crate = (0, import_react.useRef)(null);
+	const drone = (0, import_react.useRef)(null);
+	const field = (0, import_react.useRef)(null);
+	const guard = (0, import_react.useRef)(null);
 	const screen = (0, import_react.useMemo)(() => M.emit.clone(), []);
 	useFrame(() => {
 		if (hoist.current) hoist.current.position.y = vault.active ? vault.y : 1.2;
 		if (arm.current) arm.current.rotation.z = (vault.angle || 0) * Math.PI / 180;
 		if (cart.current) cart.current.position.x = TRACK.x - 1.2 + Math.min(2.4, vault.cartX * .4);
 		if (drop.current) drop.current.position.y = .35 + (vault.goal === "fall" || vault.goal === "friction" ? vault.h * .55 : 2.4);
+		const droneA = vault.aliens.find((item) => item.id === "drone");
+		const fieldA = vault.aliens.find((item) => item.id === "field");
+		const guardA = vault.aliens.find((item) => item.id === "guardian");
+		if (drone.current && droneA) {
+			drone.current.position.set(droneA.x, .55, droneA.z);
+			drone.current.rotation.y = sim.time * (droneA.mode === "chase" ? 2.4 : .8);
+		}
+		if (field.current && fieldA) field.current.position.set(fieldA.x, .7, fieldA.z);
+		if (guard.current && guardA) {
+			guard.current.position.set(guardA.x, guardA.mode === "sleep" ? .25 : .85, guardA.z);
+			guard.current.scale.setScalar(guardA.mode === "sleep" ? .65 : 1);
+		}
+		if (crate.current) crate.current.position.set(18.5, .35, crateZ(sim.time));
 		if (core.current) {
 			const live = sim.stage === 3 && vault.active;
 			core.current.emissiveIntensity = live ? .25 + vault.modules * .22 : .05;
@@ -4561,6 +5136,138 @@ function Vault() {
 				.42
 			] })
 		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			ref: crate,
+			position: [
+				18.5,
+				.35,
+				-52.6
+			],
+			material: M.stripe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.55,
+				.55,
+				.55
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: drone,
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.suitBlue,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.28,
+						14,
+						12
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.16,
+						.08,
+						.12
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.07,
+						10,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.16,
+						.08,
+						.12
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.07,
+						10,
+						8
+					] })
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: field,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.hull,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+					.16,
+					.35,
+					4,
+					8
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.emit,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.72,
+					16,
+					12
+				] })
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: guard,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.hullDark,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.46,
+					16,
+					12
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				position: [
+					0,
+					.22,
+					.28
+				],
+				material: M.emit,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.12,
+					10,
+					8
+				] })
+			})]
+		}),
+		CHECKPOINTS.map((point) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				point.x,
+				.04,
+				point.z
+			],
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			material: M.suitBlue,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ringGeometry", { args: [
+				.45,
+				.62,
+				20
+			] })
+		}, point.id)),
+		PICKUPS.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				item.x,
+				.35,
+				item.z
+			],
+			material: item.kind === "core" ? M.emit : M.gold,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("octahedronGeometry", { args: [.16, 0] })
+		}, item.id)),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
 			position: [
 				CORE.x,
@@ -4775,6 +5482,7 @@ function Overlay() {
 			sim.stage === 3 && sim.transit > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VaultCard, {}) : null,
 			elevator.done && elevator.finale <= 0 && snap.phase === "play" && sim.stage === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageReport, {}) : null,
 			vault.goal === "done" && vault.finale <= 0 && snap.phase === "play" && sim.stage === 3 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VaultReport, {}) : null,
+			sim.stage === 3 && vault.crew.over ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Downed, {}) : null,
 			snap.phase === "play" && !snap.paused && !snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Touch, {}) : null
 		]
 	});
@@ -4875,6 +5583,7 @@ function PlayHud({ snap }) {
 						children: "Objetivo"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: snap.objective })]
 				}),
+				sim.stage === 3 && vault.active ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LifeRow, {}) : null,
 				sim.stage === 2 && elevator.active && elevator.scanned && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ForceStrip, {}) : null,
 				sim.stage === 3 && vault.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EnergyStrip, {}) : null,
 				snap.line ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -4953,7 +5662,8 @@ function PlayHud({ snap }) {
 		sim.stage === 3 && vault.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "panel prompt wrap",
 			children: vault.hint
-		}) : null
+		}) : null,
+		sim.stage === 3 && vault.active && sim.transit <= 0 && !vault.crew.over ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChallengePanel, {}) : null
 	] });
 }
 function ReadoutCard({ readout }) {
@@ -5094,6 +5804,114 @@ function ForceStrip() {
 		]
 	});
 }
+function LifeRow() {
+	const hearts = Array.from({ length: 3 }, (_, i) => i < vault.crew.lives ? "♥" : "♡");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "panel force-strip",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+			"Vidas ",
+			hearts.join(" "),
+			" ",
+			vault.crew.lives,
+			"/3 · Núcleos ",
+			vault.crew.cores,
+			"/5 · ",
+			vault.crew.score,
+			" pts"
+		] }), vault.banner ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "note",
+			children: vault.banner
+		}) : null]
+	});
+}
+function ChallengePanel() {
+	const [tick, setTick] = (0, import_react.useState)(0);
+	const id = vault.quiz;
+	if (!id) {
+		const offer = !vault.crew.solved.work && (vault.goal === "null" || vault.goal === "positive" || vault.goal === "negative") ? "work" : vault.goal === "kinetic" && !vault.crew.solved.kinetic ? "kinetic" : vault.goal === "potential" && !vault.crew.solved.potential ? "potential" : null;
+		if (!offer) return null;
+		return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "panel prompt wrap",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				className: "btn",
+				type: "button",
+				onClick: () => {
+					openChallenge(offer);
+					setTick(tick + 1);
+				},
+				children: "Abrir o cálculo"
+			})
+		});
+	}
+	const spec = challengeOf(id);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "panel sheet quiz",
+		"data-ui": true,
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "kicker",
+				children: "Desafio de física"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: spec.title }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: spec.prompt }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "sub",
+				children: spec.facts
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "row",
+				children: spec.options.map((option, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					className: "btn",
+					type: "button",
+					onClick: () => {
+						answerChallenge(index);
+						setTick(tick + 1);
+					},
+					children: [option.toLocaleString("pt-BR"), " J"]
+				}, `${option}-${index}`))
+			}),
+			vault.quizNote ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "log",
+				children: vault.quizNote
+			}) : null
+		]
+	});
+}
+function Downed() {
+	const spot = vault.crew.checkpoint;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "modal",
+		"data-ui": true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "panel sheet",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "kicker",
+					children: "Sistema crítico"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Tigrão foi derrotado" }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "sub",
+					children: "O módulo de energia continua instável. O progresso dos desafios fica no último checkpoint."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "row",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						className: "btn",
+						type: "button",
+						onClick: () => beginStage3(),
+						children: "Tentar novamente"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						className: "btn ghost",
+						type: "button",
+						onClick: () => resumeCheckpoint(),
+						children: ["Voltar ao checkpoint ", spot]
+					})]
+				})
+			]
+		})
+	});
+}
 function VaultCard() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		className: "panel title-card",
@@ -5177,6 +5995,27 @@ function VaultReport() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "sub",
 					children: "Força ao longo de um deslocamento transfere energia. A energia muda de forma. Não desaparece."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "stats",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Vidas" }),
+							vault.crew.lives,
+							"/3"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Núcleos" }),
+							vault.crew.cores,
+							"/5"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Pontos" }), vault.crew.score] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Módulos" }),
+							vault.modules,
+							"/8"
+						] })
+					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
 					className: "report-list",
@@ -6692,6 +7531,10 @@ function Tigrao() {
 		if (beamOn && t > scanAt.current) {
 			scanAt.current = t + .85;
 			sfx.scanTick();
+		}
+		if (root.current) {
+			const blink = sim.stage === 3 && vault.active && vault.crew.invuln > 0 && Math.sin(sim.time * 22) > 0;
+			root.current.visible = !blink;
 		}
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {

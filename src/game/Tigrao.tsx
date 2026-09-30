@@ -419,6 +419,10 @@ export function Tigrao() {
       scanAt.current = t + 0.85;
       sfx.scanTick();
     }
+    if (root.current) {
+      const blink = sim.stage === 3 && vault.active && vault.crew.invuln > 0 && Math.sin(sim.time * 22) > 0;
+      root.current.visible = !blink;
+    }
   });
 
   return (

@@ -150,6 +150,7 @@ export const sim = {
   cinemaT: 0,
   t0: 0,
   shake: 0,
+  downed: false,
   integrity: 100,
   cell: 100,
   pushes: 0,
@@ -200,7 +201,7 @@ export function getSnap(): Snap {
   return snap;
 }
 
-function publishNow(): void {
+export function publishNow(): void {
   lastPrompt = computePrompt();
   snap = buildSnap();
   listeners.forEach((listener) => listener());
@@ -435,6 +436,7 @@ export function restart(toTitle: boolean): void {
   sim.animLock = null;
   sim.anim = "idle";
   sim.shake = 0;
+  sim.downed = false;
   sim.cinemaT = 0;
   sim.sawHall = false;
   sim.sawBay = false;
@@ -672,7 +674,7 @@ export function step(dt: number): void {
     toggleScanner();
   }
 
-  if (sim.paused || sim.mapOpen) {
+  if (sim.paused || sim.mapOpen || sim.downed) {
     sim.vx = 0;
     sim.vz = 0;
     sim.speed = 0;

@@ -17,7 +17,8 @@ import {
 } from "./sim";
 import { shotIndex } from "./layout";
 import { beginStage2, elevator, hoistState } from "./elevator";
-import { beginStage3, vault, vaultState } from "./vault";
+import { challengeOf } from "./survival";
+import { beginStage3, answerChallenge, openChallenge, resumeCheckpoint, vault, vaultState } from "./vault";
 import { FORCE_SCAN, SPEED_REST } from "./hoist";
 
 function clock(seconds: number): string {
@@ -47,6 +48,7 @@ export function Overlay() {
       {sim.stage === 3 && sim.transit > 0 ? <VaultCard /> : null}
       {elevator.done && elevator.finale <= 0 && snap.phase === "play" && sim.stage === 2 ? <StageReport /> : null}
       {vault.goal === "done" && vault.finale <= 0 && snap.phase === "play" && sim.stage === 3 ? <VaultReport /> : null}
+      {sim.stage === 3 && vault.crew.over ? <Downed /> : null}
       {snap.phase === "play" && !snap.paused && !snap.mapOpen ? <Touch /> : null}
     </div>
   );
@@ -122,6 +124,7 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
           <p className="kicker">Objetivo</p>
           <strong>{snap.objective}</strong>
         </div>
+        {sim.stage === 3 && vault.active ? <LifeRow /> : null}
         {sim.stage === 2 && elevator.active && elevator.scanned && sim.transit <= 0 ? <ForceStrip /> : null}
         {sim.stage === 3 && vault.active && sim.transit <= 0 ? <EnergyStrip /> : null}
         {snap.line ? (
@@ -166,6 +169,7 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
       {snap.prompt && sim.stage === 1 ? <div className="panel prompt">{snap.prompt}</div> : null}
       {sim.stage === 2 && elevator.active && sim.transit <= 0 ? <div className="panel prompt wrap">{elevator.hint}</div> : null}
       {sim.stage === 3 && vault.active && sim.transit <= 0 ? <div className="panel prompt wrap">{vault.hint}</div> : null}
+      {sim.stage === 3 && vault.active && sim.transit <= 0 && !vault.crew.over ? <ChallengePanel /> : null}
     </>
   );
 }
@@ -273,6 +277,87 @@ function ForceStrip() {
   );
 }
 
+function LifeRow() {
+  const hearts = Array.from({ length: 3 }, (_, i) => (i < vault.crew.lives ? "♥" : "♡"));
+  return (
+    <div className="panel force-strip">
+      <p>
+        Vidas {hearts.join(" ")} {vault.crew.lives}/3 · Núcleos {vault.crew.cores}/5 · {vault.crew.score} pts
+      </p>
+      {vault.banner ? <p className="note">{vault.banner}</p> : null}
+    </div>
+  );
+}
+
+function ChallengePanel() {
+  const [tick, setTick] = useState(0);
+  const id = vault.quiz;
+  if (!id) {
+    const offer =
+      !vault.crew.solved.work && (vault.goal === "null" || vault.goal === "positive" || vault.goal === "negative")
+        ? "work"
+        : vault.goal === "kinetic" && !vault.crew.solved.kinetic
+          ? "kinetic"
+          : vault.goal === "potential" && !vault.crew.solved.potential
+            ? "potential"
+            : null;
+    if (!offer) return null;
+    return (
+      <div className="panel prompt wrap">
+        <button className="btn" type="button" onClick={() => { openChallenge(offer); setTick(tick + 1); }}>
+          Abrir o cálculo
+        </button>
+      </div>
+    );
+  }
+  const spec = challengeOf(id);
+  return (
+    <div className="panel sheet quiz" data-ui>
+      <p className="kicker">Desafio de física</p>
+      <h2>{spec.title}</h2>
+      <p>{spec.prompt}</p>
+      <p className="sub">{spec.facts}</p>
+      <div className="row">
+        {spec.options.map((option, index) => (
+          <button
+            className="btn"
+            type="button"
+            key={`${option}-${index}`}
+            onClick={() => {
+              answerChallenge(index);
+              setTick(tick + 1);
+            }}
+          >
+            {option.toLocaleString("pt-BR")} J
+          </button>
+        ))}
+      </div>
+      {vault.quizNote ? <p className="log">{vault.quizNote}</p> : null}
+    </div>
+  );
+}
+
+function Downed() {
+  const spot = vault.crew.checkpoint;
+  return (
+    <div className="modal" data-ui>
+      <div className="panel sheet">
+        <p className="kicker">Sistema crítico</p>
+        <h2>Tigrão foi derrotado</h2>
+        <p className="sub">O módulo de energia continua instável. O progresso dos desafios fica no último checkpoint.</p>
+        <div className="row">
+          <button className="btn" type="button" onClick={() => beginStage3()}>
+            Tentar novamente
+          </button>
+          <button className="btn ghost" type="button" onClick={() => resumeCheckpoint()}>
+            Voltar ao checkpoint {spot}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VaultCard() {
   return (
     <section className="panel title-card" data-ui>
@@ -328,6 +413,24 @@ function VaultReport() {
         <p className="kicker">Relatório da missão</p>
         <h2>Etapa 3 concluída</h2>
         <p className="sub">Força ao longo de um deslocamento transfere energia. A energia muda de forma. Não desaparece.</p>
+        <div className="stats">
+          <div>
+            <span>Vidas</span>
+            {vault.crew.lives}/3
+          </div>
+          <div>
+            <span>Núcleos</span>
+            {vault.crew.cores}/5
+          </div>
+          <div>
+            <span>Pontos</span>
+            {vault.crew.score}
+          </div>
+          <div>
+            <span>Módulos</span>
+            {vault.modules}/8
+          </div>
+        </div>
         <ul className="report-list">
           <li>
             <span>Trabalho positivo, negativo e nulo</span>
