@@ -429,6 +429,12 @@ function readForces() {
 }
 
 export function tickElevator(dt: number): void {
+  if (sim.stage !== 2) {
+    elevator.active = false;
+    elevator.alarm = false;
+    elevator.adjusting = false;
+    return;
+  }
   const tap = sim.actEdge;
   sim.actEdge = false;
   const hdt = Math.min(0.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
@@ -438,12 +444,6 @@ export function tickElevator(dt: number): void {
   if (!Number.isFinite(elevator.y)) elevator.y = Y_START;
   if (!Number.isFinite(elevator.v)) elevator.v = 0;
 
-  if (sim.stage !== 2) {
-    elevator.active = false;
-    elevator.alarm = false;
-    elevator.adjusting = false;
-    return;
-  }
   if (!elevator.active) return;
 
   if (sim.transit > 0) {

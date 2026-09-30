@@ -17,6 +17,7 @@ import {
 } from "./sim";
 import { shotIndex } from "./layout";
 import { beginStage2, elevator, hoistState } from "./elevator";
+import { beginStage3, vault, vaultState } from "./vault";
 import { FORCE_SCAN, SPEED_REST } from "./hoist";
 
 function clock(seconds: number): string {
@@ -43,7 +44,9 @@ export function Overlay() {
       {snap.paused && !snap.mapOpen ? <PausePanel /> : null}
       {snap.phase === "complete" && snap.result ? <Complete result={snap.result} /> : null}
       {sim.stage === 2 && sim.transit > 0 ? <StageCard /> : null}
-      {elevator.done && elevator.finale <= 0 && snap.phase === "play" ? <StageReport /> : null}
+      {sim.stage === 3 && sim.transit > 0 ? <VaultCard /> : null}
+      {elevator.done && elevator.finale <= 0 && snap.phase === "play" && sim.stage === 2 ? <StageReport /> : null}
+      {vault.goal === "done" && vault.finale <= 0 && snap.phase === "play" && sim.stage === 3 ? <VaultReport /> : null}
       {snap.phase === "play" && !snap.paused && !snap.mapOpen ? <Touch /> : null}
     </div>
   );
@@ -120,6 +123,7 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
           <strong>{snap.objective}</strong>
         </div>
         {sim.stage === 2 && elevator.active && elevator.scanned && sim.transit <= 0 ? <ForceStrip /> : null}
+        {sim.stage === 3 && vault.active && sim.transit <= 0 ? <EnergyStrip /> : null}
         {snap.line ? (
           <div className="panel line" style={{ position: "static", transform: "none", width: "auto" }}>
             <b>{snap.line.speaker}</b>
@@ -156,11 +160,12 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
           <ScanLine size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} />
           Nexus {snap.scanner ? "ativo" : "em espera"} · Q
         </p>
-        {snap.readout && sim.stage !== 2 ? <ReadoutCard readout={snap.readout} /> : null}
+        {snap.readout && sim.stage === 1 ? <ReadoutCard readout={snap.readout} /> : null}
         {sim.stage === 2 && snap.scanner && elevator.active ? <HoistCard /> : null}
       </div>
-      {snap.prompt && sim.stage !== 2 ? <div className="panel prompt">{snap.prompt}</div> : null}
+      {snap.prompt && sim.stage === 1 ? <div className="panel prompt">{snap.prompt}</div> : null}
       {sim.stage === 2 && elevator.active && sim.transit <= 0 ? <div className="panel prompt wrap">{elevator.hint}</div> : null}
+      {sim.stage === 3 && vault.active && sim.transit <= 0 ? <div className="panel prompt wrap">{vault.hint}</div> : null}
     </>
   );
 }
@@ -268,6 +273,89 @@ function ForceStrip() {
   );
 }
 
+function VaultCard() {
+  return (
+    <section className="panel title-card" data-ui>
+      <p className="kicker">Missão Newton</p>
+      <h1>
+        ETAPA 3
+        <span>O MÓDULO DE ENERGIA</span>
+      </h1>
+      <p>Força, deslocamento, trabalho e a energia que a estação precisa de volta.</p>
+    </section>
+  );
+}
+
+function EnergyStrip() {
+  const s = vaultState();
+  const cap = 800;
+  const bar = (value: number) => `${Math.max(0, Math.min(100, (Math.abs(value) / cap) * 100))}%`;
+  const showWork = s.goal === "null" || s.goal === "positive" || s.goal === "negative" || s.goal === "angle";
+  const showPot = s.goal === "potential" || s.goal === "fall" || s.goal === "friction" || s.goal === "core" || s.goal === "done";
+  return (
+    <div className="panel force-strip">
+      <p>
+        Módulo {s.modules}/8
+        {s.goal === "angle" ? ` · θ ${s.angle}° · W ${br(s.benchW, 0)} J` : ""}
+        {s.goal === "kinetic" ? ` · v ${br(s.kinV, 0)} m/s · Ec ${br(s.kinEc, 0)} J` : ""}
+        {s.goal === "theorem" ? ` · W ${br(s.cartW, 0)} J · ΔEc ${br(s.cartDelta, 0)} J` : ""}
+        {showWork && s.goal !== "angle" ? ` · W ${br(s.tensionWork, 0)} J · d ${br(s.dy, 2)} m` : ""}
+      </p>
+      {showPot ? (
+        <p>
+          Ec {br(s.goal === "fall" || s.goal === "friction" ? s.fallEc : s.ec, 0)} J · Epg{" "}
+          {br(s.goal === "fall" || s.goal === "friction" ? s.fallEpg : s.epg, 0)} J · Em{" "}
+          {br(s.goal === "fall" || s.goal === "friction" ? s.fallEm : s.em, 0)} J
+          {s.goal === "friction" ? ` · calor ${br(s.thermal, 0)} J` : ""}
+        </p>
+      ) : null}
+      <div className="energy-bars" aria-hidden>
+        <i style={{ width: bar(showPot && (s.goal === "fall" || s.goal === "friction") ? s.fallEc : s.ec) }} />
+        <i className="pot" style={{ width: bar(showPot && (s.goal === "fall" || s.goal === "friction") ? s.fallEpg : s.epg) }} />
+        <i className="heat" style={{ width: bar(s.thermal) }} />
+      </div>
+      <p className="note">{s.note}</p>
+    </div>
+  );
+}
+
+function VaultReport() {
+  const [hide, setHide] = useState(false);
+  if (hide) return null;
+  return (
+    <div className="modal" data-ui>
+      <div className="panel sheet">
+        <p className="kicker">Relatório da missão</p>
+        <h2>Etapa 3 concluída</h2>
+        <p className="sub">Força ao longo de um deslocamento transfere energia. A energia muda de forma. Não desaparece.</p>
+        <ul className="report-list">
+          <li>
+            <span>Trabalho positivo, negativo e nulo</span>
+            <b>✓</b>
+          </li>
+          <li>
+            <span>Energia cinética e potencial</span>
+            <b>✓</b>
+          </li>
+          <li>
+            <span>W = ΔEc e conservação</span>
+            <b>✓</b>
+          </li>
+          <li>
+            <span>Atrito dissipa em calor</span>
+            <b>✓</b>
+          </li>
+        </ul>
+        <div className="row">
+          <button className="btn" type="button" onClick={() => setHide(true)}>
+            Continuar observando
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StageReport() {
   const [hide, setHide] = useState(false);
   const h = hoistState();
@@ -344,6 +432,9 @@ function StageReport() {
           <button className="btn" type="button" onClick={() => setHide(true)}>
             Continuar observando
           </button>
+          <button className="btn" type="button" onClick={() => beginStage3()}>
+            Continuar para a Etapa 3
+          </button>
         </div>
       </div>
     </div>
@@ -361,8 +452,8 @@ function Bearing() {
       const show = sim.phase === "play" && !sim.solved && !sim.paused && !sim.mapOpen;
       el.style.opacity = show ? "1" : "0";
       if (!show) return;
-      const tx = 0;
-      const tz = sim.stage === 2 ? -58.2 : sim.z < -14 ? -25 : -8;
+      const tx = sim.stage === 3 ? 25.2 : 0;
+      const tz = sim.stage === 3 ? -56 : sim.stage === 2 ? -58.2 : sim.z < -14 ? -25 : -8;
       const dx = tx - sim.x;
       const dz = tz - sim.z;
       const fx = -Math.sin(sim.camYaw);
@@ -460,6 +551,7 @@ function MapPanel() {
         <p className="kicker">Navegação · Newton-1</p>
         <h2>Mapa da missão</h2>
         {sim.stage === 2 ? <p className="sub">Etapa 2 · A força invisível. O setor de carga fica além do mapa da etapa 1.</p> : null}
+        {sim.stage === 3 ? <p className="sub">Etapa 3 · O módulo de energia. Trabalho, transformação e conservação.</p> : null}
         <div className="map-layout">
           <div className="schematic" aria-hidden>
             <div className="room goal" style={{ left: "28%", right: "28%", top: "6%", height: "22%" }}>

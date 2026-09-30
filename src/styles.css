@@ -357,6 +357,23 @@
 .force-strip p {
   margin: 0;
 }
+.energy-bars {
+  display: grid;
+  gap: 0.18rem;
+  margin-top: 0.28rem;
+}
+.energy-bars i {
+  display: block;
+  height: 4px;
+  width: 0;
+  background: #7eb8cc;
+}
+.energy-bars i.pot {
+  background: #e0a23a;
+}
+.energy-bars i.heat {
+  background: #e07a4a;
+}
 .report-list {
   list-style: none;
   padding: 0;

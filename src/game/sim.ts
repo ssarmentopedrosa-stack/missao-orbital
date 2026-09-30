@@ -126,7 +126,7 @@ export const sim = {
   scanner: false,
   freeplay: false,
   solved: false,
-  stage: 1 as 1 | 2,
+  stage: 1 as 1 | 2 | 3,
   transit: 0,
   x: SPAWN.x,
   y: 0,
@@ -687,7 +687,7 @@ export function step(dt: number): void {
     return;
   }
 
-  if (sim.stage === 2 && sim.transit > 0) {
+  if ((sim.stage === 2 || sim.stage === 3) && sim.transit > 0) {
     sim.vx = 0;
     sim.vz = 0;
     sim.vy = 0;
@@ -773,7 +773,7 @@ export function step(dt: number): void {
 
   if (sim.interactEdge) {
     sim.interactEdge = false;
-    if (sim.stage === 2) sim.actEdge = true;
+    if (sim.stage === 2 || sim.stage === 3) sim.actEdge = true;
     else tryInteract();
   }
 

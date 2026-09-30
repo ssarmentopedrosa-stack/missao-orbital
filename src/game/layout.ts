@@ -76,15 +76,20 @@ export const BLOCKS: Block[] = [
   { minX: -4.05, maxX: -3.1, minZ: -59.35, maxZ: -58.45, h: 0.95, kind: "hidden" },
   { minX: 2.85, maxX: 3.8, minZ: -52.6, maxZ: -51.85, h: 1.2, kind: "hidden" },
   { minX: 3.7, maxX: 4.45, minZ: -56.7, maxZ: -56.1, h: 1.05, kind: "hidden" },
+  { minX: 12.15, maxX: 12.55, minZ: -64.2, maxZ: -57.4, h: 4.2, kind: "hidden" },
+  { minX: 12.15, maxX: 12.55, minZ: -54.6, maxZ: -47.8, h: 4.2, kind: "hidden" },
+  { minX: 12.15, maxX: 28.1, minZ: -64.2, maxZ: -63.75, h: 4.2, kind: "hidden" },
+  { minX: 12.15, maxX: 28.1, minZ: -48.25, maxZ: -47.8, h: 4.2, kind: "hidden" },
+  { minX: 27.7, maxX: 28.1, minZ: -64.2, maxZ: -47.8, h: 4.2, kind: "hidden" },
 ];
 
 export const CINE_LEN = 64;
 
-/** Campaign slots. Only stages 1 and 2 exist; 3 and 4 are reserved. */
+/** Campaign slots. Stage 3 continues the same station: work and energy. */
 export const CAMPAIGN = [
   { stage: 1, id: "inercia", title: "Fundamentos e inércia" },
   { stage: 2, id: "elevador", title: "A força invisível" },
-  { stage: 3, id: "acao-reacao", title: "Ação e reação" },
+  { stage: 3, id: "energia", title: "O módulo de energia" },
   { stage: 4, id: "tres-leis", title: "Aplicações das três leis" },
 ] as const;
 

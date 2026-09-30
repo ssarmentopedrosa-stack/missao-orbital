@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Dressing } from "./dressing";
 import { Cargo } from "./Cargo";
+import { Vault } from "./Vault";
 import { focusGame, installControls } from "./input";
 import { Overlay } from "./overlay";
 import { CINE_LEN } from "./layout";
@@ -120,6 +121,7 @@ export function Game() {
         <Lights />
         <World />
         <Cargo />
+        <Vault />
         <Dressing />
         <Crates />
         <Vectors />

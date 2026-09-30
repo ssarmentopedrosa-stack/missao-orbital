@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-0_wacniK.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-D5agJvLm.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -908,7 +908,7 @@ var G_MOON = 1.62;
 var HOIST_Y_MIN = Y_MIN;
 var HOIST_Y_MAX = Y_MAX;
 var HOIST_V_MAX = 5.6;
-function finite(n, fallback) {
+function finite$1(n, fallback) {
 	return Number.isFinite(n) ? n : fallback;
 }
 /** Smallest mass the formula will divide by. Stops a bad load from producing Infinity. */
@@ -917,9 +917,9 @@ var MASS_MIN = .5;
 var FORCE_SCAN = .8;
 /** The only place P, Fr and a are computed. HUD, vectors and the integrator all read this. */
 function forcesOf(tension, mass, g = HOIST_G) {
-	const m = Math.max(MASS_MIN, finite(mass, 40));
-	const grav = Math.max(0, finite(g, HOIST_G));
-	const T = finite(tension, 0);
+	const m = Math.max(MASS_MIN, finite$1(mass, 40));
+	const grav = Math.max(0, finite$1(g, HOIST_G));
+	const T = finite$1(tension, 0);
 	const P = m * grav;
 	const Fr = T - P;
 	const a = Fr / m;
@@ -941,9 +941,9 @@ function accelOf(tension, mass, g = HOIST_G) {
 	return forcesOf(tension, mass, g).a;
 }
 function integrateVariable(y, v, tension, mass, g, dt, locked, yMin = HOIST_Y_MIN, yMax = HOIST_Y_MAX) {
-	const step = Math.min(.05, Math.max(0, finite(dt, 0)));
+	const step = Math.min(.05, Math.max(0, finite$1(dt, 0)));
 	const a = accelOf(tension, mass, g);
-	const y0 = finite(y, yMin);
+	const y0 = finite$1(y, yMin);
 	if (locked) return {
 		y: y0,
 		v: 0,
@@ -951,7 +951,7 @@ function integrateVariable(y, v, tension, mass, g, dt, locked, yMin = HOIST_Y_MI
 		hitTop: false,
 		hitFloor: false
 	};
-	let vy = finite(v, 0) + a * step;
+	let vy = finite$1(v, 0) + a * step;
 	if (vy > 5.6) vy = HOIST_V_MAX;
 	if (vy < -5.6) vy = -5.6;
 	let py = y0 + vy * step;
@@ -1006,9 +1006,9 @@ function arrivalAllowed(input) {
 * Clamped so an extreme tension cannot fill the bay. Never fed back into the integrator.
 */
 function vectorLength(magnitude, reference) {
-	const mag = Math.abs(finite(magnitude, 0));
+	const mag = Math.abs(finite$1(magnitude, 0));
 	if (mag < 1) return 0;
-	const raw = mag / Math.max(mag, Math.abs(finite(reference, 0)), 80) * 1.6;
+	const raw = mag / Math.max(mag, Math.abs(finite$1(reference, 0)), 80) * 1.6;
 	if (raw < .05) return 0;
 	return Math.min(1.65, Math.max(.34, raw));
 }
@@ -1297,6 +1297,46 @@ var BLOCKS = [
 		minZ: -56.7,
 		maxZ: -56.1,
 		h: 1.05,
+		kind: "hidden"
+	},
+	{
+		minX: 12.15,
+		maxX: 12.55,
+		minZ: -64.2,
+		maxZ: -57.4,
+		h: 4.2,
+		kind: "hidden"
+	},
+	{
+		minX: 12.15,
+		maxX: 12.55,
+		minZ: -54.6,
+		maxZ: -47.8,
+		h: 4.2,
+		kind: "hidden"
+	},
+	{
+		minX: 12.15,
+		maxX: 28.1,
+		minZ: -64.2,
+		maxZ: -63.75,
+		h: 4.2,
+		kind: "hidden"
+	},
+	{
+		minX: 12.15,
+		maxX: 28.1,
+		minZ: -48.25,
+		maxZ: -47.8,
+		h: 4.2,
+		kind: "hidden"
+	},
+	{
+		minX: 27.7,
+		maxX: 28.1,
+		minZ: -64.2,
+		maxZ: -47.8,
+		h: 4.2,
 		kind: "hidden"
 	}
 ];
@@ -1869,7 +1909,7 @@ function step(dt) {
 		}
 		return;
 	}
-	if (sim.stage === 2 && sim.transit > 0) {
+	if ((sim.stage === 2 || sim.stage === 3) && sim.transit > 0) {
 		sim.vx = 0;
 		sim.vz = 0;
 		sim.vy = 0;
@@ -1945,7 +1985,7 @@ function step(dt) {
 	}
 	if (sim.interactEdge) {
 		sim.interactEdge = false;
-		if (sim.stage === 2) sim.actEdge = true;
+		if (sim.stage === 2 || sim.stage === 3) sim.actEdge = true;
 		else tryInteract();
 	}
 	sim.pushing = false;
@@ -2198,7 +2238,7 @@ var LOADS = [
 	}
 ];
 var Y_START = 2.55;
-var TRANSIT = 6.4;
+var TRANSIT$1 = 6.4;
 var T_MAX = 1800;
 var elevator = {
 	active: false,
@@ -2333,17 +2373,17 @@ function resetMotion() {
 		mesmaFr: false
 	};
 }
-function queueAs(speaker, text, seconds) {
+function queueAs$1(speaker, text, seconds) {
 	elevator.lineQueue.push({
 		speaker,
 		text,
 		seconds
 	});
 }
-function queue(text, seconds) {
-	queueAs("NEWTON", text, seconds);
+function queue$1(text, seconds) {
+	queueAs$1("NEWTON", text, seconds);
 }
-function pumpLines() {
+function pumpLines$1() {
 	if (sim.line) return;
 	const next = elevator.lineQueue.shift();
 	if (!next) return;
@@ -2387,14 +2427,14 @@ function hoistState() {
 		flight: elevator.flight
 	};
 }
-function near(x, z, r) {
+function near$1(x, z, r) {
 	return Math.hypot(sim.x - x, sim.z - z) < r;
 }
 function nearPanel() {
-	return near(PANEL.x, PANEL.z, 2.15);
+	return near$1(PANEL.x, PANEL.z, 2.15);
 }
 function nearHoist() {
-	return nearPanel() || near(SHAFT.x, SHAFT.z, 6.8);
+	return nearPanel() || near$1(SHAFT.x, SHAFT.z, 6.8);
 }
 function nearLoad() {
 	let best = null;
@@ -2434,10 +2474,10 @@ function applyLoad(load) {
 	elevator.mastery.massa = true;
 	elevator.swaps += 1;
 	sfx.ui();
-	if (Math.abs(prevM - load.mass) > .5) queue(`${load.name}, ${load.mass} kg. A tração ficou em ${comma(elevator.tension, 0)} N. A aceleração foi de ${comma(prevA, 2)} para ${comma(nextA, 2)} m/s².`, 5.6);
+	if (Math.abs(prevM - load.mass) > .5) queue$1(`${load.name}, ${load.mass} kg. A tração ficou em ${comma(elevator.tension, 0)} N. A aceleração foi de ${comma(prevA, 2)} para ${comma(nextA, 2)} m/s².`, 5.6);
 	if (elevator.swaps >= 2 && !elevator.saidSame) {
 		elevator.saidSame = true;
-		queue("Mesma tração não significa mesma resultante: o peso muda com a massa. E, para a mesma resultante, a massa maior acelera menos. a = Fr / m.", 6.4);
+		queue$1("Mesma tração não significa mesma resultante: o peso muda com a massa. E, para a mesma resultante, a massa maior acelera menos. a = Fr / m.", 6.4);
 	}
 }
 function toggleGravity() {
@@ -2446,11 +2486,11 @@ function toggleGravity() {
 	elevator.g = moon ? HOIST_G : G_MOON;
 	elevator.mastery.gravidade = true;
 	sfx.ui();
-	queue(`Simulador em gravidade da ${elevator.g < 5 ? "Lua" : "estação"}. A massa continua ${comma(mass, 0)} kg. O peso passou a ${comma(weightOf(mass, elevator.g), 1)} N.`, 5.2);
+	queue$1(`Simulador em gravidade da ${elevator.g < 5 ? "Lua" : "estação"}. A massa continua ${comma(mass, 0)} kg. O peso passou a ${comma(weightOf(mass, elevator.g), 1)} N.`, 5.2);
 	if (!elevator.saidG) {
 		elevator.saidG = true;
-		queueAs("TIGRÃO", "Minha massa continua a mesma.", 2.8);
-		queue("Exatamente. O que mudou foi a força gravitacional. Peso é força. Massa, não.", 4.6);
+		queueAs$1("TIGRÃO", "Minha massa continua a mesma.", 2.8);
+		queue$1("Exatamente. O que mudou foi a força gravitacional. Peso é força. Massa, não.", 4.6);
 	}
 }
 function enterDescent() {
@@ -2465,7 +2505,7 @@ function enterDescent() {
 	elevator.alarmT = 2.4;
 	sim.shake = Math.max(sim.shake, .16);
 	sfx.cable();
-	queue("A tração caiu abaixo do peso. A carga acelera para baixo. Isso é a força resultante, não um defeito do cabo.", 5.4);
+	queue$1("A tração caiu abaixo do peso. A carga acelera para baixo. Isso é a força resultante, não um defeito do cabo.", 5.4);
 }
 function enterLab() {
 	elevator.goal = "lab";
@@ -2478,8 +2518,8 @@ function enterLab() {
 	elevator.coastHold = 0;
 	elevator.samples = [];
 	elevator.alarm = false;
-	queue("Laboratório de forças. Escolha 20, 50 ou 100 kg. Suba, equilibre parado, desça — e também siga em movimento com a resultante zero.", 6.6);
-	queue("O simulador à direita troca a gravidade entre a estação e a Lua. A massa não muda. O peso, sim.", 5.4);
+	queue$1("Laboratório de forças. Escolha 20, 50 ou 100 kg. Suba, equilibre parado, desça — e também siga em movimento com a resultante zero.", 6.6);
+	queue$1("O simulador à direita troca a gravidade entre a estação e a Lua. A massa não muda. O peso, sim.", 5.4);
 }
 function enterProtocol() {
 	elevator.goal = "protocol";
@@ -2498,10 +2538,10 @@ function enterProtocol() {
 	elevator.saidSurge = false;
 	elevator.mastery.newton = true;
 	sfx.ui();
-	queue("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
-	queue("Mantenha parada, suba acelerando, siga com velocidade constante e desacelere antes da plataforma.", 5.6);
+	queue$1("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
+	queue$1("Mantenha parada, suba acelerando, siga com velocidade constante e desacelere antes da plataforma.", 5.6);
 }
-function finish() {
+function finish$1() {
 	if (elevator.done) return;
 	elevator.flight.arriveV = elevator.v;
 	elevator.flight.collided = false;
@@ -2517,10 +2557,10 @@ function finish() {
 	sim.shake = Math.max(sim.shake, .12);
 	sim.objective = "Etapa 2 concluída";
 	sfx.success();
-	queue("Você descobriu algo importante.", 2.8);
-	queue("Uma força isolada não determina o movimento.", 3.4);
-	queue("O que importa é a força resultante.", 3.2);
-	queue("Quando você entende as forças, começa a entender o movimento.", 4.2);
+	queue$1("Você descobriu algo importante.", 2.8);
+	queue$1("Uma força isolada não determina o movimento.", 3.4);
+	queue$1("O que importa é a força resultante.", 3.2);
+	queue$1("Quando você entende as forças, começa a entender o movimento.", 4.2);
 }
 function beginStage2() {
 	if (sim.stage === 2 && elevator.active) return;
@@ -2535,7 +2575,7 @@ function beginStage2() {
 	sim.freeplay = false;
 	sim.scanner = false;
 	sim.animLock = null;
-	sim.transit = TRANSIT;
+	sim.transit = TRANSIT$1;
 	sim.x = -3.1;
 	sim.y = 0;
 	sim.z = -50.35;
@@ -2581,6 +2621,12 @@ function readForces() {
 	};
 }
 function tickElevator(dt) {
+	if (sim.stage !== 2) {
+		elevator.active = false;
+		elevator.alarm = false;
+		elevator.adjusting = false;
+		return;
+	}
 	const tap = sim.actEdge;
 	sim.actEdge = false;
 	const hdt = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
@@ -2589,16 +2635,10 @@ function tickElevator(dt) {
 	if (!Number.isFinite(elevator.tension)) elevator.tension = clampTension(weightOf(elevator.mass, elevator.g));
 	if (!Number.isFinite(elevator.y)) elevator.y = Y_START;
 	if (!Number.isFinite(elevator.v)) elevator.v = 0;
-	if (sim.stage !== 2) {
-		elevator.active = false;
-		elevator.alarm = false;
-		elevator.adjusting = false;
-		return;
-	}
 	if (!elevator.active) return;
 	if (sim.transit > 0) {
 		sim.transit = Math.max(0, sim.transit - hdt);
-		const u = 1 - sim.transit / TRANSIT;
+		const u = 1 - sim.transit / TRANSIT$1;
 		const s = u * u * (3 - 2 * u);
 		sim.x = -3.1;
 		sim.y = 0;
@@ -2608,7 +2648,7 @@ function tickElevator(dt) {
 		sim.vz = 0;
 		sim.speed = 0;
 		sim.objective = "Investigue o elevador e descubra por que ele não sobe.";
-		pumpLines();
+		pumpLines$1();
 		return;
 	}
 	if (elevator.finale > 0) {
@@ -2623,7 +2663,7 @@ function tickElevator(dt) {
 		sim.speed = 0;
 		sim.animLock = elevator.finale > 0 ? "celebrate" : null;
 		sim.objective = "Etapa 2 concluída";
-		pumpLines();
+		pumpLines$1();
 		return;
 	}
 	if (elevator.alarmT > 0) {
@@ -2632,22 +2672,22 @@ function tickElevator(dt) {
 	}
 	if (sim.phase !== "play" || sim.paused || sim.mapOpen) {
 		elevator.adjusting = false;
-		pumpLines();
+		pumpLines$1();
 		return;
 	}
 	const e = held.has("KeyE");
 	const shift = held.has("ShiftLeft") || held.has("ShiftRight") || sim.touchSprint;
 	const atPanel = nearPanel();
 	const load = nearLoad();
-	const atGrav = near(GRAV.x, GRAV.z, 1.55);
+	const atGrav = near$1(GRAV.x, GRAV.z, 1.55);
 	elevator.adjusting = Boolean(atPanel && e && elevator.goal !== "scan" && elevator.goal !== "done");
 	if (tap && load && elevator.goal === "lab") applyLoad(load);
 	else if (tap && atGrav && elevator.goal === "lab") toggleGravity();
-	else if (tap && load && elevator.goal !== "lab") queue("As cargas do laboratório entram depois que você controlar a descida.", 3.6);
-	else if (tap && atGrav && elevator.goal !== "lab") queue("O simulador de gravidade abre no laboratório de forças.", 3.4);
+	else if (tap && load && elevator.goal !== "lab") queue$1("As cargas do laboratório entram depois que você controlar a descida.", 3.6);
+	else if (tap && atGrav && elevator.goal !== "lab") queue$1("O simulador de gravidade abre no laboratório de forças.", 3.4);
 	else if (elevator.goal === "scan" && tap && atPanel && !elevator.saidWait) {
 		elevator.saidWait = true;
-		queue("Antes de alterar qualquer coisa, observe. Abra o scanner na carga.", 3.8);
+		queue$1("Antes de alterar qualquer coisa, observe. Abra o scanner na carga.", 3.8);
 	} else if (atPanel && elevator.goal !== "scan" && elevator.goal !== "done") {
 		const dir = shift ? -1 : 1;
 		const gap = Math.abs(elevator.tension - weightOf(elevator.mass, elevator.g));
@@ -2670,7 +2710,7 @@ function tickElevator(dt) {
 		elevator.y = Math.max(elevator.y, 3.5);
 		elevator.v = -.15;
 		sfx.fail();
-		queue("Impacto no piso. A velocidade estava grande. Aumente a tração antes do fim da descida.", 4.4);
+		queue$1("Impacto no piso. A velocidade estava grande. Aumente a tração antes do fim da descida.", 4.4);
 	}
 	let crashed = false;
 	if (step.hitTop && elevator.goal === "protocol" && prevV > .05) {
@@ -2686,7 +2726,7 @@ function tickElevator(dt) {
 		elevator.alarmT = Math.max(elevator.alarmT, 1.2);
 		sim.shake = Math.max(sim.shake, .22);
 		sfx.fail();
-		queue("Impacto! Você chegou rápido demais. É necessário iniciar a frenagem antes do topo.", 4.2);
+		queue$1("Impacto! Você chegou rápido demais. É necessário iniciar a frenagem antes do topo.", 4.2);
 	}
 	const { P, T, Fr, a } = readForces();
 	elevator.note = physicsNote(P, T, Fr, a, elevator.v);
@@ -2704,7 +2744,7 @@ function tickElevator(dt) {
 		sim.objective = elevator.arrived ? "2 · Ative o scanner" : "1 · Investigue o elevador";
 		if (!elevator.arrived && atPanel) {
 			elevator.arrived = true;
-			queue("O cabo está frouxo para o peso desta carga. Escaneie antes de mudar a tração.", 4.4);
+			queue$1("O cabo está frouxo para o peso desta carga. Escaneie antes de mudar a tração.", 4.4);
 		}
 		elevator.hint = elevator.arrived ? "Q liga o scanner. Peso para baixo, tração para cima." : "Caminhe até o painel do guincho. A carga não sobe.";
 		if (sim.scanner && nearHoist()) {
@@ -2712,8 +2752,8 @@ function tickElevator(dt) {
 			elevator.mastery.peso = true;
 			elevator.goal = "compare";
 			elevator.compareHold = 0;
-			queue("Peso é m·g, para baixo. Tração é o cabo, para cima. As duas existem ao mesmo tempo.", 5);
-			queue("E aumenta a tração. Shift+E diminui. No toque, Agir faz o mesmo passo — Correr inverte.", 4.6);
+			queue$1("Peso é m·g, para baixo. Tração é o cabo, para cima. As duas existem ao mesmo tempo.", 5);
+			queue$1("E aumenta a tração. Shift+E diminui. No toque, Agir faz o mesmo passo — Correr inverte.", 4.6);
 		}
 	} else if (elevator.goal === "compare") {
 		sim.objective = "3 · Compare o peso e a tração";
@@ -2721,8 +2761,8 @@ function tickElevator(dt) {
 		if (elevator.mastery.tracao) elevator.compareHold += hdt;
 		if (elevator.compareHold > .9 || elevator.y > 3.0999999999999996 && elevator.v > .12 && Fr > 0) {
 			elevator.goal = "rise";
-			queue("A diferença entre elas é a força resultante. Fr = T − P. E Fr = m·a.", 4.8);
-			queue("Faça a carga subir. A tração precisa ser maior que o peso.", 3.8);
+			queue$1("A diferença entre elas é a força resultante. Fr = T − P. E Fr = m·a.", 4.8);
+			queue$1("Faça a carga subir. A tração precisa ser maior que o peso.", 3.8);
 		}
 	} else if (elevator.goal === "rise") {
 		sim.objective = "4 · Faça a carga subir";
@@ -2731,7 +2771,7 @@ function tickElevator(dt) {
 			elevator.mastery.aceleracao = true;
 			elevator.goal = "balance";
 			elevator.balanceHold = 0;
-			queue("Agora pare a aceleração. Iguale a tração ao peso. Se ela ainda sobe, a velocidade não zera na hora.", 5.8);
+			queue$1("Agora pare a aceleração. Iguale a tração ao peso. Se ela ainda sobe, a velocidade não zera na hora.", 5.8);
 		}
 	} else if (elevator.goal === "balance") {
 		sim.objective = "5 · Pare a aceleração";
@@ -2758,7 +2798,7 @@ function tickElevator(dt) {
 			if (elevator.dropHold > .75) {
 				elevator.drop = 2;
 				elevator.mastery.resultante = true;
-				queue("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
+				queue$1("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
 			}
 		} else {
 			elevator.hint = "Freie antes do piso. Para frear na descida, a aceleração precisa apontar para cima, contra o movimento.";
@@ -2781,8 +2821,8 @@ function tickElevator(dt) {
 				elevator.mastery.resultante = true;
 				if (!elevator.saidCoast) {
 					elevator.saidCoast = true;
-					queueAs("TIGRÃO", "Então força resultante zero não significa necessariamente objeto parado?", 3.6);
-					queue("Exatamente. Resultante zero significa aceleração zero. Observe: a força resultante é zero, mas a carga continua em movimento.", 6.2);
+					queueAs$1("TIGRÃO", "Então força resultante zero não significa necessariamente objeto parado?", 3.6);
+					queue$1("Exatamente. Resultante zero significa aceleração zero. Observe: a força resultante é zero, mas a carga continua em movimento.", 6.2);
 				}
 			}
 			if (Math.abs(a) > .35 && Math.abs(Fr) > 30) {
@@ -2802,7 +2842,7 @@ function tickElevator(dt) {
 						elevator.mastery.mesmaFr = true;
 						const heavy = first.mass > second.mass ? first : second;
 						const light = first.mass > second.mass ? second : first;
-						queue(`Resultante parecida, perto de ${comma(light.Fr, 0)} N. ${comma(light.mass, 0)} kg acelerou ${comma(light.a, 2)} m/s²; ${comma(heavy.mass, 0)} kg acelerou ${comma(heavy.a, 2)} m/s². A massa maior acelera menos.`, 6.4);
+						queue$1(`Resultante parecida, perto de ${comma(light.Fr, 0)} N. ${comma(light.mass, 0)} kg acelerou ${comma(light.a, 2)} m/s²; ${comma(heavy.mass, 0)} kg acelerou ${comma(heavy.a, 2)} m/s². A massa maior acelera menos.`, 6.4);
 					}
 				}
 			}
@@ -2820,7 +2860,7 @@ function tickElevator(dt) {
 		if (elevator.v > elevator.flight.vMax) elevator.flight.vMax = elevator.v;
 		if (!elevator.saidSurge && elevator.v > 5.55) {
 			elevator.saidSurge = true;
-			queue("Você aumentou demais a tração. Observe como isso aumentou a aceleração.", 3.6);
+			queue$1("Você aumentou demais a tração. Observe como isso aumentou a aceleração.", 3.6);
 		}
 		if (elevator.proto === 0) {
 			elevator.hint = "Repouso: tração igual ao peso, resultante zero, velocidade zero.";
@@ -2829,15 +2869,15 @@ function tickElevator(dt) {
 			if (elevator.protoHold > .85) {
 				elevator.proto = 1;
 				elevator.protoHold = 0;
-				queue("Equilíbrio de forças: a resultante é aproximadamente zero.", 3.2);
-				queue("Agora faça a carga subir. A tração precisa ser maior que o peso.", 3.4);
+				queue$1("Equilíbrio de forças: a resultante é aproximadamente zero.", 3.2);
+				queue$1("Agora faça a carga subir. A tração precisa ser maior que o peso.", 3.4);
 			}
 		} else if (elevator.proto === 1) {
 			elevator.hint = "Aceleração para cima: tração maior que o peso, velocidade crescendo.";
 			if (elevator.y > 3.6 && a > .28 && elevator.v > .2) {
 				elevator.proto = 2;
 				elevator.protoHold = 0;
-				queue("Agora iguale a tração ao peso sem parar a carga.", 3.4);
+				queue$1("Agora iguale a tração ao peso sem parar a carga.", 3.4);
 			}
 		} else if (elevator.proto === 2) {
 			elevator.hint = Math.abs(elevator.v) < .12 ? "A velocidade zerou. Aumente um pouco a tração e, no meio da subida, iguale de novo." : "Resultante perto de zero e velocidade para cima. Segure assim por um instante.";
@@ -2845,10 +2885,10 @@ function tickElevator(dt) {
 			else elevator.protoHold = 0;
 			if (elevator.protoHold > .8) {
 				elevator.proto = 3;
-				queue("Resultante zero não significa necessariamente repouso.", 3.2);
-				queue("Como a aceleração é zero, a velocidade permanece constante.", 3.4);
-				queueAs("TIGRÃO", "Então, se a resultante é zero, a carga pode continuar subindo?", 3.2);
-				queue("Sim. Se a velocidade já for diferente de zero, ela continua constante. Agora freie antes do topo.", 4.2);
+				queue$1("Resultante zero não significa necessariamente repouso.", 3.2);
+				queue$1("Como a aceleração é zero, a velocidade permanece constante.", 3.4);
+				queueAs$1("TIGRÃO", "Então, se a resultante é zero, a carga pode continuar subindo?", 3.2);
+				queue$1("Sim. Se a velocidade já for diferente de zero, ela continua constante. Agora freie antes do topo.", 4.2);
 			}
 		} else if (!crashed) {
 			if (!elevator.flight.brakeValid && brakingGate(a, elevator.v, elevator.y)) {
@@ -2869,7 +2909,7 @@ function tickElevator(dt) {
 			const inBand = elevator.y >= 8.45 && elevator.y <= 9.02;
 			if (elevator.flight.brakeValid && inBand && elevator.v >= .45 && sim.time > elevator.warnAt) {
 				elevator.warnAt = sim.time + 6;
-				queue("Frenagem insuficiente. A velocidade ainda era alta na chegada.", 3.2);
+				queue$1("Frenagem insuficiente. A velocidade ainda era alta na chegada.", 3.2);
 			}
 			elevator.hint = elevator.flight.brakeValid ? "Frenagem válida. A velocidade precisa cair antes do limite — bater no topo não conta." : "Tração abaixo do peso, ainda subindo, para a velocidade cair antes do topo.";
 			if (arrivalAllowed({
@@ -2880,7 +2920,7 @@ function tickElevator(dt) {
 				v: elevator.v,
 				hitTop: step.hitTop,
 				brakeDur: elevator.flight.brakeDur
-			})) finish();
+			})) finish$1();
 		}
 	} else {
 		sim.objective = "Etapa 2 concluída · força resultante";
@@ -2888,7 +2928,7 @@ function tickElevator(dt) {
 		elevator.alarm = false;
 	}
 	if (Math.abs(elevator.v) > 5.6) elevator.v = Math.sign(elevator.v) * HOIST_V_MAX;
-	pumpLines();
+	pumpLines$1();
 }
 if (typeof window !== "undefined") window.__elevatorTest = {
 	begin: beginStage2,
@@ -3671,6 +3711,908 @@ function Cargo() {
 		})
 	] });
 }
+/** Work and energy. Every HUD number in stage 3 comes from these functions. */
+function finite(n, fallback = 0) {
+	return Number.isFinite(n) ? n : fallback;
+}
+/** W = F·d·cos(θ). θ in degrees. A right angle is exactly zero, not a float leftover. */
+function workOf(force, distance, thetaDeg = 0) {
+	const F = finite(force);
+	const d = finite(distance);
+	const theta = finite(thetaDeg);
+	const wrapped = (theta % 360 + 360) % 360;
+	const c = Math.abs(wrapped - 90) < 1e-6 || Math.abs(wrapped - 270) < 1e-6 ? 0 : Math.cos(theta * Math.PI / 180);
+	const w = F * d * c;
+	return Number.isFinite(w) ? w : 0;
+}
+/** Net work along a displacement. Same source as workOf, θ = 0 when Fr and d share a sign. */
+function workFromResultant(resultant, signedDistance) {
+	const Fr = finite(resultant);
+	const d = finite(signedDistance);
+	if (d === 0 || Fr === 0) return 0;
+	return workOf(Math.abs(Fr), Math.abs(d), Math.sign(Fr) === Math.sign(d) ? 0 : 180);
+}
+/** Ec = ½mv². Speed is squared, so the sign of velocity does not create negative energy. */
+function kineticEnergy(mass, speed) {
+	const m = Math.max(0, finite(mass));
+	const v = finite(speed);
+	const e = .5 * m * v * v;
+	return Number.isFinite(e) ? e : 0;
+}
+/** Epg = mgh. Negative mass, gravity or height do not produce a negative well. */
+function potentialEnergy(mass, g, height) {
+	const m = Math.max(0, finite(mass));
+	const grav = Math.max(0, finite(g));
+	const h = Math.max(0, finite(height));
+	const e = m * grav * h;
+	return Number.isFinite(e) ? e : 0;
+}
+/** Em = Ec + Epg. */
+function mechanicalEnergy(kinetic, potential) {
+	const e = finite(kinetic) + finite(potential);
+	return Number.isFinite(e) ? e : 0;
+}
+/** W_resultante = Ec_final − Ec_inicial. */
+function workEnergyDelta(initialKinetic, finalKinetic) {
+	const w = finite(finalKinetic) - finite(initialKinetic);
+	return Number.isFinite(w) ? w : 0;
+}
+/** True when mechanical energy is unchanged within a relative tolerance. */
+function mechanicallyConserved(initial, final, tol = .08) {
+	const a = finite(initial);
+	const b = finite(final);
+	const scale = Math.max(1, Math.abs(a), Math.abs(b));
+	return Math.abs(a - b) <= Math.abs(tol) * scale;
+}
+/**
+* Horizontal cart. Weight is perpendicular to the rail, so its work is zero.
+* W = F·d should track ΔEc. Friction removes mechanical energy as heat.
+*/
+function stepCart(x, v, force, mass, mu, g, dt) {
+	const m = Math.max(.5, finite(mass, 1));
+	const step = Math.min(.05, Math.max(0, finite(dt)));
+	const F = finite(force);
+	const frictionMax = Math.max(0, finite(mu)) * m * Math.max(0, finite(g));
+	const speed = finite(v);
+	let friction = 0;
+	if (Math.abs(speed) > .02) friction = -Math.sign(speed) * frictionMax;
+	else if (Math.abs(F) <= frictionMax) friction = -F;
+	else friction = -Math.sign(F || 1) * frictionMax;
+	const a = (F + friction) / m;
+	let vy = speed + a * step;
+	if (Math.abs(speed) > .02 && Math.sign(vy) !== Math.sign(speed) && frictionMax > 0) vy = 0;
+	const x0 = finite(x);
+	const x1 = x0 + vy * step;
+	const heat = frictionMax * Math.abs(x1 - x0);
+	if (!Number.isFinite(x1) || !Number.isFinite(vy)) return {
+		x: x0,
+		v: 0,
+		a: 0,
+		heat: 0
+	};
+	return {
+		x: x1,
+		v: vy,
+		a,
+		heat: Number.isFinite(heat) ? heat : 0
+	};
+}
+/** Vertical drop. Up is positive. Without friction, Em stays nearly constant. */
+function stepFall(h, v, mass, g, mu, dt) {
+	const m = Math.max(0, finite(mass));
+	const grav = Math.max(0, finite(g));
+	const step = Math.min(.05, Math.max(0, finite(dt)));
+	const h0 = Math.max(0, finite(h));
+	if (m <= 0) return {
+		h: h0,
+		v: 0,
+		a: 0,
+		heat: 0,
+		ec: 0,
+		epg: potentialEnergy(0, grav, h0),
+		em: 0
+	};
+	const friction = Math.max(0, finite(mu)) * m * grav;
+	const speed = finite(v);
+	let a = -grav;
+	if (friction > 0 && Math.abs(speed) > .02) a += -Math.sign(speed) * friction / m;
+	let vy = speed + a * step;
+	let hy = h0 + vy * step;
+	if (hy < 0) {
+		hy = 0;
+		vy = 0;
+	}
+	const heat = friction * Math.abs(hy - h0);
+	const ec = kineticEnergy(m, vy);
+	const epg = potentialEnergy(m, grav, hy);
+	return {
+		h: hy,
+		v: vy,
+		a,
+		heat: Number.isFinite(heat) ? heat : 0,
+		ec,
+		epg,
+		em: mechanicalEnergy(ec, epg)
+	};
+}
+var HATCH = {
+	x: 15.4,
+	z: -60.2
+};
+var HOIST = {
+	x: 16.8,
+	z: -56
+};
+var DIAL = {
+	x: 21.2,
+	z: -60.4
+};
+var TRACK = {
+	x: 22.6,
+	z: -53.5
+};
+var CORE = {
+	x: 25.2,
+	z: -56
+};
+var ANGLES = [
+	0,
+	30,
+	45,
+	60,
+	90,
+	120,
+	180
+];
+var TRANSIT = 5.2;
+var vault = {
+	active: false,
+	goal: "arrive",
+	hint: "",
+	note: "",
+	mass: 20,
+	g: HOIST_G,
+	tension: 20 * HOIST_G,
+	workT: 0,
+	y: 1.2,
+	v: 0,
+	yMark: 1.2,
+	angle: 0,
+	angleI: 0,
+	benchF: 100,
+	benchD: 0,
+	cartX: 0,
+	cartV: 0,
+	cartF: 80,
+	cartM: 20,
+	h: 5,
+	fallV: 0,
+	mu: 0,
+	thermal: 0,
+	em0: 0,
+	sawUp: false,
+	kinSlow: false,
+	kinFast: false,
+	kinV: 2,
+	ang0: false,
+	ang90: false,
+	ang180: false,
+	hold: 0,
+	finale: 0,
+	t0: 0,
+	lineQueue: [],
+	modules: 0
+};
+function resetVault() {
+	vault.active = false;
+	vault.goal = "arrive";
+	vault.hint = "";
+	vault.note = "";
+	vault.mass = 20;
+	vault.g = HOIST_G;
+	vault.tension = 20 * HOIST_G;
+	vault.workT = 0;
+	vault.y = 1.2;
+	vault.v = 0;
+	vault.yMark = 1.2;
+	vault.angle = 0;
+	vault.angleI = 0;
+	vault.benchF = 100;
+	vault.benchD = 0;
+	vault.cartX = 0;
+	vault.cartV = 0;
+	vault.cartF = 80;
+	vault.cartM = 20;
+	vault.h = 5;
+	vault.fallV = 0;
+	vault.mu = 0;
+	vault.thermal = 0;
+	vault.em0 = potentialEnergy(10, HOIST_G, 5);
+	vault.sawUp = false;
+	vault.kinSlow = false;
+	vault.kinFast = false;
+	vault.kinV = 2;
+	vault.ang0 = false;
+	vault.ang90 = false;
+	vault.ang180 = false;
+	vault.hold = 0;
+	vault.finale = 0;
+	vault.lineQueue = [];
+	vault.modules = 0;
+}
+function queue(text, seconds = 3.6) {
+	vault.lineQueue.push({
+		speaker: "NEWTON",
+		text,
+		seconds
+	});
+}
+function queueAs(speaker, text, seconds = 3.2) {
+	vault.lineQueue.push({
+		speaker,
+		text,
+		seconds
+	});
+}
+function pumpLines() {
+	if (sim.line) return;
+	const next = vault.lineQueue.shift();
+	if (next) speak(next.speaker, next.text, next.seconds);
+}
+function near(p, r = 1.85) {
+	return Math.hypot(sim.x - p.x, sim.z - p.z) < r;
+}
+function mark(goal, modules) {
+	vault.goal = goal;
+	vault.modules = modules;
+	vault.hold = 0;
+	sfx.ui();
+}
+function vaultState() {
+	const dy = vault.y - vault.yMark;
+	const tensionWork = vault.workT;
+	const weightWork = workOf(vault.mass * vault.g, Math.abs(dy), dy >= 0 ? 180 : 0);
+	const ec = kineticEnergy(vault.mass, vault.v);
+	const epg = potentialEnergy(vault.mass, vault.g, Math.max(0, vault.y - 1.05));
+	const benchW = workOf(vault.benchF, vault.benchD, vault.angle);
+	const cartEc = kineticEnergy(vault.cartM, vault.cartV);
+	const cartW = workFromResultant(vault.cartF, vault.cartX);
+	const fallEc = kineticEnergy(10, vault.fallV);
+	const fallEpg = potentialEnergy(10, vault.g, vault.h);
+	const fallEm = fallEc + fallEpg;
+	return {
+		goal: vault.goal,
+		hint: vault.hint,
+		note: vault.note,
+		active: vault.active,
+		done: vault.goal === "done",
+		finale: vault.finale,
+		modules: vault.modules,
+		mass: vault.mass,
+		g: vault.g,
+		tension: vault.tension,
+		y: vault.y,
+		v: vault.v,
+		h: Math.max(0, vault.y - 1.05),
+		dy,
+		tensionWork,
+		weightWork,
+		netWork: tensionWork + weightWork,
+		ec,
+		epg,
+		em: ec + epg,
+		angle: vault.angle,
+		benchF: vault.benchF,
+		benchD: vault.benchD,
+		benchW,
+		kinV: vault.kinV,
+		kinEc: kineticEnergy(50, vault.kinV),
+		cartX: vault.cartX,
+		cartV: vault.cartV,
+		cartW,
+		cartEc,
+		cartDelta: workEnergyDelta(0, cartEc),
+		fallH: vault.h,
+		fallV: vault.fallV,
+		fallEc,
+		fallEpg,
+		fallEm,
+		thermal: vault.thermal,
+		em0: vault.em0,
+		mu: vault.mu
+	};
+}
+function beginStage3() {
+	if (sim.stage === 3 && vault.active) return;
+	resetVault();
+	vault.active = true;
+	vault.t0 = sim.time;
+	sim.stage = 3;
+	sim.phase = "play";
+	sim.paused = false;
+	sim.mapOpen = false;
+	sim.freeplay = false;
+	sim.scanner = false;
+	sim.solved = false;
+	sim.animLock = null;
+	sim.transit = TRANSIT;
+	sim.x = 14.1;
+	sim.y = 0;
+	sim.z = -56;
+	sim.yaw = Math.PI / 2;
+	sim.vx = 0;
+	sim.vy = 0;
+	sim.vz = 0;
+	sim.speed = 0;
+	sim.objective = "1 · O que é trabalho?";
+	vault.hint = "Caminhe até a escotilha travada.";
+	queue("Tigrão, conseguimos controlar as forças. Agora precisamos descobrir para onde vai a energia.", 4.4);
+	queue("Na missão anterior, a resultante produzia aceleração. Aqui a força encontra um deslocamento.", 4.6);
+	queueAs("TIGRÃO", "Então força sozinha não basta?", 2.6);
+	queue("Exatamente. Sem deslocamento, o trabalho mecânico é zero.", 3.4);
+	const first = vault.lineQueue.shift();
+	if (first) speak(first.speaker, first.text, first.seconds);
+}
+function finish() {
+	if (vault.goal === "done") return;
+	vault.goal = "done";
+	vault.modules = 8;
+	vault.finale = 7;
+	vault.hint = "O núcleo aceitou a energia. Trabalho e energia contam a mesma história.";
+	sim.objective = "Etapa 3 concluída";
+	sim.animLock = "celebrate";
+	sfx.success();
+	queue("O núcleo estável não recebeu força mágica.", 3.2);
+	queue("Recebeu trabalho, transformação e o que o atrito tinha espalhado em calor.", 4.2);
+	queueAs("TIGRÃO", "A energia não sumiu. Só mudou de endereço.", 3.2);
+}
+function tickVault(dt) {
+	if (sim.stage !== 3) {
+		if (vault.active && vault.goal !== "done") vault.active = false;
+		return;
+	}
+	const tap = sim.actEdge;
+	sim.actEdge = false;
+	const hdt = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	if (!vault.active) return;
+	if (sim.transit > 0) {
+		sim.transit = Math.max(0, sim.transit - hdt);
+		pumpLines();
+		return;
+	}
+	if (vault.finale > 0) {
+		vault.finale = Math.max(0, vault.finale - hdt);
+		sim.x = CORE.x - 1.6;
+		sim.z = CORE.z + 1.1;
+		sim.yaw = Math.atan2(CORE.x - sim.x, CORE.z - sim.z);
+	}
+	const e = held.has("KeyE");
+	const shift = held.has("ShiftLeft") || held.has("ShiftRight") || sim.touchSprint;
+	const atHoist = near(HOIST);
+	const P = vault.mass * vault.g;
+	if (vault.goal === "positive" || vault.goal === "negative" || vault.goal === "potential") {
+		if (atHoist && e) {
+			const dir = shift ? -1 : 1;
+			const stepN = tap ? 12 : 70 * hdt;
+			vault.tension = Math.max(0, Math.min(1800, vault.tension + dir * stepN));
+		} else if (atHoist && tap) vault.tension = Math.max(0, Math.min(1800, vault.tension + (shift ? -12 : 12)));
+		const prevY = vault.y;
+		const step = integrateVariable(vault.y, vault.v, vault.tension, vault.mass, vault.g, hdt, false, 1.05, 7.4);
+		vault.y = step.y;
+		vault.v = step.v;
+		const moved = vault.y - prevY;
+		if (moved >= 0) vault.workT += workOf(vault.tension, moved, 0);
+		else vault.workT += workOf(vault.tension, -moved, 180);
+		if (step.v > .12) vault.sawUp = true;
+	}
+	if (vault.goal === "angle") {
+		vault.benchD = Math.min(4, vault.benchD + .55 * hdt);
+		if (near(DIAL) && tap) {
+			vault.angleI = (vault.angleI + 1) % ANGLES.length;
+			vault.angle = ANGLES[vault.angleI] ?? 0;
+			sfx.ui();
+		}
+		const w = workOf(vault.benchF, vault.benchD, vault.angle);
+		if (vault.benchD > 1.4 && vault.angle === 0 && w > 50) vault.ang0 = true;
+		if (vault.benchD > 1.4 && vault.angle === 90 && Math.abs(w) < 1) vault.ang90 = true;
+		if (vault.benchD > 1.4 && vault.angle === 180 && w < -50) vault.ang180 = true;
+	}
+	if (vault.goal === "kinetic" && near(TRACK) && tap) {
+		vault.kinV = vault.kinV < 3 ? 4 : 2;
+		vault.hold = 0;
+		sfx.ui();
+	}
+	if (vault.goal === "kinetic") {
+		vault.hold += hdt;
+		if (vault.kinV === 2 && vault.hold > .45) vault.kinSlow = true;
+		if (vault.kinV === 4 && vault.hold > .45) vault.kinFast = true;
+	}
+	if (vault.goal === "theorem") {
+		const step = stepCart(vault.cartX, vault.cartV, vault.cartF, vault.cartM, 0, vault.g, hdt);
+		vault.cartX = Math.min(6, step.x);
+		vault.cartV = step.v;
+	}
+	if (vault.goal === "fall" || vault.goal === "friction") {
+		const step = stepFall(vault.h, vault.fallV, 10, vault.g, vault.mu, hdt);
+		vault.thermal += step.heat;
+		vault.h = step.h;
+		vault.fallV = step.v;
+	}
+	const s = vaultState();
+	if (vault.goal === "arrive") {
+		sim.objective = "1 · O que é trabalho?";
+		vault.hint = "A escotilha travada está à esquerda. Encoste nela e segure E.";
+		vault.note = "Força sem deslocamento não transfere energia.";
+		if (near(HATCH)) {
+			mark("null", 0);
+			queue("A escotilha não cede. Existe força. Não existe deslocamento.", 3.8);
+		}
+	} else if (vault.goal === "null") {
+		sim.objective = "2 · Trabalho nulo";
+		vault.hint = near(HATCH) ? "Segure E. A força existe. O deslocamento continua zero." : "Volte à escotilha travada.";
+		vault.note = "W = F·d·cosθ. Se d = 0, W = 0.";
+		if (near(HATCH) && e) vault.hold += hdt;
+		else vault.hold = 0;
+		if (vault.hold > 1.15 && workOf(80, 0, 0) === 0) {
+			mark("positive", 1);
+			vault.mass = 20;
+			vault.y = 1.2;
+			vault.v = 0;
+			vault.yMark = 1.2;
+			vault.tension = 20 * HOIST_G;
+			vault.workT = 0;
+			vault.sawUp = false;
+			queue("A força continua existindo, mas sem deslocamento não há trabalho mecânico.", 4);
+			queue("Agora eleve a carga de 20 kg. Tração e deslocamento apontam para cima: o trabalho é positivo.", 4.4);
+		}
+	} else if (vault.goal === "positive") {
+		sim.objective = "3 · Trabalho positivo";
+		vault.hint = atHoist ? "E aumenta a tração. Shift+E diminui. A carga precisa subir." : "O guincho está no centro da sala.";
+		vault.note = "θ = 0° · cos 0° = 1 · W = F·d";
+		if (vault.sawUp && s.dy > 1.15 && s.tensionWork > 180) {
+			mark("negative", 2);
+			vault.y = 4.4;
+			vault.v = 0;
+			vault.yMark = 4.4;
+			vault.tension = Math.max(0, P - 70);
+			vault.workT = 0;
+			queue("A força atuou no mesmo sentido do deslocamento. O trabalho foi positivo.", 3.8);
+			queue("Agora a carga desce e a tração continua para cima. Isso é trabalho negativo — a frenagem da etapa anterior.", 4.6);
+		}
+	} else if (vault.goal === "negative") {
+		sim.objective = "4 · Trabalho negativo";
+		vault.hint = "Deixe descer. Se quiser, Shift+E reduz ainda mais a tração. O trabalho da tração fica negativo.";
+		vault.note = "θ = 180° · a força de sustentação aponta contra o deslocamento.";
+		if (s.dy < -.9 && s.tensionWork < -80 && vault.v < -.05) {
+			mark("angle", 3);
+			vault.benchD = 0;
+			vault.angle = 0;
+			vault.angleI = 0;
+			queue("A força de frenagem atua contra o deslocamento. Por isso, seu trabalho é negativo.", 4.2);
+			queue("No trilho ao fundo, gire o ângulo com E. 0° transfere, 90° não, 180° retira.", 4.4);
+		}
+	} else if (vault.goal === "angle") {
+		sim.objective = "5 · O ângulo importa";
+		vault.hint = near(DIAL) ? `Ângulo ${vault.angle}°. E troca o ângulo. Falta: ${[
+			vault.ang0 ? "" : "0°",
+			vault.ang90 ? "" : "90°",
+			vault.ang180 ? "" : "180°"
+		].filter(Boolean).join(", ") || "nada"}.` : "O disco de ângulo está no fundo da sala.";
+		vault.note = "θ = 90° · a força é perpendicular ao deslocamento · W = 0.";
+		if (vault.ang0 && vault.ang90 && vault.ang180) {
+			mark("kinetic", 4);
+			vault.kinV = 2;
+			vault.hold = 0;
+			queue("Força perpendicular ao deslocamento não realiza trabalho. Força não é a mesma coisa que trabalho.", 4.6);
+			queueAs("TIGRÃO", "E se a velocidade dobrar?", 2.4);
+			queue("A energia cinética não dobra. Ela quadruplica. Ec = ½mv².", 3.8);
+		}
+	} else if (vault.goal === "kinetic") {
+		sim.objective = "6 · Energia cinética";
+		vault.hint = near(TRACK) ? "E alterna 2 m/s e 4 m/s. A massa fica em 50 kg. Compare as duas energias." : "A bancada de velocidade está no trilho.";
+		vault.note = "Ec = ½mv². Dobrar v multiplica a energia por quatro.";
+		if (vault.kinSlow && vault.kinFast) {
+			const slow = kineticEnergy(50, 2);
+			if (kineticEnergy(50, 4) > slow * 3.9) {
+				mark("theorem", 5);
+				vault.cartX = 0;
+				vault.cartV = 0;
+				queue("50 kg a 4 m/s têm 400 J. A 2 m/s, 100 J. A velocidade pesa ao quadrado.", 4.2);
+				queue("No trilho, o peso é perpendicular ao deslocamento: trabalho nulo. Quem muda a energia cinética é a força ao longo do trilho.", 5);
+			}
+		}
+	} else if (vault.goal === "theorem") {
+		sim.objective = "7 · Trabalho e energia cinética";
+		const scale = Math.max(1, Math.abs(s.cartW), Math.abs(s.cartDelta));
+		const close = Math.abs(s.cartW - s.cartDelta) < .08 * scale;
+		vault.hint = "A força empurra o carrinho. Compare o trabalho com a variação da energia cinética.";
+		vault.note = "W_resultante = ΔEc. O peso, perpendicular ao trilho, não entra nessa conta.";
+		if (s.cartX > 1.6 && s.cartV > .4 && close) {
+			mark("potential", 5);
+			vault.mass = 10;
+			vault.g = HOIST_G;
+			vault.y = 1.12;
+			vault.v = 0;
+			vault.yMark = 1.12;
+			vault.tension = 10 * HOIST_G;
+			vault.workT = 0;
+			vault.sawUp = false;
+			queue("O trabalho da resultante apareceu como energia cinética. W = ΔEc.", 3.8);
+			queue("Agora eleve 10 kg até cerca de 5 m. A energia potencial é mgh.", 4);
+		}
+	} else if (vault.goal === "potential") {
+		sim.objective = "8 · Energia potencial";
+		const h = Math.max(0, vault.y - 1.05);
+		vault.hint = atHoist ? "E aumenta a tração. A altura de referência é o piso do guincho. Alvo: 5 m." : "Volte ao guincho. Carga de 10 kg.";
+		vault.note = "Epg = mgh. Mais alto, mais energia armazenada no campo gravitacional.";
+		const epg = potentialEnergy(10, HOIST_G, h);
+		if (h > 4.85 && h < 6.4 && Math.abs(vault.v) < .55 && Math.abs(epg - 490.5) < 40) {
+			mark("fall", 6);
+			vault.h = 5;
+			vault.fallV = 0;
+			vault.mu = 0;
+			vault.thermal = 0;
+			vault.em0 = potentialEnergy(10, HOIST_G, 5);
+			queue("10 kg, 9,81 m/s², 5 m. Epg fica em 490,5 J. A altura entrou na conta.", 4.2);
+			queue("Solte a carga. A potencial deve virar cinética. A mecânica fica quase constante.", 4.2);
+		}
+	} else if (vault.goal === "fall") {
+		sim.objective = "9 · Conservação";
+		vault.hint = "Observe a queda sem atrito. Uma barra desce, a outra sobe, a soma quase não muda.";
+		vault.note = "Em = Ec + Epg. Sem dissipação, Em inicial ≈ Em final.";
+		const dropped = vault.em0 - s.fallEpg > 80 && s.fallEc > 60;
+		if (vault.h < 1.15 && vault.h > .2 && vault.fallV < -.8 && dropped && mechanicallyConserved(vault.em0, s.fallEm, .18)) {
+			mark("friction", 7);
+			vault.h = 5;
+			vault.fallV = 0;
+			vault.mu = .35;
+			vault.thermal = 0;
+			vault.em0 = potentialEnergy(10, HOIST_G, 5);
+			queue("Durante a queda, a energia potencial foi transformada em energia cinética.", 4);
+			queue("Observe o painel. A energia mecânica permaneceu praticamente constante.", 3.8);
+			queue("Agora o trilho tem atrito. A mecânica diminui. A energia não desaparece.", 4.2);
+		}
+	} else if (vault.goal === "friction") {
+		sim.objective = "10 · Atrito e dissipação";
+		vault.hint = "A energia térmica sobe enquanto a mecânica desce. Nada some: muda de forma.";
+		vault.note = "Em final < Em inicial. A diferença foi para energia térmica.";
+		if (vault.h < 1.3 && vault.h > .15 && vault.thermal > 20 && s.fallEm < vault.em0 - 15) {
+			mark("core", 7);
+			queue("A energia mecânica diminuiu porque parte dela foi transformada em energia térmica pelo atrito.", 4.6);
+			queueAs("TIGRÃO", "Então o núcleo pode receber o que a gente mediu?", 3);
+			queue("Sim. Vá até o núcleo e confirme. Ele só abre depois dessa sequência real.", 3.8);
+		}
+	} else if (vault.goal === "core") {
+		sim.objective = "11 · Restaurar o núcleo";
+		vault.hint = near(CORE) ? "Segure E. O núcleo confere trabalho, queda e dissipação." : "O núcleo está no fim da sala, à direita.";
+		vault.note = "Força → resultante → aceleração → deslocamento → trabalho → energia.";
+		if (near(CORE) && e) vault.hold += hdt;
+		else vault.hold = 0;
+		if (vault.hold > 1.4 && vault.modules >= 7) finish();
+	} else {
+		sim.objective = "Etapa 3 concluída · trabalho e energia";
+		vault.hint = "Tração e peso continuam. O deslocamento é que decide o trabalho.";
+		vault.note = "W = Fd cosθ · Ec = ½mv² · Epg = mgh · Em = Ec + Epg";
+	}
+	pumpLines();
+}
+if (typeof window !== "undefined") window.__vaultTest = {
+	begin: beginStage3,
+	get: vaultState
+};
+function Vault() {
+	const hoist = (0, import_react.useRef)(null);
+	const arm = (0, import_react.useRef)(null);
+	const cart = (0, import_react.useRef)(null);
+	const core = (0, import_react.useRef)(null);
+	const drop = (0, import_react.useRef)(null);
+	const screen = (0, import_react.useMemo)(() => M.emit.clone(), []);
+	useFrame(() => {
+		if (hoist.current) hoist.current.position.y = vault.active ? vault.y : 1.2;
+		if (arm.current) arm.current.rotation.z = (vault.angle || 0) * Math.PI / 180;
+		if (cart.current) cart.current.position.x = TRACK.x - 1.2 + Math.min(2.4, vault.cartX * .4);
+		if (drop.current) drop.current.position.y = .35 + (vault.goal === "fall" || vault.goal === "friction" ? vault.h * .55 : 2.4);
+		if (core.current) {
+			const live = sim.stage === 3 && vault.active;
+			core.current.emissiveIntensity = live ? .25 + vault.modules * .22 : .05;
+		}
+		screen.emissive.set(vault.goal === "done" ? "#8fd0a8" : "#e0a23a");
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			rotation: [
+				-Math.PI / 2,
+				0,
+				0
+			],
+			position: [
+				20,
+				0,
+				-56
+			],
+			receiveShadow: true,
+			material: M.floor,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [16, 16] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				20,
+				2.1,
+				-63.9
+			],
+			args: [
+				16,
+				4.2,
+				.28
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				20,
+				2.1,
+				-48.1
+			],
+			args: [
+				16,
+				4.2,
+				.28
+			],
+			material: M.hullDark
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				12.35,
+				2.1,
+				-60.6
+			],
+			args: [
+				.28,
+				4.2,
+				6.4
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				12.35,
+				2.1,
+				-51.2
+			],
+			args: [
+				.28,
+				4.2,
+				6.2
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				27.85,
+				2.1,
+				-56
+			],
+			args: [
+				.28,
+				4.2,
+				15.6
+			],
+			material: M.hull
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+			position: [
+				HATCH.x,
+				1.15,
+				HATCH.z
+			],
+			args: [
+				.35,
+				2.1,
+				1.3
+			],
+			material: M.stripe
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "ESCOTILHA TRAVADA",
+			position: [
+				HATCH.x,
+				2.45,
+				HATCH.z
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			position: [
+				HOIST.x,
+				0,
+				HOIST.z
+			],
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Solid, {
+				position: [
+					0,
+					4.2,
+					0
+				],
+				args: [
+					.12,
+					7.2,
+					.12
+				],
+				material: M.hull
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
+				ref: hoist,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.suitBlue,
+					dispose: null,
+					castShadow: true,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.9,
+						.7,
+						.9
+					] })
+				})
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "GUINCHO",
+			position: [
+				HOIST.x,
+				3.3,
+				HOIST.z + .8
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			position: [
+				DIAL.x,
+				1.15,
+				DIAL.z
+			],
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.dark,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+					.55,
+					.55,
+					.08,
+					20
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("group", {
+				ref: arm,
+				position: [
+					0,
+					.08,
+					0
+				],
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.38,
+						0,
+						0
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.7,
+						.06,
+						.06
+					] })
+				})
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "ÂNGULO θ",
+			position: [
+				DIAL.x,
+				2.1,
+				DIAL.z
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			position: [
+				TRACK.x,
+				.35,
+				TRACK.z
+			],
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.hull,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+					3.2,
+					.08,
+					.35
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				ref: cart,
+				position: [
+					-1.2,
+					.28,
+					0
+				],
+				material: M.suit,
+				dispose: null,
+				castShadow: true,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+					.45,
+					.35,
+					.4
+				] })
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "TRILHO",
+			position: [
+				TRACK.x,
+				1.5,
+				TRACK.z
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			ref: drop,
+			position: [
+				24.1,
+				2.4,
+				-56
+			],
+			material: M.stripe,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+				.42,
+				.42,
+				.42
+			] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("mesh", {
+			position: [
+				CORE.x,
+				1.15,
+				CORE.z
+			],
+			dispose: null,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("cylinderGeometry", { args: [
+				.55,
+				.7,
+				1.5,
+				16
+			] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("meshStandardMaterial", {
+				ref: core,
+				color: "#123044",
+				emissive: "#7eb8cc",
+				emissiveIntensity: .08,
+				roughness: .35,
+				metalness: .45
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+			position: [
+				CORE.x,
+				1.7,
+				CORE.z + .72
+			],
+			material: screen,
+			dispose: null,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("planeGeometry", { args: [.7, .28] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoloLabel, {
+			text: "NÚCLEO",
+			position: [
+				CORE.x,
+				2.35,
+				CORE.z
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pointLight", {
+			position: [
+				20,
+				3.2,
+				-56
+			],
+			color: "#9fd4e6",
+			intensity: .7,
+			distance: 16,
+			decay: 2
+		})
+	] });
+}
 var KEY_FROM_CHAR = {
 	w: "KeyW",
 	W: "KeyW",
@@ -3830,7 +4772,9 @@ function Overlay() {
 			snap.paused && !snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PausePanel, {}) : null,
 			snap.phase === "complete" && snap.result ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Complete, { result: snap.result }) : null,
 			sim.stage === 2 && sim.transit > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageCard, {}) : null,
-			elevator.done && elevator.finale <= 0 && snap.phase === "play" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageReport, {}) : null,
+			sim.stage === 3 && sim.transit > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VaultCard, {}) : null,
+			elevator.done && elevator.finale <= 0 && snap.phase === "play" && sim.stage === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageReport, {}) : null,
+			vault.goal === "done" && vault.finale <= 0 && snap.phase === "play" && sim.stage === 3 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VaultReport, {}) : null,
 			snap.phase === "play" && !snap.paused && !snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Touch, {}) : null
 		]
 	});
@@ -3932,6 +4876,7 @@ function PlayHud({ snap }) {
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: snap.objective })]
 				}),
 				sim.stage === 2 && elevator.active && elevator.scanned && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ForceStrip, {}) : null,
+				sim.stage === 3 && vault.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EnergyStrip, {}) : null,
 				snap.line ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "panel line",
 					style: {
@@ -3993,17 +4938,21 @@ function PlayHud({ snap }) {
 						" · Q"
 					]
 				}),
-				snap.readout && sim.stage !== 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReadoutCard, { readout: snap.readout }) : null,
+				snap.readout && sim.stage === 1 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReadoutCard, { readout: snap.readout }) : null,
 				sim.stage === 2 && snap.scanner && elevator.active ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HoistCard, {}) : null
 			]
 		}),
-		snap.prompt && sim.stage !== 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		snap.prompt && sim.stage === 1 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "panel prompt",
 			children: snap.prompt
 		}) : null,
 		sim.stage === 2 && elevator.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "panel prompt wrap",
 			children: elevator.hint
+		}) : null,
+		sim.stage === 3 && vault.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "panel prompt wrap",
+			children: vault.hint
 		}) : null
 	] });
 }
@@ -4145,6 +5094,112 @@ function ForceStrip() {
 		]
 	});
 }
+function VaultCard() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+		className: "panel title-card",
+		"data-ui": true,
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "kicker",
+				children: "Missão Newton"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { children: ["ETAPA 3", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "O MÓDULO DE ENERGIA" })] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Força, deslocamento, trabalho e a energia que a estação precisa de volta." })
+		]
+	});
+}
+function EnergyStrip() {
+	const s = vaultState();
+	const cap = 800;
+	const bar = (value) => `${Math.max(0, Math.min(100, Math.abs(value) / cap * 100))}%`;
+	const showWork = s.goal === "null" || s.goal === "positive" || s.goal === "negative" || s.goal === "angle";
+	const showPot = s.goal === "potential" || s.goal === "fall" || s.goal === "friction" || s.goal === "core" || s.goal === "done";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "panel force-strip",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Módulo ",
+				s.modules,
+				"/8",
+				s.goal === "angle" ? ` · θ ${s.angle}° · W ${br(s.benchW, 0)} J` : "",
+				s.goal === "kinetic" ? ` · v ${br(s.kinV, 0)} m/s · Ec ${br(s.kinEc, 0)} J` : "",
+				s.goal === "theorem" ? ` · W ${br(s.cartW, 0)} J · ΔEc ${br(s.cartDelta, 0)} J` : "",
+				showWork && s.goal !== "angle" ? ` · W ${br(s.tensionWork, 0)} J · d ${br(s.dy, 2)} m` : ""
+			] }),
+			showPot ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				"Ec ",
+				br(s.goal === "fall" || s.goal === "friction" ? s.fallEc : s.ec, 0),
+				" J · Epg",
+				" ",
+				br(s.goal === "fall" || s.goal === "friction" ? s.fallEpg : s.epg, 0),
+				" J · Em",
+				" ",
+				br(s.goal === "fall" || s.goal === "friction" ? s.fallEm : s.em, 0),
+				" J",
+				s.goal === "friction" ? ` · calor ${br(s.thermal, 0)} J` : ""
+			] }) : null,
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "energy-bars",
+				"aria-hidden": true,
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", { style: { width: bar(showPot && (s.goal === "fall" || s.goal === "friction") ? s.fallEc : s.ec) } }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "pot",
+						style: { width: bar(showPot && (s.goal === "fall" || s.goal === "friction") ? s.fallEpg : s.epg) }
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "heat",
+						style: { width: bar(s.thermal) }
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note",
+				children: s.note
+			})
+		]
+	});
+}
+function VaultReport() {
+	const [hide, setHide] = (0, import_react.useState)(false);
+	if (hide) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "modal",
+		"data-ui": true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "panel sheet",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "kicker",
+					children: "Relatório da missão"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Etapa 3 concluída" }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "sub",
+					children: "Força ao longo de um deslocamento transfere energia. A energia muda de forma. Não desaparece."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "report-list",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Trabalho positivo, negativo e nulo" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "✓" })] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Energia cinética e potencial" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "✓" })] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "W = ΔEc e conservação" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "✓" })] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Atrito dissipa em calor" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "✓" })] })
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "row",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						className: "btn",
+						type: "button",
+						onClick: () => setHide(true),
+						children: "Continuar observando"
+					})
+				})
+			]
+		})
+	});
+}
 function StageReport() {
 	const [hide, setHide] = (0, import_react.useState)(false);
 	const h = hoistState();
@@ -4219,14 +5274,19 @@ function StageReport() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Frenagem válida" }), f.brakeValid ? "SIM" : "NÃO"] })
 					]
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "row",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						className: "btn",
 						type: "button",
 						onClick: () => setHide(true),
 						children: "Continuar observando"
-					})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						className: "btn",
+						type: "button",
+						onClick: () => beginStage3(),
+						children: "Continuar para a Etapa 3"
+					})]
 				})
 			]
 		})
@@ -4243,8 +5303,8 @@ function Bearing() {
 			const show = sim.phase === "play" && !sim.solved && !sim.paused && !sim.mapOpen;
 			el.style.opacity = show ? "1" : "0";
 			if (!show) return;
-			const tx = 0;
-			const tz = sim.stage === 2 ? -58.2 : sim.z < -14 ? -25 : -8;
+			const tx = sim.stage === 3 ? 25.2 : 0;
+			const tz = sim.stage === 3 ? -56 : sim.stage === 2 ? -58.2 : sim.z < -14 ? -25 : -8;
 			const dx = tx - sim.x;
 			const dz = tz - sim.z;
 			const fx = -Math.sin(sim.camYaw);
@@ -4386,6 +5446,10 @@ function MapPanel() {
 				sim.stage === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "sub",
 					children: "Etapa 2 · A força invisível. O setor de carga fica além do mapa da etapa 1."
+				}) : null,
+				sim.stage === 3 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "sub",
+					children: "Etapa 3 · O módulo de energia. Trabalho, transformação e conservação."
 				}) : null,
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "map-layout",
@@ -4575,6 +5639,7 @@ function Simulator() {
 			guard += 1;
 		}
 		tickElevator(dt);
+		tickVault(dt);
 		pump(sim.phase);
 		M.alarm.emissiveIntensity = elevator.alarm ? .55 + (Math.sin(sim.time * 12) * .5 + .5) * 2.1 : sim.phase === "title" ? .35 + (Math.sin(sim.time * 6) * .5 + .5) * 1.3 : .2;
 		for (const puff of sim.puffs) if (puff.life > 0) puff.life -= dt * 1.4;
@@ -4728,6 +5793,17 @@ function Lights() {
 	] });
 }
 function scripted(dt, camera) {
+	if (sim.stage === 3 && vault.finale > 0) {
+		desired.set(CORE.x - 2.4, 2.5, CORE.z + 3.2);
+		look.set(CORE.x, 1.4, CORE.z);
+		return true;
+	}
+	if (sim.stage === 3 && sim.transit > 0) {
+		const u = 1 - sim.transit / 5.2;
+		desired.set(11.2 + u * 2.2, 2.3, -52.5);
+		look.set(20, 1.5, -56);
+		return true;
+	}
 	if (sim.stage === 2 && elevator.finale > 0) {
 		const u = 1 - Math.min(1, elevator.finale / 7.2);
 		desired.set(1.35, 2.4 + u * 5.1, -53.4);
@@ -5368,6 +6444,7 @@ function Tigrao() {
 			else if (elevator.braking && !sim.scanner) mood = "effort";
 			else if (sim.scanner && sim.speed < .45) mood = "curious";
 		}
+		if (sim.stage === 3 && vault.active && vault.goal === "done") mood = "success";
 		const stride = moving ? Math.abs(Math.sin(t * freq)) : 0;
 		let hipY = .7 + (moving ? stride * (run ? .045 : .028) - Math.abs(swing) * .04 : breathe * .01);
 		if (mood === "success") hipY = .7 + Math.abs(Math.sin(t * 7.5)) * .055;
@@ -8179,6 +9256,7 @@ function Game() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Lights, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(World, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cargo, {}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Vault, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dressing, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Crates, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Vectors, {}),

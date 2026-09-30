@@ -4,6 +4,7 @@ import type { Group, Mesh, MeshStandardMaterial, PointLight } from "three";
 import { sfx } from "./audio";
 import { badgeTexture, plateTexture } from "./draw";
 import { elevator, SHAFT } from "./elevator";
+import { vault } from "./vault";
 import { shotIndex, FICHA, NEWTON } from "./layout";
 import { M } from "./materials";
 import { sim } from "./sim";
@@ -152,6 +153,7 @@ export function Tigrao() {
       else if (elevator.braking && !sim.scanner) mood = "effort";
       else if (sim.scanner && sim.speed < 0.45) mood = "curious";
     }
+    if (sim.stage === 3 && vault.active && vault.goal === "done") mood = "success";
 
     const stride = moving ? Math.abs(Math.sin(t * freq)) : 0;
     let hipY = 0.7 + (moving ? stride * (run ? 0.045 : 0.028) - Math.abs(swing) * 0.04 : breathe * 0.01);

@@ -7,6 +7,7 @@ import { HoloLabel } from "./bits";
 import { labelSprite } from "./draw";
 import { pump } from "./audio";
 import { elevator, hoistState, SHAFT, tickElevator } from "./elevator";
+import { CORE, tickVault, vault } from "./vault";
 import { vectorLength } from "./hoist";
 import { BLOCKS, CINE_LEN, CRATE_SPECS, DOCK, G, exteriorShot, shotIndex } from "./layout";
 import { M } from "./materials";
@@ -41,6 +42,7 @@ export function Simulator() {
       guard += 1;
     }
     tickElevator(dt);
+    tickVault(dt);
     pump(sim.phase);
     M.alarm.emissiveIntensity = elevator.alarm
       ? 0.55 + (Math.sin(sim.time * 12) * 0.5 + 0.5) * 2.1
@@ -146,6 +148,17 @@ export function Lights() {
 }
 
 function scripted(dt: number, camera: THREE.PerspectiveCamera): boolean {
+  if (sim.stage === 3 && vault.finale > 0) {
+    desired.set(CORE.x - 2.4, 2.5, CORE.z + 3.2);
+    look.set(CORE.x, 1.4, CORE.z);
+    return true;
+  }
+  if (sim.stage === 3 && sim.transit > 0) {
+    const u = 1 - sim.transit / 5.2;
+    desired.set(11.2 + u * 2.2, 2.3, -52.5);
+    look.set(20, 1.5, -56);
+    return true;
+  }
   if (sim.stage === 2 && elevator.finale > 0) {
     const u = 1 - Math.min(1, elevator.finale / 7.2);
     desired.set(1.35, 2.4 + u * 5.1, -53.4);
