@@ -6,6 +6,8 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { HoloLabel } from "./bits";
 import { labelSprite } from "./draw";
 import { pump } from "./audio";
+import { elevator, SHAFT, tickElevator } from "./elevator";
+import { HOIST_WEIGHT, netForce } from "./hoist";
 import { BLOCKS, CINE_LEN, CRATE_SPECS, DOCK, G, exteriorShot, shotIndex } from "./layout";
 import { M } from "./materials";
 import { installProbe, sim, step } from "./sim";
@@ -38,8 +40,13 @@ export function Simulator() {
       acc -= h;
       guard += 1;
     }
+    tickElevator(dt);
     pump(sim.phase);
-    M.alarm.emissiveIntensity = sim.phase === "title" ? 0.35 + (Math.sin(sim.time * 6) * 0.5 + 0.5) * 1.3 : 0.2;
+    M.alarm.emissiveIntensity = elevator.alarm
+      ? 0.55 + (Math.sin(sim.time * 12) * 0.5 + 0.5) * 2.1
+      : sim.phase === "title"
+        ? 0.35 + (Math.sin(sim.time * 6) * 0.5 + 0.5) * 1.3
+        : 0.2;
     for (const puff of sim.puffs) {
       if (puff.life > 0) puff.life -= dt * 1.4;
     }
@@ -139,6 +146,12 @@ export function Lights() {
 }
 
 function scripted(dt: number, camera: THREE.PerspectiveCamera): boolean {
+  if (sim.stage === 2 && sim.transit > 0) {
+    const u = 1 - sim.transit / 6.4;
+    desired.set(-1.2 + u * 0.4, 2.15 + u * 1.4, sim.z + 3.1);
+    look.set(SHAFT.x, 2.2 + u * 1.6, SHAFT.z);
+    return true;
+  }
   if (sim.phase === "title") {
     const shot = shotIndex(sim.shotTime);
     const u = sim.shotTime % CINE_LEN;
@@ -401,6 +414,23 @@ export function Vectors() {
       sprite.visible = false;
     });
     pack.ring.visible = false;
+    if (sim.stage === 2 && elevator.active && sim.scanner && sim.phase === "play") {
+      const y = elevator.y + 0.55;
+      const T = elevator.tension;
+      const P = HOIST_WEIGHT;
+      const Fr = netForce(T);
+      const scale = 1 / 230;
+      show(SHAFT.x - 0.15, y, SHAFT.z, 0, -1, 0, P * scale, 0x8aa0b5, 4);
+      show(SHAFT.x + 0.15, y, SHAFT.z, 0, 1, 0, Math.max(0.2, T * scale), 0xe0a23a, 0);
+      if (Math.abs(Fr) > 6) {
+        show(SHAFT.x + 0.55, y, SHAFT.z, 0, Math.sign(Fr), 0, Math.max(0.28, Math.abs(Fr) * scale), 0xf4f7fb, 2);
+      }
+      pack.ring.visible = true;
+      pack.ring.position.set(SHAFT.x, 0.06, SHAFT.z);
+      const pulse = 1 + Math.sin(sim.time * 4) * 0.05;
+      pack.ring.scale.set(1.7 * pulse, 1.7 * pulse, 1);
+      return;
+    }
     const cineScan = sim.phase === "title" && (shotIndex(sim.shotTime) === 6 || shotIndex(sim.shotTime) === 7);
     if (cineScan) {
       const crate = sim.crates.find((item) => item.kind === "module");

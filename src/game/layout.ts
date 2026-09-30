@@ -67,9 +67,21 @@ export const BLOCKS: Block[] = [
   { minX: -6.2, maxX: -3.85, minZ: -0.35, maxZ: 1.45, h: 0.55, kind: "prop" },
   { minX: 4.45, maxX: 6.7, minZ: -0.55, maxZ: 1.55, h: 0.88, kind: "prop" },
   { minX: 7.15, maxX: 8.85, minZ: -12.4, maxZ: -10.3, h: 1.05, kind: "prop" },
+  { minX: -5.75, maxX: -5.3, minZ: -63.1, maxZ: -48.7, h: 4.4, kind: "hidden" },
+  { minX: 5.3, maxX: 5.75, minZ: -63.1, maxZ: -48.7, h: 4.4, kind: "hidden" },
+  { minX: -5.75, maxX: 5.75, minZ: -63.1, maxZ: -62.65, h: 4.4, kind: "hidden" },
+  { minX: -5.75, maxX: 5.75, minZ: -49.15, maxZ: -48.7, h: 4.4, kind: "hidden" },
 ];
 
 export const CINE_LEN = 64;
+
+/** Campaign slots. Only stages 1 and 2 exist; 3 and 4 are reserved. */
+export const CAMPAIGN = [
+  { stage: 1, id: "inercia", title: "Fundamentos e inércia" },
+  { stage: 2, id: "elevador", title: "O elevador da Newton-1" },
+  { stage: 3, id: "acao-reacao", title: "Ação e reação" },
+  { stage: 4, id: "tres-leis", title: "Aplicações das três leis" },
+] as const;
 
 /** Title beats. 0–1 are exterior; 2–8 move inside the station. */
 export function shotIndex(shotTime: number): number {

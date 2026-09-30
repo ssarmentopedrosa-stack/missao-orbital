@@ -16,6 +16,7 @@ import {
   togglePause,
 } from "./sim";
 import { shotIndex } from "./layout";
+import { beginStage2, elevator, hoistState } from "./elevator";
 
 function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -32,6 +33,7 @@ export function Overlay() {
     <div className="hud">
       <div className="vignette" />
       {snap.scanner && snap.phase === "play" ? <div className="scanner-tint" /> : null}
+      {elevator.alarm ? <div className="alarm-tint" /> : null}
       {snap.phase === "play" && !snap.solved ? <Bearing /> : null}
 
       {snap.phase === "title" ? <Title best={snap.best} /> : null}
@@ -39,8 +41,22 @@ export function Overlay() {
       {snap.mapOpen ? <MapPanel /> : null}
       {snap.paused && !snap.mapOpen ? <PausePanel /> : null}
       {snap.phase === "complete" && snap.result ? <Complete result={snap.result} /> : null}
+      {sim.stage === 2 && sim.transit > 0 ? <StageCard /> : null}
       {snap.phase === "play" && !snap.paused && !snap.mapOpen ? <Touch /> : null}
     </div>
+  );
+}
+
+function StageCard() {
+  return (
+    <section className="panel title-card" data-ui>
+      <p className="kicker">Missão Newton</p>
+      <h1>
+        ETAPA 2
+        <span>O ELEVADOR DA NEWTON-1</span>
+      </h1>
+      <p className="sub">Objetivo: reposicionar o contêiner de manutenção.</p>
+    </section>
   );
 }
 
@@ -137,9 +153,11 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
           <ScanLine size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} />
           Nexus {snap.scanner ? "ativo" : "em espera"} · Q
         </p>
-        {snap.readout ? <ReadoutCard readout={snap.readout} /> : null}
+        {snap.readout && sim.stage !== 2 ? <ReadoutCard readout={snap.readout} /> : null}
+        {sim.stage === 2 && snap.scanner && elevator.active ? <HoistCard /> : null}
       </div>
       {snap.prompt ? <div className="panel prompt">{snap.prompt}</div> : null}
+      {sim.stage === 2 && elevator.active ? <div className="panel prompt">{elevator.hint}</div> : null}
     </>
   );
 }
@@ -177,6 +195,40 @@ function ReadoutCard({ readout }: { readout: NonNullable<ReturnType<typeof getSn
             ? "Em movimento. Sem força, o atrito é quem para."
             : "F = m · a"}
       </p>
+    </div>
+  );
+}
+
+function br(value: number, digits = 1): string {
+  return value.toFixed(digits).replace(".", ",");
+}
+
+function HoistCard() {
+  const h = hoistState();
+  const up = h.Fr >= 0;
+  return (
+    <div className="panel readout hoist">
+      <p className="kicker">Scanner Newton</p>
+      <h2>Contêiner</h2>
+      <div className="eq">
+        <em>m</em>
+        <span>{br(h.mass, 1)} kg</span>
+        <em>g</em>
+        <span>{br(h.g, 2)} m/s²</span>
+        <em>P</em>
+        <span>{br(h.P, 1)} N ↓</span>
+        <em>T</em>
+        <span>{br(h.T, 1)} N ↑</span>
+        <em>Fr</em>
+        <span>
+          {br(Math.abs(h.Fr), 1)} N {Math.abs(h.Fr) < 0.8 ? "·" : up ? "↑" : "↓"}
+        </span>
+        <em>a</em>
+        <span>
+          {br(Math.abs(h.a), 2)} m/s² {Math.abs(h.a) < 0.05 ? "" : up ? "↑" : "↓"}
+        </span>
+      </div>
+      <p className="note">ESTADO: {h.state}. Peso e tração não somem. Zero, quando acontece, é a resultante.</p>
     </div>
   );
 }
@@ -267,7 +319,10 @@ function Complete({ result }: { result: { time: number; pushes: number; scans: n
           Registro — Primeira lei. Um corpo permanece em movimento uniforme até uma força, aqui o atrito, alterar esse estado. Massa maior, mesma força, menor aceleração.
         </p>
         <div className="row">
-          <button className="btn" type="button" onClick={() => continueLab()}>
+          <button className="btn" type="button" onClick={() => beginStage2()}>
+            CONTINUAR PARA ETAPA 2
+          </button>
+          <button className="btn ghost" type="button" onClick={() => continueLab()}>
             Continuar no laboratório
           </button>
           <button className="btn ghost" type="button" onClick={() => restart(false)}>
@@ -287,6 +342,7 @@ function MapPanel() {
       <div className="panel sheet map-sheet">
         <p className="kicker">Navegação · Newton-1</p>
         <h2>Mapa da missão</h2>
+        {sim.stage === 2 ? <p className="sub">Etapa 2 · Setor de carga da Newton-1. O elevador não entra no mapa da etapa 1.</p> : null}
         <div className="map-layout">
           <div className="schematic" aria-hidden>
             <div className="room goal" style={{ left: "28%", right: "28%", top: "6%", height: "22%" }}>

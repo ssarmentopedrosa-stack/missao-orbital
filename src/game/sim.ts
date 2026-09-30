@@ -126,6 +126,8 @@ export const sim = {
   scanner: false,
   freeplay: false,
   solved: false,
+  stage: 1 as 1 | 2,
+  transit: 0,
   x: SPAWN.x,
   y: 0,
   z: SPAWN.z,
@@ -289,6 +291,10 @@ function say(speaker: string, text: string, seconds: number): void {
   publishNow();
 }
 
+export function speak(speaker: string, text: string, seconds: number): void {
+  say(speaker, text, seconds);
+}
+
 function puff(x: number, z: number): void {
   const slot = sim.puffs.find((item) => item.life <= 0) ?? sim.puffs[0];
   if (!slot) return;
@@ -416,6 +422,8 @@ export function restart(toTitle: boolean): void {
   sim.scanner = false;
   sim.freeplay = false;
   sim.solved = false;
+  sim.stage = 1;
+  sim.transit = 0;
   sim.integrity = 100;
   sim.cell = 100;
   sim.pushes = 0;
@@ -674,6 +682,18 @@ export function step(dt: number): void {
       uiAcc = 0;
       publishNow();
     }
+    return;
+  }
+
+  if (sim.stage === 2 && sim.transit > 0) {
+    sim.vx = 0;
+    sim.vz = 0;
+    sim.vy = 0;
+    sim.speed = 0;
+    sim.grounded = true;
+    sim.anim = "walk";
+    sim.lookDX = 0;
+    sim.lookDY = 0;
     return;
   }
 
@@ -981,6 +1001,7 @@ export function installProbe(): void {
       mapOpen: sim.mapOpen,
       scanner: sim.scanner,
       pushes: sim.pushes,
+      stage: sim.stage,
     }),
     setKeys: (codes: string[]) => {
       held.clear();
@@ -1010,6 +1031,7 @@ declare global {
         mapOpen: boolean;
         scanner: boolean;
         pushes: number;
+        stage: number;
       };
       setKeys?: (codes: string[]) => void;
       advanceTitle?: (t: number) => void;

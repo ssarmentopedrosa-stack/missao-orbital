@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Dressing } from "./dressing";
+import { Cargo } from "./Cargo";
 import { focusGame, installControls } from "./input";
 import { Overlay } from "./overlay";
 import { CINE_LEN } from "./layout";
@@ -118,6 +119,7 @@ export function Game() {
         <FogTune />
         <Lights />
         <World />
+        <Cargo />
         <Dressing />
         <Crates />
         <Vectors />

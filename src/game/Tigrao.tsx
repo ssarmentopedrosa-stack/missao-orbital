@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh, MeshStandardMaterial, PointLight } from "three";
 import { sfx } from "./audio";
 import { badgeTexture, plateTexture } from "./draw";
+import { elevator, SHAFT } from "./elevator";
 import { shotIndex, FICHA, NEWTON } from "./layout";
 import { M } from "./materials";
 import { sim } from "./sim";
@@ -140,6 +141,11 @@ export function Tigrao() {
     else if (shot === 4 || shot === 5 || shot === 7) mood = "curious";
     else if (near && near.d < 2.6 && sim.anim === "idle") mood = "curious";
     else if (!sim.grounded && sim.vy < 0) mood = "alert";
+    if (sim.stage === 2 && elevator.active && sim.phase === "play") {
+      if (elevator.done) mood = "success";
+      else if (elevator.alarm) mood = "surprise";
+      else if (sim.scanner && sim.speed < 0.45) mood = "curious";
+    }
 
     const stride = moving ? Math.abs(Math.sin(t * freq)) : 0;
     let hipY = 0.7 + (moving ? stride * (run ? 0.045 : 0.028) - Math.abs(swing) * 0.04 : breathe * 0.01);
@@ -223,7 +229,10 @@ export function Tigrao() {
       tailX = -0.7;
     }
 
-    if (near && near.d < 4.2 && (sim.anim === "idle" || sim.anim === "push" || sim.anim === "scan" || sim.scanner)) {
+    if (sim.stage === 2 && elevator.active && (sim.anim === "idle" || sim.anim === "scan" || sim.scanner || elevator.alarm)) {
+      headY = clamp(lookYaw(SHAFT.x, SHAFT.z), -0.7, 0.7);
+      headX = elevator.alarm ? 0.22 : elevator.y > 5 ? 0.16 : -0.08;
+    } else if (near && near.d < 4.2 && (sim.anim === "idle" || sim.anim === "push" || sim.anim === "scan" || sim.scanner)) {
       const aim = lookYaw(near.x, near.z);
       if (Math.abs(aim) < 1.45) {
         headY = clamp(aim, -0.7, 0.7);
