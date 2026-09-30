@@ -68,6 +68,7 @@ export function Tigrao() {
   const react = useRef(0);
   const confuse = useRef(0);
   const seenBlocked = useRef(sim.blocked);
+  const seenHoist = useRef(0);
   const prevYaw = useRef(sim.yaw);
   const prevSpeed = useRef(0);
   const turn = useRef(0);
@@ -142,8 +143,13 @@ export function Tigrao() {
     else if (near && near.d < 2.6 && sim.anim === "idle") mood = "curious";
     else if (!sim.grounded && sim.vy < 0) mood = "alert";
     if (sim.stage === 2 && elevator.active && sim.phase === "play") {
+      if (elevator.flinch !== seenHoist.current) {
+        seenHoist.current = elevator.flinch;
+        react.current = 0.42;
+      }
       if (elevator.done) mood = "success";
-      else if (elevator.alarm) mood = "surprise";
+      else if (react.current > 0.16) mood = "surprise";
+      else if (elevator.braking && !sim.scanner) mood = "effort";
       else if (sim.scanner && sim.speed < 0.45) mood = "curious";
     }
 

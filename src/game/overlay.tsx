@@ -231,13 +231,19 @@ function HoistCard() {
           {br(h.v, 2)} m/s{arrow(h.v)}
         </span>
       </div>
-      <p className="note">
-        {still
-          ? "Resultante = 0 · aceleração = 0. A velocidade continua a que a carga já tem."
-          : "P = m·g · Fr = T − P · a = Fr/m"}
-      </p>
+      <p className="note">{relation(h)}</p>
+      <p className="note dim">P = m·g · Fr = T − P · a = Fr/m</p>
     </div>
   );
+}
+
+function relation(h: ReturnType<typeof hoistState>): string {
+  if (Math.abs(h.Fr) < 0.8) {
+    return Math.abs(h.v) < 0.08
+      ? "T ≈ P · Fr ≈ 0 · a ≈ 0 · repouso"
+      : "T ≈ P · Fr ≈ 0 · a ≈ 0 · a velocidade se conserva";
+  }
+  return h.T > h.P ? "T > P · aceleração para cima" : "T < P · aceleração para baixo";
 }
 
 function ForceStrip() {
@@ -305,7 +311,7 @@ function StageReport() {
             {br(f.vMax, 2)} m/s
           </div>
           <div>
-            <span>Frenagem</span>
+            <span>Início</span>
             {br(f.brakeY, 2)} m
           </div>
           <div>
@@ -315,6 +321,14 @@ function StageReport() {
           <div>
             <span>v na chegada</span>
             {br(f.arriveV, 2)} m/s
+          </div>
+          <div>
+            <span>a na frenagem</span>
+            {br(f.brakeA, 2)} m/s²
+          </div>
+          <div>
+            <span>Duração</span>
+            {br(f.brakeDur, 1)} s
           </div>
           <div>
             <span>Colisão na chegada</span>

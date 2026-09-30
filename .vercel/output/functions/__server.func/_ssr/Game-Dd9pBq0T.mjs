@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-DQOJr1iN.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-Dd9pBq0T.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -983,6 +983,17 @@ function arrivalAllowed(input) {
 	if (input.y < 8.45 || input.y > 9.02) return false;
 	if (!(input.v >= -.02 && input.v < .45)) return false;
 	return true;
+}
+/**
+* Arrow length for the scanner only. Same reference for P, T and Fr, so a larger force is a longer arrow.
+* Clamped so an extreme tension cannot fill the bay. Never fed back into the integrator.
+*/
+function vectorLength(magnitude, reference) {
+	const mag = Math.abs(finite(magnitude, 0));
+	if (mag < 1) return 0;
+	const raw = mag / Math.max(mag, Math.abs(finite(reference, 0)), 80) * 1.6;
+	if (raw < .05) return 0;
+	return Math.min(1.65, Math.max(.34, raw));
 }
 var SPAWN = {
 	x: 0,
@@ -2201,15 +2212,9 @@ var elevator = {
 	proto: 0,
 	protoHold: 0,
 	braking: false,
-	flight: {
-		vMax: 0,
-		brakeY: 0,
-		brakeV: 0,
-		arriveV: 0,
-		collided: false,
-		brakeValid: false,
-		impacts: 0
-	},
+	flight: freshFlight(),
+	flinch: 0,
+	warnAt: 0,
 	samples: [],
 	cheer: 0,
 	finale: 0,
@@ -2225,6 +2230,7 @@ var elevator = {
 	saidSame: false,
 	saidCoast: false,
 	saidPair: false,
+	saidSurge: false,
 	lineQueue: [],
 	mastery: {
 		peso: false,
@@ -2238,6 +2244,19 @@ var elevator = {
 		mesmaFr: false
 	}
 };
+function freshFlight() {
+	return {
+		vMax: 0,
+		brakeY: 0,
+		brakeV: 0,
+		arriveV: 0,
+		brakeA: 0,
+		brakeDur: 0,
+		collided: false,
+		brakeValid: false,
+		impacts: 0
+	};
+}
 function resetMotion() {
 	elevator.goal = "scan";
 	elevator.tension = 300;
@@ -2266,15 +2285,9 @@ function resetMotion() {
 	elevator.proto = 0;
 	elevator.protoHold = 0;
 	elevator.braking = false;
-	elevator.flight = {
-		vMax: 0,
-		brakeY: 0,
-		brakeV: 0,
-		arriveV: 0,
-		collided: false,
-		brakeValid: false,
-		impacts: 0
-	};
+	elevator.flight = freshFlight();
+	elevator.flinch = 0;
+	elevator.warnAt = 0;
 	elevator.samples = [];
 	elevator.cheer = 0;
 	elevator.finale = 0;
@@ -2289,6 +2302,7 @@ function resetMotion() {
 	elevator.saidSame = false;
 	elevator.saidCoast = false;
 	elevator.saidPair = false;
+	elevator.saidSurge = false;
 	elevator.lineQueue = [];
 	elevator.mastery = {
 		peso: false,
@@ -2466,15 +2480,10 @@ function enterProtocol() {
 	elevator.proto = 0;
 	elevator.protoHold = 0;
 	elevator.braking = false;
-	elevator.flight = {
-		vMax: 0,
-		brakeY: 0,
-		brakeV: 0,
-		arriveV: 0,
-		collided: false,
-		brakeValid: false,
-		impacts: 0
-	};
+	elevator.flight = freshFlight();
+	elevator.flinch = 0;
+	elevator.warnAt = 0;
+	elevator.saidSurge = false;
 	elevator.mastery.newton = true;
 	sfx.ui();
 	queue("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
@@ -2655,12 +2664,13 @@ function tickElevator(dt) {
 		elevator.flight.collided = true;
 		elevator.flight.brakeValid = false;
 		elevator.braking = false;
+		elevator.flinch += 1;
 		elevator.y = 7.05;
 		elevator.v = .4;
 		elevator.alarmT = Math.max(elevator.alarmT, 1.2);
 		sim.shake = Math.max(sim.shake, .22);
 		sfx.fail();
-		queue("Impacto! Você chegou ao limite antes de reduzir a velocidade. Para frear, a aceleração precisa apontar para baixo enquanto a carga ainda sobe.", 6.2);
+		queue("Impacto! Você chegou rápido demais. É necessário iniciar a frenagem antes do topo.", 4.2);
 	}
 	const { P, T, Fr, a } = readForces();
 	elevator.note = physicsNote(P, T, Fr, a, elevator.v);
@@ -2790,8 +2800,12 @@ function tickElevator(dt) {
 			if (elevator.labUp && elevator.labDown && elevator.labBalance && elevator.labCoast) enterProtocol();
 		}
 	} else if (elevator.goal === "protocol") {
-		sim.objective = "7 · Protocolo Newton";
+		sim.objective = `7 · ${elevator.proto === 0 ? "Repouso" : elevator.proto === 1 ? "Acelerando" : elevator.proto === 2 ? "Velocidade constante" : "Frenagem"}`;
 		if (elevator.v > elevator.flight.vMax) elevator.flight.vMax = elevator.v;
+		if (!elevator.saidSurge && elevator.v > 5.55) {
+			elevator.saidSurge = true;
+			queue("Você aumentou demais a tração. Observe como isso aumentou a aceleração.", 3.6);
+		}
 		if (elevator.proto === 0) {
 			elevator.hint = "Repouso: tração igual ao peso, resultante zero, velocidade zero.";
 			if (Math.abs(Fr) < 12 && Math.abs(a) < .08 && Math.abs(elevator.v) < .18 && elevator.y < 2.2) elevator.protoHold += hdt;
@@ -2799,14 +2813,15 @@ function tickElevator(dt) {
 			if (elevator.protoHold > .85) {
 				elevator.proto = 1;
 				elevator.protoHold = 0;
-				queue("Parada, com forças presentes. Agora faça a carga subir acelerando.", 4);
+				queue("Equilíbrio de forças: a resultante é aproximadamente zero.", 3.2);
+				queue("Agora faça a carga subir. A tração precisa ser maior que o peso.", 3.4);
 			}
 		} else if (elevator.proto === 1) {
 			elevator.hint = "Aceleração para cima: tração maior que o peso, velocidade crescendo.";
 			if (elevator.y > 3.6 && a > .28 && elevator.v > .2) {
 				elevator.proto = 2;
 				elevator.protoHold = 0;
-				queue("Agora velocidade constante: iguale a tração ao peso enquanto ela ainda sobe.", 4.6);
+				queue("Agora iguale a tração ao peso sem parar a carga.", 3.4);
 			}
 		} else if (elevator.proto === 2) {
 			elevator.hint = Math.abs(elevator.v) < .12 ? "A velocidade zerou. Aumente um pouco a tração e, no meio da subida, iguale de novo." : "Resultante perto de zero e velocidade para cima. Segure assim por um instante.";
@@ -2814,17 +2829,31 @@ function tickElevator(dt) {
 			else elevator.protoHold = 0;
 			if (elevator.protoHold > .8) {
 				elevator.proto = 3;
-				queue("Força resultante zero, velocidade conservada. Desacelere antes da plataforma: tração menor que o peso, ainda subindo.", 5.4);
+				queue("Resultante zero não significa necessariamente repouso.", 3.2);
+				queue("Como a aceleração é zero, a velocidade permanece constante.", 3.4);
+				queueAs("TIGRÃO", "Então, se a resultante é zero, a carga pode continuar subindo?", 3.2);
+				queue("Sim. Se a velocidade já for diferente de zero, ela continua constante. Agora freie antes do topo.", 4.2);
 			}
 		} else if (!crashed) {
 			if (!elevator.flight.brakeValid && brakingGate(a, elevator.v, elevator.y)) {
 				elevator.flight.brakeValid = true;
 				elevator.flight.brakeY = elevator.y;
 				elevator.flight.brakeV = elevator.v;
+				elevator.flight.brakeA = a;
+				elevator.flight.brakeDur = 0;
 				elevator.braking = true;
 			} else if (elevator.flight.brakeValid && elevator.v > elevator.flight.brakeV - .04 && a > -.05) {
 				elevator.flight.brakeValid = false;
 				elevator.braking = false;
+			}
+			if (elevator.flight.brakeValid) {
+				elevator.flight.brakeDur += hdt;
+				if (a < elevator.flight.brakeA) elevator.flight.brakeA = a;
+			}
+			const inBand = elevator.y >= 8.45 && elevator.y <= 9.02;
+			if (elevator.flight.brakeValid && inBand && elevator.v >= .45 && sim.time > elevator.warnAt) {
+				elevator.warnAt = sim.time + 6;
+				queue("Frenagem insuficiente. A velocidade ainda era alta na chegada.", 3.2);
 			}
 			elevator.hint = elevator.flight.brakeValid ? "Frenagem válida. A velocidade precisa cair antes do limite — bater no topo não conta." : "Tração abaixo do peso, ainda subindo, para a velocidade cair antes do topo.";
 			if (arrivalAllowed({
@@ -4048,10 +4077,18 @@ function HoistCard() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "note",
-				children: still ? "Resultante = 0 · aceleração = 0. A velocidade continua a que a carga já tem." : "P = m·g · Fr = T − P · a = Fr/m"
+				children: relation(h)
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note dim",
+				children: "P = m·g · Fr = T − P · a = Fr/m"
 			})
 		]
 	});
+}
+function relation(h) {
+	if (Math.abs(h.Fr) < .8) return Math.abs(h.v) < .08 ? "T ≈ P · Fr ≈ 0 · a ≈ 0 · repouso" : "T ≈ P · Fr ≈ 0 · a ≈ 0 · a velocidade se conserva";
+	return h.T > h.P ? "T > P · aceleração para cima" : "T < P · aceleração para baixo";
 }
 function ForceStrip() {
 	const h = hoistState();
@@ -4137,7 +4174,7 @@ function StageReport() {
 							" m/s"
 						] }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Frenagem" }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Início" }),
 							br(f.brakeY, 2),
 							" m"
 						] }),
@@ -4150,6 +4187,16 @@ function StageReport() {
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "v na chegada" }),
 							br(f.arriveV, 2),
 							" m/s"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "a na frenagem" }),
+							br(f.brakeA, 2),
+							" m/s²"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Duração" }),
+							br(f.brakeDur, 1),
+							" s"
 						] }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Colisão na chegada" }), f.collided ? "SIM" : "NÃO"] }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Frenagem válida" }), f.brakeValid ? "SIM" : "NÃO"] })
@@ -4773,6 +4820,12 @@ function CameraRig() {
 					look.z += (best.z - look.z) * .18;
 				}
 			}
+			if (sim.stage === 2 && elevator.active && elevator.goal !== "done" && Math.hypot(sim.x - SHAFT.x, sim.z - SHAFT.z) < 12) {
+				const aimY = Math.min(6.8, 1.15 + elevator.y * .42);
+				look.y += (aimY - look.y) * .16;
+				look.x += (SHAFT.x - look.x) * .08;
+				look.z += (SHAFT.z - look.z) * .08;
+			}
 		}
 		const jump = smooth.distanceTo(desired) > 24;
 		const follow = sim.sprinting && sim.speed > 3 ? 7.4 : sim.pushing ? 6.2 : 4.5;
@@ -5043,10 +5096,13 @@ function Vectors() {
 		if (sim.stage === 2 && elevator.active && sim.scanner && sim.phase === "play") {
 			const h = hoistState();
 			const y = h.y + .55;
-			const scale = 1.65 / Math.max(h.P, h.T, 80);
-			show(SHAFT.x - .22, y, SHAFT.z, 0, -1, 0, Math.max(.2, h.P * scale), 9085109, 7);
-			show(SHAFT.x + .22, y, SHAFT.z, 0, 1, 0, Math.max(.2, h.T * scale), 14721594, 6);
-			if (Math.abs(h.Fr) > 6) show(SHAFT.x + .62, y, SHAFT.z, 0, Math.sign(h.Fr) || 1, 0, Math.max(.28, Math.abs(h.Fr) * scale), 16054267, 8);
+			const span = Math.max(h.P, h.T, Math.abs(h.Fr), 80);
+			const weight = vectorLength(h.P, span);
+			const tension = vectorLength(h.T, span);
+			const resultant = vectorLength(h.Fr, span);
+			if (weight > 0) show(SHAFT.x - .22, y, SHAFT.z, 0, -1, 0, weight, 9085109, 7);
+			if (tension > 0) show(SHAFT.x + .22, y, SHAFT.z, 0, 1, 0, tension, 14721594, 6);
+			if (resultant > 0) show(SHAFT.x + .62, y, SHAFT.z, 0, Math.sign(h.Fr) || 1, 0, resultant, 16054267, 8);
 			pack.ring.visible = true;
 			pack.ring.position.set(SHAFT.x, .06, SHAFT.z);
 			const pulse = 1 + Math.sin(sim.time * 4) * .05;
@@ -5211,6 +5267,7 @@ function Tigrao() {
 	const react = (0, import_react.useRef)(0);
 	const confuse = (0, import_react.useRef)(0);
 	const seenBlocked = (0, import_react.useRef)(sim.blocked);
+	const seenHoist = (0, import_react.useRef)(0);
 	const prevYaw = (0, import_react.useRef)(sim.yaw);
 	const prevSpeed = (0, import_react.useRef)(0);
 	const turn = (0, import_react.useRef)(0);
@@ -5285,8 +5342,13 @@ function Tigrao() {
 		else if (near && near.d < 2.6 && sim.anim === "idle") mood = "curious";
 		else if (!sim.grounded && sim.vy < 0) mood = "alert";
 		if (sim.stage === 2 && elevator.active && sim.phase === "play") {
+			if (elevator.flinch !== seenHoist.current) {
+				seenHoist.current = elevator.flinch;
+				react.current = .42;
+			}
 			if (elevator.done) mood = "success";
-			else if (elevator.alarm) mood = "surprise";
+			else if (react.current > .16) mood = "surprise";
+			else if (elevator.braking && !sim.scanner) mood = "effort";
 			else if (sim.scanner && sim.speed < .45) mood = "curious";
 		}
 		const stride = moving ? Math.abs(Math.sin(t * freq)) : 0;

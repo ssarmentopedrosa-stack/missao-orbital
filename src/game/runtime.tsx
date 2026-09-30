@@ -7,6 +7,7 @@ import { HoloLabel } from "./bits";
 import { labelSprite } from "./draw";
 import { pump } from "./audio";
 import { elevator, hoistState, SHAFT, tickElevator } from "./elevator";
+import { vectorLength } from "./hoist";
 import { BLOCKS, CINE_LEN, CRATE_SPECS, DOCK, G, exteriorShot, shotIndex } from "./layout";
 import { M } from "./materials";
 import { installProbe, sim, step } from "./sim";
@@ -258,6 +259,12 @@ export function CameraRig() {
           look.z += (best.z - look.z) * 0.18;
         }
       }
+      if (sim.stage === 2 && elevator.active && elevator.goal !== "done" && Math.hypot(sim.x - SHAFT.x, sim.z - SHAFT.z) < 12) {
+        const aimY = Math.min(6.8, 1.15 + elevator.y * 0.42);
+        look.y += (aimY - look.y) * 0.16;
+        look.x += (SHAFT.x - look.x) * 0.08;
+        look.z += (SHAFT.z - look.z) * 0.08;
+      }
     }
     const jump = smooth.distanceTo(desired) > 24;
     const follow = sim.sprinting && sim.speed > 3 ? 7.4 : sim.pushing ? 6.2 : 4.5;
@@ -424,13 +431,13 @@ export function Vectors() {
     if (sim.stage === 2 && elevator.active && sim.scanner && sim.phase === "play") {
       const h = hoistState();
       const y = h.y + 0.55;
-      const span = Math.max(h.P, h.T, 80);
-      const scale = 1.65 / span;
-      show(SHAFT.x - 0.22, y, SHAFT.z, 0, -1, 0, Math.max(0.2, h.P * scale), 0x8aa0b5, 7);
-      show(SHAFT.x + 0.22, y, SHAFT.z, 0, 1, 0, Math.max(0.2, h.T * scale), 0xe0a23a, 6);
-      if (Math.abs(h.Fr) > 6) {
-        show(SHAFT.x + 0.62, y, SHAFT.z, 0, Math.sign(h.Fr) || 1, 0, Math.max(0.28, Math.abs(h.Fr) * scale), 0xf4f7fb, 8);
-      }
+      const span = Math.max(h.P, h.T, Math.abs(h.Fr), 80);
+      const weight = vectorLength(h.P, span);
+      const tension = vectorLength(h.T, span);
+      const resultant = vectorLength(h.Fr, span);
+      if (weight > 0) show(SHAFT.x - 0.22, y, SHAFT.z, 0, -1, 0, weight, 0x8aa0b5, 7);
+      if (tension > 0) show(SHAFT.x + 0.22, y, SHAFT.z, 0, 1, 0, tension, 0xe0a23a, 6);
+      if (resultant > 0) show(SHAFT.x + 0.62, y, SHAFT.z, 0, Math.sign(h.Fr) || 1, 0, resultant, 0xf4f7fb, 8);
       pack.ring.visible = true;
       pack.ring.position.set(SHAFT.x, 0.06, SHAFT.z);
       const pulse = 1 + Math.sin(sim.time * 4) * 0.05;

@@ -126,3 +126,17 @@ export function arrivalAllowed(input: ArrivalInput): boolean {
   return true;
 }
 
+/**
+ * Arrow length for the scanner only. Same reference for P, T and Fr, so a larger force is a longer arrow.
+ * Clamped so an extreme tension cannot fill the bay. Never fed back into the integrator.
+ */
+export function vectorLength(magnitude: number, reference: number): number {
+  const mag = Math.abs(finite(magnitude, 0));
+  if (mag < 1) return 0;
+  const span = Math.max(mag, Math.abs(finite(reference, 0)), 80);
+  const raw = (mag / span) * 1.6;
+  if (raw < 0.05) return 0;
+  return Math.min(1.65, Math.max(0.34, raw));
+}
+
+

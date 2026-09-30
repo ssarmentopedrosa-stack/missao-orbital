@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, accelOf, arrivalAllowed, brakingGate, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, weightOf, G_MOON } from "../src/game/hoist.ts";
+import { HOIST_MASS, HOIST_WEIGHT, T_ACCEL, T_TOL, accelOf, arrivalAllowed, brakingGate, hoistAccel, integrateHoist, integrateVariable, netForce, netForceOf, vectorLength, weightOf, G_MOON } from "../src/game/hoist.ts";
 
 test("peso do contêiner é m·g", () => {
   assert.equal(HOIST_MASS, 40);
@@ -168,6 +168,19 @@ test("protocolo completo pode concluir sem encostar no teto", () => {
     arrivalAllowed({ phase: "brake", brakeValid: true, brakeV: Number.NaN, y: 8.72, v: 0.28, hitTop: false }),
     false,
   );
+});
+
+test("vetores visuais seguem o módulo e não estouram a cena", () => {
+  const span = Math.max(800, 500, 300);
+  const tension = vectorLength(800, span);
+  const weight = vectorLength(500, span);
+  const resultant = vectorLength(300, span);
+  assert.ok(tension > weight);
+  assert.ok(weight > resultant);
+  assert.ok(tension <= 1.65);
+  assert.ok(resultant >= 0.34);
+  assert.equal(vectorLength(0, span), 0);
+  assert.ok(Number.isFinite(vectorLength(Number.NaN, span)));
 });
 
 test("mesma resultante de 100 N acelera 5 m/s² e 1 m/s²", () => {

@@ -459,8 +459,8 @@ function resolveCircle(x: number, z: number, radius: number): { x: number; z: nu
   for (const block of BLOCKS) {
     const cx = Math.max(block.minX, Math.min(x, block.maxX));
     const cz = Math.max(block.minZ, Math.min(z, block.maxZ));
-    let dx = x - cx;
-    let dz = z - cz;
+    const dx = x - cx;
+    const dz = z - cz;
     const d2 = dx * dx + dz * dz;
     if (d2 >= radius * radius) continue;
     if (d2 < 1e-8) {
