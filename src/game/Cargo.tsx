@@ -14,6 +14,9 @@ export function Cargo() {
   const alarmR = useRef<PointLight>(null);
   const drum = useRef<Mesh>(null);
   const pick = useRef<Mesh>(null);
+  const drone = useRef<Group>(null);
+  const field = useRef<Group>(null);
+  const guard = useRef<Group>(null);
   const plate = useMemo(() => plateTexture("NEWTON-1"), []);
   const mission = useMemo(() => plateTexture("DINÂMICA"), []);
   const screen = useMemo(() => M.emit.clone(), []);
@@ -41,6 +44,24 @@ export function Cargo() {
     const flash = elevator.alarm ? 1.2 + Math.sin(sim.time * 14) * 1.6 : 0.12;
     if (alarmL.current) alarmL.current.intensity = flash;
     if (alarmR.current) alarmR.current.intensity = flash;
+    const byId = (id: string) => elevator.aliens.find((item) => item.id === id);
+    const droneA = byId("drone");
+    const fieldA = byId("field");
+    const guardA = byId("guardian");
+    if (drone.current && droneA) {
+      drone.current.visible = !droneA.disabled && droneA.mode !== "sleep";
+      drone.current.position.set(droneA.x, 0.55 + Math.sin(sim.time * 3) * 0.05, droneA.z);
+    }
+    if (field.current && fieldA) {
+      field.current.visible = !fieldA.disabled && fieldA.mode !== "sleep";
+      field.current.position.set(fieldA.x, 0.7, fieldA.z);
+      const pulse = 0.85 + Math.sin(sim.time * 3) * 0.1;
+      field.current.scale.setScalar(pulse);
+    }
+    if (guard.current && guardA) {
+      guard.current.visible = elevator.goal === "guardian" && !guardA.disabled;
+      guard.current.position.set(guardA.x, 0.85 + Math.sin(sim.time * 1.6) * 0.04, guardA.z);
+    }
   });
 
   return (
@@ -181,6 +202,33 @@ export function Cargo() {
       <pointLight ref={alarmR} position={[4.2, 2.4, -60]} color="#e0a23a" distance={8} decay={2} intensity={0.15} />
       <pointLight position={[0, 3.2, -58.2]} color="#9fd4e6" distance={10} decay={2} intensity={1.15} />
       <pointLight position={[-2, 2.6, -51]} color="#d5e4ef" distance={8} decay={2} intensity={0.55} />
+      <group ref={drone}>
+        <mesh material={M.hullDark} dispose={null}>
+          <boxGeometry args={[0.36, 0.18, 0.24]} />
+        </mesh>
+        <mesh position={[0.08, 0.06, 0.1]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.04, 8, 8]} />
+        </mesh>
+        <mesh position={[-0.08, 0.06, 0.1]} material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.04, 8, 8]} />
+        </mesh>
+      </group>
+      <group ref={field}>
+        <mesh material={M.hull} dispose={null}>
+          <capsuleGeometry args={[0.16, 0.32, 4, 8]} />
+        </mesh>
+        <mesh material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.48, 12, 10]} />
+        </mesh>
+      </group>
+      <group ref={guard}>
+        <mesh material={M.hullDark} dispose={null}>
+          <boxGeometry args={[0.62, 0.48, 0.4]} />
+        </mesh>
+        <mesh material={M.emit} dispose={null}>
+          <sphereGeometry args={[0.14, 10, 8]} />
+        </mesh>
+      </group>
     </group>
   );
 }

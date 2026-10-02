@@ -21,7 +21,10 @@ import {
   SPEED_REST,
   weightOf,
 } from "./hoist";
-import { held, sim, speak } from "./sim";
+import { gradeLesson, guardMet, labReady, lessonFor, liveLine, type LessonAsk } from "./lesson";
+import { held, publishNow, sim, speak } from "./sim";
+import { freshCrew, hazardHits, reachCheckpoint, stepAlien, takeDamage, tickCrew, type Crew } from "./survival";
+import { freshStageAliens, STAGE2_POINTS } from "./stage2";
 
 export const PANEL = { x: 2.55, z: -52.15 };
 export const SHAFT = { x: 0, z: -58.2 };
@@ -36,7 +39,7 @@ const Y_START = 2.55;
 const TRANSIT = 6.4;
 const T_MAX = 1800;
 
-export type HoistGoal = "scan" | "compare" | "rise" | "balance" | "descent" | "lab" | "protocol" | "done";
+export type HoistGoal = "scan" | "compare" | "rise" | "balance" | "descent" | "lab" | "guardian" | "protocol" | "done";
 export type LoadId = "maint" | "a" | "b" | "c" | "protocol";
 
 type Line = { speaker: string; text: string; seconds: number };
@@ -89,6 +92,13 @@ export const elevator = {
   saidCoast: false,
   saidPair: false,
   saidSurge: false,
+  stuck: 0,
+  mark: "",
+  ask: null as LessonAsk | null,
+  askNote: "",
+  help: false,
+  crew: freshCrew() as Crew,
+  aliens: freshStageAliens(),
   lineQueue: [] as Line[],
   mastery: {
     peso: false,
@@ -163,6 +173,13 @@ function resetMotion(): void {
   elevator.saidCoast = false;
   elevator.saidPair = false;
   elevator.saidSurge = false;
+  elevator.stuck = 0;
+  elevator.mark = "";
+  elevator.ask = null;
+  elevator.askNote = "";
+  elevator.help = false;
+  elevator.crew = freshCrew();
+  elevator.aliens = freshStageAliens();
   elevator.lineQueue = [];
   elevator.mastery = {
     peso: false,
@@ -231,6 +248,36 @@ export function hoistState() {
     mastery: elevator.mastery,
     moon: f.g < 5,
     flight: elevator.flight,
+    lesson: lessonFor({
+      goal: elevator.goal,
+      drop: elevator.drop,
+      proto: elevator.proto,
+      arrived: elevator.arrived,
+      touch: Math.abs(sim.touchX) + Math.abs(sim.touchY) > 0.05 || sim.touchSprint,
+      stuck: elevator.stuck,
+      lab: {
+        up: elevator.labUp,
+        down: elevator.labDown,
+        balance: elevator.labBalance,
+        coast: elevator.labCoast,
+        masses: elevator.mastery.mesmaFr,
+        gravity: elevator.mastery.gravidade,
+      },
+    }),
+    ask: elevator.ask,
+    askNote: elevator.askNote,
+    help: elevator.help,
+    lives: elevator.crew.lives,
+    checkpoint: STAGE2_POINTS.find((item) => item.id === elevator.crew.checkpoint)?.name ?? "Entrada",
+    guard: elevator.goal === "guardian" ? Math.max(0, 100 - elevator.proto * 20) : elevator.goal === "protocol" || elevator.goal === "done" ? 0 : 100,
+    lab: {
+      up: elevator.labUp,
+      down: elevator.labDown,
+      balance: elevator.labBalance,
+      coast: elevator.labCoast,
+      masses: elevator.mastery.mesmaFr,
+      gravity: elevator.mastery.gravidade,
+    },
   };
 }
 
@@ -265,13 +312,7 @@ function clampTension(value: number): number {
 }
 
 function physicsNote(P: number, T: number, Fr: number, a: number, v: number): string {
-  if (Math.abs(Fr) < FORCE_EQ && Math.abs(v) > SPEED_MOVE) return "Resultante nula — e a carga continua em movimento.";
-  if (Math.abs(Fr) < FORCE_EQ) return "Forças equilibradas. A resultante é nula.";
-  if (T > P + FORCE_EQ && a > 0.05) return "Tração maior que o peso. A carga acelera para cima.";
-  if (T < P - FORCE_EQ && a < -0.05) return "Peso maior que a tração. A aceleração aponta para baixo.";
-  if (a > 0.05) return "A aceleração aponta para cima.";
-  if (a < -0.05) return "A aceleração aponta para baixo.";
-  return "Observe o peso, a tração e a diferença entre eles.";
+  return liveLine(P, T, Fr, a, v);
 }
 
 function bumpTension(dir: number, amount: number): void {
@@ -312,6 +353,8 @@ function toggleGravity(): void {
     elevator.saidG = true;
     queueAs("TIGRÃO", "Minha massa continua a mesma.", 2.8);
     queue("Exatamente. O que mudou foi a força gravitacional. Peso é força. Massa, não.", 4.6);
+    elevator.ask = "moon";
+    elevator.askNote = "";
   }
 }
 
@@ -346,6 +389,25 @@ function enterLab(): void {
   queue("O simulador à direita troca a gravidade entre a estação e a Lua. A massa não muda. O peso, sim.", 5.4);
 }
 
+function enterGuardian(): void {
+  elevator.goal = "guardian";
+  elevator.proto = 0;
+  elevator.protoHold = 0;
+  markCheckpoint(3);
+  sfx.cable();
+  queue("O guardião bloqueia o núcleo. Ele não cai com um tiro.", 3.6);
+  queue("Cada fase pede uma relação entre tração e peso. Errou? Ajuste e repita.", 4.2);
+}
+
+function markCheckpoint(id: 1 | 2 | 3 | 4): void {
+  const next = reachCheckpoint(elevator.crew, id);
+  elevator.crew = next;
+  if (!next.fresh) return;
+  const spot = STAGE2_POINTS.find((item) => item.id === id);
+  queue(`Checkpoint ativado · ${spot?.name ?? "setor"}.`, 2.4);
+  sfx.ui();
+}
+
 function enterProtocol(): void {
   elevator.goal = "protocol";
   elevator.g = HOIST_G;
@@ -362,6 +424,7 @@ function enterProtocol(): void {
   elevator.warnAt = 0;
   elevator.saidSurge = false;
   elevator.mastery.newton = true;
+  markCheckpoint(4);
   sfx.ui();
   queue("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
   queue("Mantenha parada, suba acelerando, siga com velocidade constante e desacelere antes da plataforma.", 5.6);
@@ -387,6 +450,8 @@ function finish(): void {
   queue("Uma força isolada não determina o movimento.", 3.4);
   queue("O que importa é a força resultante.", 3.2);
   queue("Quando você entende as forças, começa a entender o movimento.", 4.2);
+  queueAs("TIGRÃO", "A estação voltou ao nosso controle.", 2.8);
+  queue("Os invasores foram contidos. O módulo de energia, não. Ele ficou instável.", 4.4);
 }
 
 export function beginStage2(): void {
@@ -413,19 +478,78 @@ export function beginStage2(): void {
   sim.speed = 0;
   sim.objective = "Investigue o elevador e descubra por que ele não sobe.";
   elevator.lineQueue = [
-    { speaker: "NEWTON", text: "Tigrão, temos um problema.", seconds: 3.1 },
-    { speaker: "NEWTON", text: "A carga está pronta, mas o elevador não consegue colocá-la em movimento.", seconds: 4.6 },
-    { speaker: "NEWTON", text: "Você está diante de três forças: peso, tração e força resultante.", seconds: 4.6 },
-    { speaker: "NEWTON", text: "Descubra como elas determinam o movimento.", seconds: 3.6 },
+    { speaker: "NEWTON", text: "Alerta de invasão. Intrusos no setor de carga. O elevador principal está offline.", seconds: 4.4 },
+    { speaker: "TIGRÃO", text: "E os invasores?", seconds: 2.2 },
+    { speaker: "NEWTON", text: "Primeiro as forças. Sem controlar peso e tração, a carga não se move.", seconds: 4.2 },
+    { speaker: "NEWTON", text: "Chegue ao painel. Evite o contato. O invasor não é o exercício.", seconds: 3.8 },
   ];
   const first = elevator.lineQueue.shift();
   if (first) speak(first.speaker, first.text, first.seconds);
   else sfx.ui();
+  elevator.alarm = true;
+  elevator.alarmT = 2.8;
+  markCheckpoint(1);
 }
 
 function readForces() {
   const f = forcesOf(elevator.tension, elevator.mass, elevator.g);
   return { P: f.P, T: f.T, Fr: f.Fr, a: f.a };
+}
+
+function tickStage2Threats(hdt: number): void {
+  const goal = elevator.goal;
+  const chase = goal === "descent" || goal === "guardian";
+  const pastRise = goal === "rise" || goal === "balance" || goal === "descent" || goal === "lab" || goal === "guardian" || goal === "protocol" || goal === "done";
+  elevator.aliens = elevator.aliens.map((alien) => {
+    const wake = alien.id === "drone" ? goal === "scan" || goal === "compare" || chase : alien.id === "field" ? pastRise && goal !== "protocol" : goal === "guardian";
+    const next = stepAlien({ ...alien, disabled: !wake }, sim.x, sim.z, hdt, false);
+    if (next.kind === "patrol") {
+      const dx = next.x - next.homeX;
+      const dz = next.z - next.homeZ;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 2.2) {
+        next.x = next.homeX + (dx / dist) * 2.2;
+        next.z = next.homeZ + (dz / dist) * 2.2;
+        next.mode = "return";
+      }
+    }
+    return next;
+  });
+  elevator.crew = tickCrew(elevator.crew, hdt);
+  if (elevator.crew.over || sim.transit > 0) return;
+  const hit = hazardHits(elevator.aliens, sim.x, sim.z, sim.time, false);
+  if (!hit) return;
+  const next = takeDamage(elevator.crew, hit.source);
+  elevator.crew = next;
+  if (!next.applied) return;
+  const len = Math.hypot(sim.x - hit.ox, sim.z - hit.oz) || 1;
+  sim.vx += ((sim.x - hit.ox) / len) * 3.2;
+  sim.vz += ((sim.z - hit.oz) / len) * 3.2;
+  sim.shake = Math.max(sim.shake, 0.26);
+  sfx.hit();
+  if (next.over) {
+    sim.downed = true;
+    sfx.fail();
+    queue("Sistema crítico. O elevador continua no último checkpoint.", 3.2);
+  }
+  publishNow();
+}
+
+export function resumeStage2(): void {
+  const spot = STAGE2_POINTS.find((item) => item.id === elevator.crew.checkpoint) ?? STAGE2_POINTS[0];
+  sim.x = spot?.x ?? -3.1;
+  sim.z = spot?.z ?? -51.6;
+  sim.vx = 0;
+  sim.vz = 0;
+  sim.vy = 0;
+  elevator.crew = { ...elevator.crew, lives: 3, invuln: 1.8, over: false, flash: 0 };
+  sim.downed = false;
+  publishNow();
+}
+
+export function restartStage2(): void {
+  elevator.active = false;
+  beginStage2();
 }
 
 export function tickElevator(dt: number): void {
@@ -488,6 +612,14 @@ export function tickElevator(dt: number): void {
     pumpLines();
     return;
   }
+
+  tickStage2Threats(hdt);
+  if (elevator.crew.over) {
+    sim.downed = true;
+    pumpLines();
+    return;
+  }
+  sim.downed = false;
 
   const e = held.has("KeyE");
   const shift = held.has("ShiftLeft") || held.has("ShiftRight") || sim.touchSprint;
@@ -564,7 +696,8 @@ export function tickElevator(dt: number): void {
     sim.objective = elevator.arrived ? "2 · Ative o scanner" : "1 · Investigue o elevador";
     if (!elevator.arrived && atPanel) {
       elevator.arrived = true;
-      queue("O cabo está frouxo para o peso desta carga. Escaneie antes de mudar a tração.", 4.4);
+      markCheckpoint(2);
+      queue("Elevador danificado. Escaneie antes de mudar a tração. Peso para baixo, tração para cima.", 4.4);
     }
     elevator.hint = elevator.arrived
       ? "Q liga o scanner. Peso para baixo, tração para cima."
@@ -590,6 +723,7 @@ export function tickElevator(dt: number): void {
       elevator.goal = "rise";
       queue("A diferença entre elas é a força resultante. Fr = T − P. E Fr = m·a.", 4.8);
       queue("Faça a carga subir. A tração precisa ser maior que o peso.", 3.8);
+      queue("Há um invasor no fundo do setor. Ele não altera a carga. Evite o contato se for até lá.", 3.6);
     }
   } else if (elevator.goal === "rise") {
     sim.objective = "4 · Faça a carga subir";
@@ -603,6 +737,8 @@ export function tickElevator(dt: number): void {
       elevator.mastery.aceleracao = true;
       elevator.goal = "balance";
       elevator.balanceHold = 0;
+      elevator.ask = "coast";
+      elevator.askNote = "";
       queue("Agora pare a aceleração. Iguale a tração ao peso. Se ela ainda sobe, a velocidade não zera na hora.", 5.8);
     }
   } else if (elevator.goal === "balance") {
@@ -633,6 +769,8 @@ export function tickElevator(dt: number): void {
       if (elevator.dropHold > 0.75) {
         elevator.drop = 2;
         elevator.mastery.resultante = true;
+        elevator.ask = "brake";
+        elevator.askNote = "";
         queue("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
       }
     } else {
@@ -697,7 +835,30 @@ export function tickElevator(dt: number): void {
       elevator.hint = missing.length
         ? `Com ${comma(elevator.mass, 0)} kg falta: ${missing.join(", ")}.`
         : "As quatro situações estão registradas. Troque a massa e repita uma resultante parecida.";
-      if (elevator.labUp && elevator.labDown && elevator.labBalance && elevator.labCoast) enterProtocol();
+      if (elevator.labUp && labReady({
+        up: elevator.labUp,
+        down: elevator.labDown,
+        balance: elevator.labBalance,
+        coast: elevator.labCoast,
+        masses: elevator.mastery.mesmaFr,
+        gravity: elevator.mastery.gravidade,
+      })) enterGuardian();
+    }
+  } else if (elevator.goal === "guardian") {
+    sim.objective = "Guardião · forças";
+    const phase = elevator.proto;
+    const met = guardMet(phase, P, T, Fr, a, elevator.v);
+    if (met) elevator.protoHold += hdt;
+    else elevator.protoHold = 0;
+    elevator.hint = met ? "Condição física válida. Segure mais um instante." : elevator.hint;
+    if (elevator.protoHold > 0.7) {
+      elevator.proto += 1;
+      elevator.protoHold = 0;
+      sfx.success();
+      if (elevator.proto >= 5) {
+        queue("Guardião desativado. O controle das forças voltou. Agora o Protocolo Newton.", 4.2);
+        enterProtocol();
+      } else queue("Fase aceita. A próxima pede outra relação entre T e P.", 2.8);
     }
   } else if (elevator.goal === "protocol") {
     const phase = elevator.proto === 0 ? "Repouso" : elevator.proto === 1 ? "Acelerando" : elevator.proto === 2 ? "Velocidade constante" : "Frenagem";
@@ -782,8 +943,51 @@ export function tickElevator(dt: number): void {
     elevator.alarm = false;
   }
 
+  const mark = `${elevator.goal}:${elevator.arrived}:${elevator.drop}:${elevator.proto}`;
+  if (mark !== elevator.mark) {
+    elevator.mark = mark;
+    elevator.stuck = 0;
+  } else elevator.stuck = Math.min(40, elevator.stuck + hdt);
+  const card = lessonFor({
+    goal: elevator.goal,
+    drop: elevator.drop,
+    proto: elevator.proto,
+    arrived: elevator.arrived,
+    touch: Math.abs(sim.touchX) + Math.abs(sim.touchY) > 0.05 || sim.touchSprint,
+    stuck: elevator.stuck,
+    lab: {
+      up: elevator.labUp,
+      down: elevator.labDown,
+      balance: elevator.labBalance,
+      coast: elevator.labCoast,
+      masses: elevator.mastery.mesmaFr,
+      gravity: elevator.mastery.gravidade,
+    },
+  });
+  elevator.hint = card.hints[Math.min(2, Math.floor(elevator.stuck / 8))] ?? card.hints[0];
+  sim.objective = `${card.step}/${card.total} · ${card.title}`;
+
   if (Math.abs(elevator.v) > HOIST_V_MAX) elevator.v = Math.sign(elevator.v) * HOIST_V_MAX;
   pumpLines();
+}
+
+export function answerLesson(index: number): void {
+  if (!elevator.ask || sim.stage !== 2) return;
+  const graded = gradeLesson(elevator.ask, index);
+  elevator.askNote = graded.text;
+  if (graded.ok) {
+    elevator.ask = null;
+    sfx.success();
+  } else sfx.fail();
+}
+
+export function dismissLesson(): void {
+  elevator.ask = null;
+}
+
+export function toggleHelp(): void {
+  elevator.help = !elevator.help;
+  sfx.ui();
 }
 
 if (typeof window !== "undefined") {

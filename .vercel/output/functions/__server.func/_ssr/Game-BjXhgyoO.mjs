@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { D as Vector3, E as TextureLoader, O as require_jsx_runtime, S as SRGBColorSpace, T as SpriteMaterial, _ as MeshStandardMaterial, a as PMREMGenerator, b as RepeatWrapping, c as BufferAttribute, d as Fog, f as Group, h as MeshBasicMaterial, k as require_react, l as BufferGeometry, m as Mesh, n as useFrame, o as ArrowHelper, r as useThree, t as Canvas, u as CanvasTexture, v as Object3D, w as Sprite, x as RingGeometry } from "../_libs/@react-three/fiber+[...].mjs";
 import { n as ScanLine } from "../_libs/lucide-react.mjs";
 import { t as RoomEnvironment } from "../_libs/three.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/Game-iH7xKo_j.js
+//#region node_modules/.nitro/vite/services/ssr/assets/Game-BjXhgyoO.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function std(color, extra = {}) {
@@ -1016,6 +1016,274 @@ function vectorLength(magnitude, reference) {
 	const raw = mag / Math.max(mag, Math.abs(finite$1(reference, 0)), 80) * 1.6;
 	if (raw < .05) return 0;
 	return Math.min(1.65, Math.max(.34, raw));
+}
+function labReady(flags) {
+	return flags.up && flags.down && flags.balance && flags.coast && flags.masses && flags.gravity;
+}
+function guardMet(phase, P, T, Fr, a, v) {
+	if (phase <= 0) return Math.abs(Fr) < 8 && Math.abs(v) < .18;
+	if (phase === 1) return T > P + 8 && v > .12;
+	if (phase === 2) return Fr > 30 && a > .2;
+	if (phase === 3) return Math.abs(Fr) <= 10 && v > .22;
+	return v < -.12 && a > .08;
+}
+function liveLine(P, T, Fr, a, v) {
+	if (v < -.22 && a > .05) return "A carga desce e a aceleração aponta para cima. Isso é frenagem.";
+	if (v > .22 && a < -.05) return "A carga sobe e a aceleração aponta para baixo. A velocidade está caindo.";
+	if (Math.abs(Fr) < 8 && Math.abs(v) > .22) return "Fr ≈ 0 e a carga continua em movimento. Velocidade não é aceleração.";
+	if (Math.abs(Fr) < 8 && Math.abs(v) <= .18) return "T ≈ P. Forças equilibradas e a carga está em repouso.";
+	if (T > P + 8) return "T > P. A resultante aponta para cima.";
+	if (T < P - 8) return "T < P. A resultante aponta para baixo.";
+	return "Compare T e P. A diferença é a força resultante.";
+}
+var CONTROL_KEYS = "E aumenta a tração. Shift+E diminui.";
+var CONTROL_TOUCH = "Agir aumenta a tração. Correr inverte.";
+function lessonFor(input) {
+	const control = input.touch ? CONTROL_TOUCH : CONTROL_KEYS;
+	if (input.goal === "scan" && !input.arrived) return {
+		step: 1,
+		total: 8,
+		title: "Investigue o elevador",
+		task: "Vá até o painel. A carga está parada e o cabo não a move.",
+		control: "Caminhe com WASD ou o joystick.",
+		why: "Antes de mudar a tração, descubra quais forças já existem.",
+		hints: [
+			"O painel do guincho fica junto da carga.",
+			"Aproxime-se até a interação aparecer.",
+			"O painel está no setor de carga, à frente da plataforma."
+		]
+	};
+	if (input.goal === "scan") return {
+		step: 2,
+		total: 8,
+		title: "Peso e tração",
+		task: "Ative o scanner e leia P e T.",
+		control: "Q liga o scanner, de frente para a carga.",
+		why: "Peso é a gravidade, para baixo. Tração é o cabo, para cima.",
+		hints: [
+			"Aperte Q perto da carga.",
+			"O scanner mostra P = m·g e a tração do cabo.",
+			"Fique junto do painel e aperte Q."
+		]
+	};
+	if (input.goal === "compare") return {
+		step: 3,
+		total: 8,
+		title: "Força resultante",
+		task: "Mude a tração e observe Fr = T − P.",
+		control,
+		why: "Uma força sozinha não decide o movimento. A resultante decide a aceleração.",
+		hints: [
+			"Compare T com P enquanto mexe na tração.",
+			"Se T fica maior que P, Fr aponta para cima.",
+			"Aumente T alguns newtons acima de P e veja a seta da resultante."
+		]
+	};
+	if (input.goal === "rise") return {
+		step: 4,
+		total: 8,
+		title: "Faça a carga subir",
+		task: "A tração precisa superar o peso.",
+		control,
+		why: "T > P produz Fr > 0 e aceleração para cima.",
+		hints: [
+			"Compare T e P.",
+			"A tração precisa ficar maior que o peso.",
+			"Segure E até T passar de P. Qualquer valor acima já serve."
+		]
+	};
+	if (input.goal === "balance") return {
+		step: 5,
+		total: 8,
+		title: "Pare a aceleração",
+		task: "Iguale T e P. Não é preciso zerar a velocidade na hora.",
+		control,
+		why: "Fr = 0 significa a = 0. Se a carga já se move, a velocidade tende a continuar.",
+		hints: [
+			"Traga a tração para perto do peso.",
+			"Fr perto de zero e a carga ainda pode estar subindo.",
+			"Ajuste E ou Shift+E até T ficar cerca de 8 N do peso. Depois espere a velocidade cair."
+		]
+	};
+	if (input.goal === "descent" && input.drop === 0) return {
+		step: 6,
+		total: 8,
+		title: "Faça a carga descer",
+		task: "Reduza a tração até ficar menor que o peso.",
+		control,
+		why: "T < P produz resultante e aceleração para baixo.",
+		hints: [
+			"O peso precisa vencer a tração.",
+			"Shift+E reduz a tração.",
+			"Deixe T alguns newtons abaixo de P e observe v para baixo."
+		]
+	};
+	if (input.goal === "descent" && input.drop === 1) return {
+		step: 6,
+		total: 8,
+		title: "Desça com velocidade constante",
+		task: "Iguale T e P sem parar a carga.",
+		control,
+		why: "Fr = 0 não apaga a velocidade. A aceleração é que fica nula.",
+		hints: [
+			"A carga já desce. Agora zere a resultante, não a velocidade.",
+			"Aumente T até ficar perto de P, com v ainda para baixo.",
+			"Se a velocidade zerar, reduza T de novo e reequilibre no meio da descida."
+		]
+	};
+	if (input.goal === "descent") return {
+		step: 6,
+		total: 8,
+		title: "Freie a descida",
+		task: "A carga desce. A aceleração precisa apontar para cima.",
+		control,
+		why: "Frear é acelerar contra o movimento. Na descida, isso pede T > P.",
+		hints: [
+			"Você precisa diminuir a velocidade, não inverter o cabo.",
+			"A aceleração precisa apontar contra o movimento.",
+			"Como a carga desce, faça T maior que P até a velocidade ficar pequena, longe do piso."
+		]
+	};
+	if (input.goal === "guardian") {
+		const titles = [
+			"Peso",
+			"Tração",
+			"Resultante",
+			"Velocidade constante",
+			"Frenagem"
+		];
+		const tasks = [
+			"Deixe T perto de P, com a carga parada. Esse equilíbrio revela o peso.",
+			"Faça a tração superar o peso e a carga subir.",
+			"Mantenha uma resultante clara para cima, acima de 30 N.",
+			"Iguale T e P sem parar a subida.",
+			"A carga precisa descer perdendo velocidade: aceleração para cima."
+		];
+		const phase = Math.max(0, Math.min(4, input.proto));
+		return {
+			step: 8,
+			total: 8,
+			title: `Guardião · ${titles[phase]}`,
+			task: tasks[phase] ?? tasks[0] ?? "",
+			control,
+			why: "O guardião não cai por tiro. Cada fase pede Fr = T − P de um jeito diferente.",
+			hints: [
+				"Errou a tração? Ajuste e tente de novo. O invasor não pune o erro de conta.",
+				tasks[phase] ?? "",
+				"Observe o painel: T, P, Fr, a e v. O sinal da velocidade não é o sinal da aceleração."
+			]
+		};
+	}
+	if (input.goal === "lab") {
+		const missing = [
+			input.lab.up ? "" : "subida",
+			input.lab.balance ? "" : "equilíbrio parado",
+			input.lab.down ? "" : "descida",
+			input.lab.coast ? "" : "Fr = 0 em movimento",
+			input.lab.masses ? "" : "duas massas com Fr parecida",
+			input.lab.gravity ? "" : "gravidade da Lua"
+		].filter(Boolean);
+		const next = missing[0] ? `Próximo: ${missing[0]}.` : "O protocolo abre quando a lista fechar.";
+		return {
+			step: 7,
+			total: 8,
+			title: "Laboratório de forças",
+			task: missing.length ? `Ainda falta: ${missing.join(", ")}.` : "As seis situações estão registradas.",
+			control: `${control} E numa carga troca a massa. E no simulador troca g.`,
+			why: "A mesma resultante acelera menos uma massa maior. Mudar g muda o peso, não a massa.",
+			hints: [
+				next,
+				missing[1] ? `Depois: ${missing[1]}.` : next,
+				missing[2] ? `E também: ${missing[2]}.` : next
+			]
+		};
+	}
+	if (input.goal === "protocol" && input.proto === 0) return {
+		step: 8,
+		total: 8,
+		title: "Protocolo · repouso",
+		task: "Deixe T = P, com a carga parada e baixa.",
+		control,
+		why: "Repouso aqui é Fr ≈ 0 e v ≈ 0 ao mesmo tempo.",
+		hints: [
+			"Iguale tração e peso.",
+			"A velocidade também precisa estar perto de zero.",
+			"Fique abaixo de 2 m e segure T cerca de 8 N do peso."
+		]
+	};
+	if (input.goal === "protocol" && input.proto === 1) return {
+		step: 8,
+		total: 8,
+		title: "Protocolo · aceleração",
+		task: "Faça a carga subir de verdade.",
+		control,
+		why: "T > P produz aceleração para cima. A velocidade deve crescer.",
+		hints: [
+			"A tração precisa superar o peso.",
+			"Suba além de 3 m com velocidade crescendo.",
+			"Segure E até a > 0 e a carga passar de 3,6 m."
+		]
+	};
+	if (input.goal === "protocol" && input.proto === 2) return {
+		step: 8,
+		total: 8,
+		title: "Protocolo · velocidade constante",
+		task: "Iguale T e P sem parar a subida.",
+		control,
+		why: "Fr = 0 não significa parada. Significa que a velocidade se mantém.",
+		hints: [
+			"Se a velocidade zerou, acelere de novo e equilibre no meio.",
+			"Fr perto de zero e v para cima, por um instante.",
+			"Solte o excesso de tração até T ficar perto de P, com a carga ainda subindo."
+		]
+	};
+	if (input.goal === "protocol") return {
+		step: 8,
+		total: 8,
+		title: "Protocolo · frenagem",
+		task: "A carga sobe. Faça a velocidade cair antes do topo.",
+		control,
+		why: "Movimento para cima e aceleração para baixo: T < P. Bater no teto não conta.",
+		hints: [
+			"Diminua a velocidade enquanto a carga ainda sobe.",
+			"A aceleração precisa apontar contra o movimento.",
+			"Reduza T abaixo de P cedo o bastante para chegar devagar, sem encostar no limite."
+		]
+	};
+	return {
+		step: 8,
+		total: 8,
+		title: "Etapa 2 concluída",
+		task: "A resultante decide a aceleração.",
+		control,
+		why: "P, T e Fr continuam valendo no módulo seguinte.",
+		hints: [
+			"A etapa 3 abre em seguida.",
+			"A etapa 3 abre em seguida.",
+			"A etapa 3 abre em seguida."
+		]
+	};
+}
+function gradeLesson(id, index) {
+	if (id === "coast") {
+		const ok = index === 2;
+		return {
+			ok,
+			text: ok ? "Se a velocidade é constante, a aceleração é zero. Logo Fr = 0." : "Velocidade constante não pede força resultante. A aceleração é que é zero."
+		};
+	}
+	if (id === "brake") {
+		const ok = index === 0;
+		return {
+			ok,
+			text: ok ? "A carga desce e perde velocidade. A aceleração aponta para cima, contra o movimento." : "Olhe o movimento e a mudança da velocidade. Frear uma descida pede aceleração para cima."
+		};
+	}
+	const ok = index === 1;
+	return {
+		ok,
+		text: ok ? "A massa não mudou. O peso mudou porque P = m·g e g mudou." : "Massa e peso não são a mesma coisa. Na Lua, g é menor, então o peso diminui."
+	};
 }
 var SPAWN = {
 	x: 0,
@@ -2209,6 +2477,697 @@ function installProbe() {
 		}
 	};
 }
+/** Work and energy. Every HUD number in stage 3 comes from these functions. */
+function finite(n, fallback = 0) {
+	return Number.isFinite(n) ? n : fallback;
+}
+/** W = F·d·cos(θ). θ in degrees. A right angle is exactly zero, not a float leftover. */
+function workOf(force, distance, thetaDeg = 0) {
+	const F = finite(force);
+	const d = finite(distance);
+	const theta = finite(thetaDeg);
+	const wrapped = (theta % 360 + 360) % 360;
+	const c = Math.abs(wrapped - 90) < 1e-6 || Math.abs(wrapped - 270) < 1e-6 ? 0 : Math.cos(theta * Math.PI / 180);
+	const w = F * d * c;
+	return Number.isFinite(w) ? w : 0;
+}
+/** Net work along a displacement. Same source as workOf, θ = 0 when Fr and d share a sign. */
+function workFromResultant(resultant, signedDistance) {
+	const Fr = finite(resultant);
+	const d = finite(signedDistance);
+	if (d === 0 || Fr === 0) return 0;
+	return workOf(Math.abs(Fr), Math.abs(d), Math.sign(Fr) === Math.sign(d) ? 0 : 180);
+}
+/** Ec = ½mv². Speed is squared, so the sign of velocity does not create negative energy. */
+function kineticEnergy(mass, speed) {
+	const m = Math.max(0, finite(mass));
+	const v = finite(speed);
+	const e = .5 * m * v * v;
+	return Number.isFinite(e) ? e : 0;
+}
+/** Epg = mgh. Negative mass, gravity or height do not produce a negative well. */
+function potentialEnergy(mass, g, height) {
+	const m = Math.max(0, finite(mass));
+	const grav = Math.max(0, finite(g));
+	const h = Math.max(0, finite(height));
+	const e = m * grav * h;
+	return Number.isFinite(e) ? e : 0;
+}
+/** Em = Ec + Epg. */
+function mechanicalEnergy(kinetic, potential) {
+	const e = finite(kinetic) + finite(potential);
+	return Number.isFinite(e) ? e : 0;
+}
+/** Energy that left the mechanical account. Never negative: a gain is not dissipation. */
+function dissipatedEnergy(initialMechanical, finalMechanical) {
+	const lost = finite(initialMechanical) - finite(finalMechanical);
+	return lost > 0 && Number.isFinite(lost) ? lost : 0;
+}
+/** W_resultante = Ec_final − Ec_inicial. */
+function workEnergyDelta(initialKinetic, finalKinetic) {
+	const w = finite(finalKinetic) - finite(initialKinetic);
+	return Number.isFinite(w) ? w : 0;
+}
+/** Relative band used by the stage-3 fall. Discrete steps are not exact. */
+var ENERGY_TOL = .18;
+/** True when mechanical energy is unchanged within a relative tolerance. */
+function mechanicallyConserved(initial, final, tol = ENERGY_TOL) {
+	const a = finite(initial);
+	const b = finite(final);
+	const scale = Math.max(1, Math.abs(a), Math.abs(b));
+	return Math.abs(a - b) <= Math.abs(tol) * scale;
+}
+/**
+* Horizontal cart. Weight is perpendicular to the rail, so its work is zero.
+* W = F·d should track ΔEc. Friction removes mechanical energy as heat.
+*/
+function stepCart(x, v, force, mass, mu, g, dt) {
+	const m = Math.max(.5, finite(mass, 1));
+	const step = Math.min(.05, Math.max(0, finite(dt)));
+	const F = finite(force);
+	const frictionMax = Math.max(0, finite(mu)) * m * Math.max(0, finite(g));
+	const speed = finite(v);
+	let friction = 0;
+	if (Math.abs(speed) > .02) friction = -Math.sign(speed) * frictionMax;
+	else if (Math.abs(F) <= frictionMax) friction = -F;
+	else friction = -Math.sign(F || 1) * frictionMax;
+	const a = (F + friction) / m;
+	let vy = speed + a * step;
+	if (Math.abs(speed) > .02 && Math.sign(vy) !== Math.sign(speed) && frictionMax > 0) vy = 0;
+	const x0 = finite(x);
+	const x1 = x0 + vy * step;
+	const heat = frictionMax * Math.abs(x1 - x0);
+	if (!Number.isFinite(x1) || !Number.isFinite(vy)) return {
+		x: x0,
+		v: 0,
+		a: 0,
+		heat: 0
+	};
+	return {
+		x: x1,
+		v: vy,
+		a,
+		heat: Number.isFinite(heat) ? heat : 0
+	};
+}
+/** Vertical drop. Up is positive. Without friction, Em stays nearly constant. */
+function stepFall(h, v, mass, g, mu, dt) {
+	const m = Math.max(0, finite(mass));
+	const grav = Math.max(0, finite(g));
+	const step = Math.min(.05, Math.max(0, finite(dt)));
+	const h0 = Math.max(0, finite(h));
+	if (m <= 0) return {
+		h: h0,
+		v: 0,
+		a: 0,
+		heat: 0,
+		ec: 0,
+		epg: potentialEnergy(0, grav, h0),
+		em: 0
+	};
+	const friction = Math.max(0, finite(mu)) * m * grav;
+	const speed = finite(v);
+	let a = -grav;
+	if (friction > 0 && Math.abs(speed) > .02) a += -Math.sign(speed) * friction / m;
+	let vy = speed + a * step;
+	let hy = h0 + vy * step;
+	if (hy < 0) {
+		hy = 0;
+		vy = 0;
+	}
+	const heat = friction * Math.abs(hy - h0);
+	const ec = kineticEnergy(m, vy);
+	const epg = potentialEnergy(m, grav, hy);
+	return {
+		h: hy,
+		v: vy,
+		a,
+		heat: Number.isFinite(heat) ? heat : 0,
+		ec,
+		epg,
+		em: mechanicalEnergy(ec, epg)
+	};
+}
+var INVULN_TIME = 1.8;
+var GUARD_STEPS = [
+	"guard-work",
+	"guard-kinetic",
+	"guard-potential",
+	"guard-save",
+	"guard-heat"
+];
+var CHECKPOINTS = [
+	{
+		id: 1,
+		x: 14.2,
+		z: -56,
+		name: "Entrada do módulo"
+	},
+	{
+		id: 2,
+		x: 17.2,
+		z: -56.8,
+		name: "Laboratório de energia"
+	},
+	{
+		id: 3,
+		x: 22.4,
+		z: -54.2,
+		name: "Câmara das rampas"
+	},
+	{
+		id: 4,
+		x: 24.4,
+		z: -56,
+		name: "Núcleo de energia"
+	}
+];
+var PICKUPS = [
+	{
+		id: "core-a",
+		kind: "core",
+		x: 18.6,
+		z: -54.4
+	},
+	{
+		id: "core-b",
+		kind: "core",
+		x: 23.5,
+		z: -55.4
+	},
+	{
+		id: "core-c",
+		kind: "core",
+		x: 21.4,
+		z: -61.1
+	},
+	{
+		id: "cell",
+		kind: "cell",
+		x: 14.9,
+		z: -53.4
+	},
+	{
+		id: "full",
+		kind: "full",
+		x: 26.4,
+		z: -53.1
+	}
+];
+function freshCrew() {
+	return {
+		lives: 3,
+		invuln: 0,
+		score: 0,
+		cores: 0,
+		checkpoint: 1,
+		over: false,
+		flash: 0,
+		source: "",
+		tries: 0,
+		solved: {},
+		picked: {}
+	};
+}
+function freshAliens() {
+	return [
+		{
+			id: "drone",
+			kind: "patrol",
+			x: 19.2,
+			z: -62.2,
+			homeX: 19.2,
+			homeZ: -62.2,
+			span: 2.4,
+			mode: "patrol",
+			t: 0,
+			wind: 0,
+			disabled: false
+		},
+		{
+			id: "field",
+			kind: "energy",
+			x: 19.4,
+			z: -61.2,
+			homeX: 19.4,
+			homeZ: -61.2,
+			span: 0,
+			mode: "patrol",
+			t: 0,
+			wind: 0,
+			disabled: false
+		},
+		{
+			id: "guardian",
+			kind: "guardian",
+			x: 25.2,
+			z: -56.8,
+			homeX: 25.2,
+			homeZ: -56.8,
+			span: 0,
+			mode: "patrol",
+			t: 0,
+			wind: 0,
+			disabled: false
+		}
+	];
+}
+function takeDamage(crew, source) {
+	const livesNow = Number.isFinite(crew.lives) ? Math.max(0, Math.min(3, crew.lives)) : 0;
+	if (crew.over || crew.invuln > 0 || livesNow <= 0) return {
+		...crew,
+		lives: livesNow,
+		applied: false
+	};
+	const lives = livesNow - 1;
+	return {
+		...crew,
+		lives,
+		invuln: INVULN_TIME,
+		over: lives <= 0,
+		score: Math.max(0, Number.isFinite(crew.score) ? crew.score - 25 : 0),
+		flash: .45,
+		source,
+		applied: true
+	};
+}
+function tickCrew(crew, dt) {
+	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	return {
+		...crew,
+		lives: Math.max(0, Math.min(3, crew.lives)),
+		invuln: Math.max(0, crew.invuln - step),
+		flash: Math.max(0, crew.flash - step),
+		score: Math.max(0, crew.score),
+		cores: Math.max(0, Math.min(5, crew.cores))
+	};
+}
+function heal(crew, amount) {
+	if (crew.lives >= 3 || amount <= 0) return {
+		...crew,
+		lives: Math.min(3, crew.lives),
+		gained: false
+	};
+	return {
+		...crew,
+		lives: Math.min(3, crew.lives + amount),
+		gained: true
+	};
+}
+function addCore(crew) {
+	if (crew.cores >= 5) return {
+		...crew,
+		gained: false
+	};
+	return {
+		...crew,
+		cores: crew.cores + 1,
+		score: crew.score + 150,
+		gained: true
+	};
+}
+function addScore(crew, amount) {
+	const next = crew.score + (Number.isFinite(amount) ? amount : 0);
+	return {
+		...crew,
+		score: Math.max(0, Math.min(99999, next))
+	};
+}
+function reachCheckpoint(crew, id) {
+	if (id !== 1 && id !== 2 && id !== 3 && id !== 4) return {
+		...crew,
+		fresh: false
+	};
+	if (id <= crew.checkpoint) return {
+		...crew,
+		fresh: false
+	};
+	return {
+		...crew,
+		checkpoint: id,
+		score: crew.score + 100,
+		fresh: true
+	};
+}
+function guardianEnergy(solved) {
+	const done = GUARD_STEPS.filter((id) => solved[id]).length;
+	return Math.max(0, 100 - done * 20);
+}
+function guardianAsleep(solved) {
+	return GUARD_STEPS.every((id) => Boolean(solved[id]));
+}
+function challengeOf(id) {
+	if (id === "work") {
+		const answer = workOf(50, 6, 0);
+		return {
+			id,
+			title: "Trabalho",
+			prompt: "Um alien de energia trava a plataforma. A força de 50 N acompanha 6 m de deslocamento.",
+			facts: "F = 50 N · d = 6 m · θ = 0°",
+			options: [
+				50,
+				100,
+				answer,
+				600
+			],
+			answer,
+			explain: "A força está no mesmo sentido do deslocamento. W = 50 × 6 × cos 0° = 300 J.",
+			hint: "Observe o ângulo. Se θ = 0°, cos θ = 1 e W = F·d."
+		};
+	}
+	if (id === "kinetic") {
+		const answer = kineticEnergy(10, 6);
+		return {
+			id,
+			title: "Energia cinética",
+			prompt: "O mecanismo pede a energia de uma carga de 10 kg a 6 m/s.",
+			facts: "m = 10 kg · v = 6 m/s · Ec = ½mv²",
+			options: [
+				60,
+				answer,
+				360,
+				90
+			],
+			answer,
+			explain: "Ec = ½ × 10 × 6² = 180 J. A velocidade entra ao quadrado.",
+			hint: "Eleve a velocidade ao quadrado antes de multiplicar pela metade da massa."
+		};
+	}
+	if (id === "potential") {
+		const answer = potentialEnergy(20, 9.8, 5);
+		return {
+			id,
+			title: "Energia potencial",
+			prompt: "A plataforma pede a energia para erguer 20 kg por 5 m.",
+			facts: "m = 20 kg · g = 9,8 m/s² · h = 5 m",
+			options: [
+				100,
+				490,
+				answer,
+				1960
+			],
+			answer,
+			explain: "Epg = mgh = 20 × 9,8 × 5 = 980 J. Mais alto, mais energia armazenada.",
+			hint: "Multiplique massa, gravidade e altura. Nenhum desses três pode faltar."
+		};
+	}
+	if (id === "guard-work") {
+		const answer = workOf(100, 5, 0);
+		return {
+			id,
+			title: "Guardião · trabalho",
+			prompt: "O núcleo exige 500 J. Uma força de 100 N age por 5 m, no mesmo sentido.",
+			facts: "F = 100 N · d = 5 m · θ = 0°",
+			options: [
+				20,
+				105,
+				answer,
+				250
+			],
+			answer,
+			explain: "W = 100 × 5 = 500 J. Esse trabalho é a energia que o núcleo aceita.",
+			hint: "Mesma direção e mesmo sentido: o cosseno vale 1."
+		};
+	}
+	if (id === "guard-kinetic") {
+		const answer = kineticEnergy(4, 5);
+		return {
+			id,
+			title: "Guardião · energia cinética",
+			prompt: "4 kg a 5 m/s. Qual é a energia cinética que o núcleo compara?",
+			facts: "Ec = ½mv². O sinal da velocidade não muda o resultado.",
+			options: [
+				20,
+				answer,
+				100,
+				10
+			],
+			answer,
+			explain: "Ec = ½ × 4 × 5² = 50 J. A velocidade entra ao quadrado.",
+			hint: "Quadrado da velocidade primeiro. Depois multiplique por metade da massa."
+		};
+	}
+	if (id === "guard-potential") {
+		const answer = potentialEnergy(5, 9.8, 4);
+		return {
+			id,
+			title: "Guardião · energia potencial",
+			prompt: "5 kg elevados 4 m, com g = 9,8 m/s². Qual é a energia potencial?",
+			facts: "Epg = mgh",
+			options: [
+				49,
+				98,
+				answer,
+				392
+			],
+			answer,
+			explain: "Epg = 5 × 9,8 × 4 = 196 J. Altura e massa entram juntas.",
+			hint: "Não esqueça a gravidade no meio da conta."
+		};
+	}
+	if (id === "guard-save") {
+		const answer = mechanicalEnergy(0, potentialEnergy(2, 9.81, 10));
+		return {
+			id,
+			title: "Guardião · conservação",
+			prompt: "Uma carga de 2 kg parte do repouso a 10 m. Qual é a energia mecânica?",
+			facts: "v = 0 · h = 10 m · Em = Ec + Epg",
+			options: [
+				98.1,
+				answer,
+				392.4,
+				20
+			],
+			answer,
+			explain: "No alto, Ec = 0 e Epg = 2 × 9,81 × 10 = 196,2 J. Em é essa soma.",
+			hint: "Se a velocidade é zero, a cinética é zero. Resta o mgh."
+		};
+	}
+	const lost = dissipatedEnergy(490.5, 320);
+	return {
+		id,
+		title: "Guardião · dissipação",
+		prompt: "A mecânica caiu de 490,5 J para 320 J. Quanto virou calor?",
+		facts: "Em não desaparece. A diferença foi dissipada.",
+		options: [
+			120,
+			lost,
+			490.5,
+			810.5
+		],
+		answer: lost,
+		explain: "490,5 − 320 = 170,5 J deixaram de ser energia mecânica. Viraram calor no atrito.",
+		hint: "Subtraia a energia mecânica final da inicial. O que saiu não sumiu."
+	};
+}
+function gradeChallenge(id, picked) {
+	const spec = challengeOf(id);
+	return {
+		ok: Number.isFinite(picked) && Math.abs(picked - spec.answer) < .05,
+		spec
+	};
+}
+var ALERT_DELAY = .35;
+var STRIKE = .34;
+var COOLDOWN = .7;
+var DETECT = 3.1;
+function seesAhead(alien, px) {
+	const facing = Math.cos(alien.t * .8) >= 0 ? 1 : -1;
+	const dx = px - alien.x;
+	return Math.abs(dx) < .45 || Math.sign(dx || 1) === facing;
+}
+function striking(alien) {
+	return !alien.disabled && alien.mode === "attack" && alien.wind > 0 && alien.wind <= .12;
+}
+function stepAlien(alien, px, pz, dt, asleep) {
+	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
+	const next = {
+		...alien,
+		t: alien.t + step,
+		wind: Math.max(0, (Number.isFinite(alien.wind) ? alien.wind : 0) - step)
+	};
+	if (asleep || next.disabled) {
+		next.disabled = true;
+		next.mode = "sleep";
+		next.wind = 0;
+		next.x += (next.homeX - next.x) * Math.min(1, step * 2);
+		next.z += (next.homeZ + 1.2 - next.z) * Math.min(1, step * 2);
+		return next;
+	}
+	const dist = Math.hypot(px - next.x, pz - next.z);
+	if (next.kind === "energy") {
+		next.mode = dist < 3.4 ? "alert" : "patrol";
+		return next;
+	}
+	if (next.kind === "guardian") {
+		if (dist >= 2.4) {
+			if (next.mode === "cooldown" && next.wind > 0) return next;
+			next.mode = "patrol";
+			return next;
+		}
+		if (next.mode === "cooldown") {
+			if (next.wind <= 0) {
+				next.mode = "attack";
+				next.wind = STRIKE;
+			}
+			return next;
+		}
+		if (next.mode !== "attack") {
+			next.mode = "attack";
+			next.wind = STRIKE;
+			return next;
+		}
+		if (next.wind <= 0) {
+			next.mode = "cooldown";
+			next.wind = COOLDOWN;
+		}
+		return next;
+	}
+	if (next.mode === "cooldown") {
+		if (next.wind <= 0) next.mode = "return";
+		return next;
+	}
+	if (next.mode === "attack") {
+		if (next.wind <= 0) {
+			next.mode = "cooldown";
+			next.wind = COOLDOWN;
+		}
+		return next;
+	}
+	if (next.mode === "alert") {
+		if (dist > 3.9000000000000004) {
+			next.mode = "patrol";
+			return next;
+		}
+		if (next.wind <= 0) next.mode = "chase";
+		return next;
+	}
+	if (next.mode === "chase") {
+		const len = Math.max(.001, dist);
+		next.x += (px - next.x) / len * 1.7 * step;
+		next.z += (pz - next.z) / len * 1.7 * step;
+		if (dist < .9) {
+			next.mode = "attack";
+			next.wind = STRIKE;
+		} else if (dist > 4.8) next.mode = "return";
+		return next;
+	}
+	if (next.mode === "return") {
+		next.x += (next.homeX - next.x) * Math.min(1, step * 1.4);
+		next.z += (next.homeZ - next.z) * Math.min(1, step * 1.4);
+		if (Math.hypot(next.homeX - next.x, next.homeZ - next.z) < .3) next.mode = "patrol";
+		return next;
+	}
+	next.x = next.homeX + Math.sin(next.t * .8) * next.span;
+	next.z = next.homeZ;
+	next.mode = "patrol";
+	if (dist < DETECT && seesAhead(next, px)) {
+		next.mode = "alert";
+		next.wind = ALERT_DELAY;
+	}
+	return next;
+}
+function crateZ(time) {
+	return -52.6 + Math.sin(time * .9) * 1.1;
+}
+function hazardHits(aliens, px, pz, time, shield) {
+	if (shield) return null;
+	for (const alien of aliens) {
+		if (alien.disabled || alien.mode === "sleep") continue;
+		const dist = Math.hypot(px - alien.x, pz - alien.z);
+		if (alien.kind === "patrol" && striking(alien) && dist < .9) return {
+			source: "drone de patrulha",
+			ox: alien.x,
+			oz: alien.z
+		};
+		if (alien.kind === "energy" && dist < 1.35 && Math.sin(alien.t * 3) > .55) return {
+			source: "campo do alien de energia",
+			ox: alien.x,
+			oz: alien.z
+		};
+		if (alien.kind === "guardian" && striking(alien) && dist < 1.25) return {
+			source: "guardião do núcleo",
+			ox: alien.x,
+			oz: alien.z
+		};
+	}
+	const cz = crateZ(time);
+	if (Math.hypot(px - 18.5, pz - cz) < .55) return {
+		source: "caixa em movimento",
+		ox: 18.5,
+		oz: cz
+	};
+	return null;
+}
+var STAGE2_POINTS = [
+	{
+		id: 1,
+		x: -3.1,
+		z: -51.6,
+		name: "Entrada do setor"
+	},
+	{
+		id: 2,
+		x: 2.2,
+		z: -52.3,
+		name: "Painel do elevador"
+	},
+	{
+		id: 3,
+		x: -2.4,
+		z: -56.4,
+		name: "Laboratório"
+	},
+	{
+		id: 4,
+		x: 1.1,
+		z: -55.2,
+		name: "Protocolo Newton"
+	}
+];
+function freshStageAliens() {
+	return [
+		{
+			id: "drone",
+			kind: "patrol",
+			x: -1.2,
+			z: -50.7,
+			homeX: -1.2,
+			homeZ: -50.7,
+			span: 1.15,
+			mode: "patrol",
+			t: 0,
+			wind: 0,
+			disabled: false
+		},
+		{
+			id: "field",
+			kind: "energy",
+			x: 4.15,
+			z: -60.4,
+			homeX: 4.15,
+			homeZ: -60.4,
+			span: 0,
+			mode: "patrol",
+			t: 0,
+			wind: 0,
+			disabled: true
+		},
+		{
+			id: "guardian",
+			kind: "guardian",
+			x: 2.35,
+			z: -60.2,
+			homeX: 2.35,
+			homeZ: -60.2,
+			span: 0,
+			mode: "sleep",
+			t: 0,
+			wind: 0,
+			disabled: true
+		}
+	];
+}
 var PANEL = {
 	x: 2.55,
 	z: -52.15
@@ -2295,6 +3254,13 @@ var elevator = {
 	saidCoast: false,
 	saidPair: false,
 	saidSurge: false,
+	stuck: 0,
+	mark: "",
+	ask: null,
+	askNote: "",
+	help: false,
+	crew: freshCrew(),
+	aliens: freshStageAliens(),
 	lineQueue: [],
 	mastery: {
 		peso: false,
@@ -2367,6 +3333,13 @@ function resetMotion() {
 	elevator.saidCoast = false;
 	elevator.saidPair = false;
 	elevator.saidSurge = false;
+	elevator.stuck = 0;
+	elevator.mark = "";
+	elevator.ask = null;
+	elevator.askNote = "";
+	elevator.help = false;
+	elevator.crew = freshCrew();
+	elevator.aliens = freshStageAliens();
 	elevator.lineQueue = [];
 	elevator.mastery = {
 		peso: false,
@@ -2431,7 +3404,37 @@ function hoistState() {
 		elapsed: Math.max(0, sim.time - elevator.t0),
 		mastery: elevator.mastery,
 		moon: f.g < 5,
-		flight: elevator.flight
+		flight: elevator.flight,
+		lesson: lessonFor({
+			goal: elevator.goal,
+			drop: elevator.drop,
+			proto: elevator.proto,
+			arrived: elevator.arrived,
+			touch: Math.abs(sim.touchX) + Math.abs(sim.touchY) > .05 || sim.touchSprint,
+			stuck: elevator.stuck,
+			lab: {
+				up: elevator.labUp,
+				down: elevator.labDown,
+				balance: elevator.labBalance,
+				coast: elevator.labCoast,
+				masses: elevator.mastery.mesmaFr,
+				gravity: elevator.mastery.gravidade
+			}
+		}),
+		ask: elevator.ask,
+		askNote: elevator.askNote,
+		help: elevator.help,
+		lives: elevator.crew.lives,
+		checkpoint: STAGE2_POINTS.find((item) => item.id === elevator.crew.checkpoint)?.name ?? "Entrada",
+		guard: elevator.goal === "guardian" ? Math.max(0, 100 - elevator.proto * 20) : elevator.goal === "protocol" || elevator.goal === "done" ? 0 : 100,
+		lab: {
+			up: elevator.labUp,
+			down: elevator.labDown,
+			balance: elevator.labBalance,
+			coast: elevator.labCoast,
+			masses: elevator.mastery.mesmaFr,
+			gravity: elevator.mastery.gravidade
+		}
 	};
 }
 function near$1(x, z, r) {
@@ -2460,13 +3463,7 @@ function clampTension(value) {
 	return Math.max(0, Math.min(T_MAX, Math.round(value * 10) / 10));
 }
 function physicsNote(P, T, Fr, a, v) {
-	if (Math.abs(Fr) < 8 && Math.abs(v) > .22) return "Resultante nula — e a carga continua em movimento.";
-	if (Math.abs(Fr) < 8) return "Forças equilibradas. A resultante é nula.";
-	if (T > P + 8 && a > .05) return "Tração maior que o peso. A carga acelera para cima.";
-	if (T < P - 8 && a < -.05) return "Peso maior que a tração. A aceleração aponta para baixo.";
-	if (a > .05) return "A aceleração aponta para cima.";
-	if (a < -.05) return "A aceleração aponta para baixo.";
-	return "Observe o peso, a tração e a diferença entre eles.";
+	return liveLine(P, T, Fr, a, v);
 }
 function bumpTension(dir, amount) {
 	elevator.tension = clampTension(elevator.tension + dir * amount);
@@ -2498,6 +3495,8 @@ function toggleGravity() {
 		elevator.saidG = true;
 		queueAs$1("TIGRÃO", "Minha massa continua a mesma.", 2.8);
 		queue$1("Exatamente. O que mudou foi a força gravitacional. Peso é força. Massa, não.", 4.6);
+		elevator.ask = "moon";
+		elevator.askNote = "";
 	}
 }
 function enterDescent() {
@@ -2528,6 +3527,22 @@ function enterLab() {
 	queue$1("Laboratório de forças. Escolha 20, 50 ou 100 kg. Suba, equilibre parado, desça — e também siga em movimento com a resultante zero.", 6.6);
 	queue$1("O simulador à direita troca a gravidade entre a estação e a Lua. A massa não muda. O peso, sim.", 5.4);
 }
+function enterGuardian() {
+	elevator.goal = "guardian";
+	elevator.proto = 0;
+	elevator.protoHold = 0;
+	markCheckpoint(3);
+	sfx.cable();
+	queue$1("O guardião bloqueia o núcleo. Ele não cai com um tiro.", 3.6);
+	queue$1("Cada fase pede uma relação entre tração e peso. Errou? Ajuste e repita.", 4.2);
+}
+function markCheckpoint(id) {
+	const next = reachCheckpoint(elevator.crew, id);
+	elevator.crew = next;
+	if (!next.fresh) return;
+	queue$1(`Checkpoint ativado · ${STAGE2_POINTS.find((item) => item.id === id)?.name ?? "setor"}.`, 2.4);
+	sfx.ui();
+}
 function enterProtocol() {
 	elevator.goal = "protocol";
 	elevator.g = HOIST_G;
@@ -2544,6 +3559,7 @@ function enterProtocol() {
 	elevator.warnAt = 0;
 	elevator.saidSurge = false;
 	elevator.mastery.newton = true;
+	markCheckpoint(4);
 	sfx.ui();
 	queue$1("Protocolo Newton. Cento e vinte quilogramas. Você já sabe o suficiente. Controle o elevador.", 4.8);
 	queue$1("Mantenha parada, suba acelerando, siga com velocidade constante e desacelere antes da plataforma.", 5.6);
@@ -2568,6 +3584,8 @@ function finish$1() {
 	queue$1("Uma força isolada não determina o movimento.", 3.4);
 	queue$1("O que importa é a força resultante.", 3.2);
 	queue$1("Quando você entende as forças, começa a entender o movimento.", 4.2);
+	queueAs$1("TIGRÃO", "A estação voltou ao nosso controle.", 2.8);
+	queue$1("Os invasores foram contidos. O módulo de energia, não. Ele ficou instável.", 4.4);
 }
 function beginStage2() {
 	if (sim.stage === 2 && elevator.active) return;
@@ -2595,28 +3613,31 @@ function beginStage2() {
 	elevator.lineQueue = [
 		{
 			speaker: "NEWTON",
-			text: "Tigrão, temos um problema.",
-			seconds: 3.1
+			text: "Alerta de invasão. Intrusos no setor de carga. O elevador principal está offline.",
+			seconds: 4.4
+		},
+		{
+			speaker: "TIGRÃO",
+			text: "E os invasores?",
+			seconds: 2.2
 		},
 		{
 			speaker: "NEWTON",
-			text: "A carga está pronta, mas o elevador não consegue colocá-la em movimento.",
-			seconds: 4.6
+			text: "Primeiro as forças. Sem controlar peso e tração, a carga não se move.",
+			seconds: 4.2
 		},
 		{
 			speaker: "NEWTON",
-			text: "Você está diante de três forças: peso, tração e força resultante.",
-			seconds: 4.6
-		},
-		{
-			speaker: "NEWTON",
-			text: "Descubra como elas determinam o movimento.",
-			seconds: 3.6
+			text: "Chegue ao painel. Evite o contato. O invasor não é o exercício.",
+			seconds: 3.8
 		}
 	];
 	const first = elevator.lineQueue.shift();
 	if (first) speak(first.speaker, first.text, first.seconds);
 	else sfx.ui();
+	elevator.alarm = true;
+	elevator.alarmT = 2.8;
+	markCheckpoint(1);
 }
 function readForces() {
 	const f = forcesOf(elevator.tension, elevator.mass, elevator.g);
@@ -2626,6 +3647,68 @@ function readForces() {
 		Fr: f.Fr,
 		a: f.a
 	};
+}
+function tickStage2Threats(hdt) {
+	const goal = elevator.goal;
+	const chase = goal === "descent" || goal === "guardian";
+	const pastRise = goal === "rise" || goal === "balance" || goal === "descent" || goal === "lab" || goal === "guardian" || goal === "protocol" || goal === "done";
+	elevator.aliens = elevator.aliens.map((alien) => {
+		const wake = alien.id === "drone" ? goal === "scan" || goal === "compare" || chase : alien.id === "field" ? pastRise && goal !== "protocol" : goal === "guardian";
+		const next = stepAlien({
+			...alien,
+			disabled: !wake
+		}, sim.x, sim.z, hdt, false);
+		if (next.kind === "patrol") {
+			const dx = next.x - next.homeX;
+			const dz = next.z - next.homeZ;
+			const dist = Math.hypot(dx, dz);
+			if (dist > 2.2) {
+				next.x = next.homeX + dx / dist * 2.2;
+				next.z = next.homeZ + dz / dist * 2.2;
+				next.mode = "return";
+			}
+		}
+		return next;
+	});
+	elevator.crew = tickCrew(elevator.crew, hdt);
+	if (elevator.crew.over || sim.transit > 0) return;
+	const hit = hazardHits(elevator.aliens, sim.x, sim.z, sim.time, false);
+	if (!hit) return;
+	const next = takeDamage(elevator.crew, hit.source);
+	elevator.crew = next;
+	if (!next.applied) return;
+	const len = Math.hypot(sim.x - hit.ox, sim.z - hit.oz) || 1;
+	sim.vx += (sim.x - hit.ox) / len * 3.2;
+	sim.vz += (sim.z - hit.oz) / len * 3.2;
+	sim.shake = Math.max(sim.shake, .26);
+	sfx.hit();
+	if (next.over) {
+		sim.downed = true;
+		sfx.fail();
+		queue$1("Sistema crítico. O elevador continua no último checkpoint.", 3.2);
+	}
+	publishNow();
+}
+function resumeStage2() {
+	const spot = STAGE2_POINTS.find((item) => item.id === elevator.crew.checkpoint) ?? STAGE2_POINTS[0];
+	sim.x = spot?.x ?? -3.1;
+	sim.z = spot?.z ?? -51.6;
+	sim.vx = 0;
+	sim.vz = 0;
+	sim.vy = 0;
+	elevator.crew = {
+		...elevator.crew,
+		lives: 3,
+		invuln: 1.8,
+		over: false,
+		flash: 0
+	};
+	sim.downed = false;
+	publishNow();
+}
+function restartStage2() {
+	elevator.active = false;
+	beginStage2();
 }
 function tickElevator(dt) {
 	if (sim.stage !== 2) {
@@ -2682,6 +3765,13 @@ function tickElevator(dt) {
 		pumpLines$1();
 		return;
 	}
+	tickStage2Threats(hdt);
+	if (elevator.crew.over) {
+		sim.downed = true;
+		pumpLines$1();
+		return;
+	}
+	sim.downed = false;
 	const e = held.has("KeyE");
 	const shift = held.has("ShiftLeft") || held.has("ShiftRight") || sim.touchSprint;
 	const atPanel = nearPanel();
@@ -2751,7 +3841,8 @@ function tickElevator(dt) {
 		sim.objective = elevator.arrived ? "2 · Ative o scanner" : "1 · Investigue o elevador";
 		if (!elevator.arrived && atPanel) {
 			elevator.arrived = true;
-			queue$1("O cabo está frouxo para o peso desta carga. Escaneie antes de mudar a tração.", 4.4);
+			markCheckpoint(2);
+			queue$1("Elevador danificado. Escaneie antes de mudar a tração. Peso para baixo, tração para cima.", 4.4);
 		}
 		elevator.hint = elevator.arrived ? "Q liga o scanner. Peso para baixo, tração para cima." : "Caminhe até o painel do guincho. A carga não sobe.";
 		if (sim.scanner && nearHoist()) {
@@ -2770,6 +3861,7 @@ function tickElevator(dt) {
 			elevator.goal = "rise";
 			queue$1("A diferença entre elas é a força resultante. Fr = T − P. E Fr = m·a.", 4.8);
 			queue$1("Faça a carga subir. A tração precisa ser maior que o peso.", 3.8);
+			queue$1("Há um invasor no fundo do setor. Ele não altera a carga. Evite o contato se for até lá.", 3.6);
 		}
 	} else if (elevator.goal === "rise") {
 		sim.objective = "4 · Faça a carga subir";
@@ -2778,6 +3870,8 @@ function tickElevator(dt) {
 			elevator.mastery.aceleracao = true;
 			elevator.goal = "balance";
 			elevator.balanceHold = 0;
+			elevator.ask = "coast";
+			elevator.askNote = "";
 			queue$1("Agora pare a aceleração. Iguale a tração ao peso. Se ela ainda sobe, a velocidade não zera na hora.", 5.8);
 		}
 	} else if (elevator.goal === "balance") {
@@ -2805,6 +3899,8 @@ function tickElevator(dt) {
 			if (elevator.dropHold > .75) {
 				elevator.drop = 2;
 				elevator.mastery.resultante = true;
+				elevator.ask = "brake";
+				elevator.askNote = "";
 				queue$1("Observe: a velocidade não é zero, e a força resultante é. Velocidade e aceleração não são a mesma coisa.", 5.6);
 			}
 		} else {
@@ -2860,7 +3956,30 @@ function tickElevator(dt) {
 				elevator.labCoast ? "" : "resultante zero em movimento"
 			].filter(Boolean);
 			elevator.hint = missing.length ? `Com ${comma(elevator.mass, 0)} kg falta: ${missing.join(", ")}.` : "As quatro situações estão registradas. Troque a massa e repita uma resultante parecida.";
-			if (elevator.labUp && elevator.labDown && elevator.labBalance && elevator.labCoast) enterProtocol();
+			if (elevator.labUp && labReady({
+				up: elevator.labUp,
+				down: elevator.labDown,
+				balance: elevator.labBalance,
+				coast: elevator.labCoast,
+				masses: elevator.mastery.mesmaFr,
+				gravity: elevator.mastery.gravidade
+			})) enterGuardian();
+		}
+	} else if (elevator.goal === "guardian") {
+		sim.objective = "Guardião · forças";
+		const phase = elevator.proto;
+		const met = guardMet(phase, P, T, Fr, a, elevator.v);
+		if (met) elevator.protoHold += hdt;
+		else elevator.protoHold = 0;
+		elevator.hint = met ? "Condição física válida. Segure mais um instante." : elevator.hint;
+		if (elevator.protoHold > .7) {
+			elevator.proto += 1;
+			elevator.protoHold = 0;
+			sfx.success();
+			if (elevator.proto >= 5) {
+				queue$1("Guardião desativado. O controle das forças voltou. Agora o Protocolo Newton.", 4.2);
+				enterProtocol();
+			} else queue$1("Fase aceita. A próxima pede outra relação entre T e P.", 2.8);
 		}
 	} else if (elevator.goal === "protocol") {
 		sim.objective = `7 · ${elevator.proto === 0 ? "Repouso" : elevator.proto === 1 ? "Acelerando" : elevator.proto === 2 ? "Velocidade constante" : "Frenagem"}`;
@@ -2934,8 +4053,47 @@ function tickElevator(dt) {
 		elevator.hint = "Tração e peso continuam. Quem decide a aceleração é a resultante.";
 		elevator.alarm = false;
 	}
+	const mark = `${elevator.goal}:${elevator.arrived}:${elevator.drop}:${elevator.proto}`;
+	if (mark !== elevator.mark) {
+		elevator.mark = mark;
+		elevator.stuck = 0;
+	} else elevator.stuck = Math.min(40, elevator.stuck + hdt);
+	const card = lessonFor({
+		goal: elevator.goal,
+		drop: elevator.drop,
+		proto: elevator.proto,
+		arrived: elevator.arrived,
+		touch: Math.abs(sim.touchX) + Math.abs(sim.touchY) > .05 || sim.touchSprint,
+		stuck: elevator.stuck,
+		lab: {
+			up: elevator.labUp,
+			down: elevator.labDown,
+			balance: elevator.labBalance,
+			coast: elevator.labCoast,
+			masses: elevator.mastery.mesmaFr,
+			gravity: elevator.mastery.gravidade
+		}
+	});
+	elevator.hint = card.hints[Math.min(2, Math.floor(elevator.stuck / 8))] ?? card.hints[0];
+	sim.objective = `${card.step}/${card.total} · ${card.title}`;
 	if (Math.abs(elevator.v) > 5.6) elevator.v = Math.sign(elevator.v) * HOIST_V_MAX;
 	pumpLines$1();
+}
+function answerLesson(index) {
+	if (!elevator.ask || sim.stage !== 2) return;
+	const graded = gradeLesson(elevator.ask, index);
+	elevator.askNote = graded.text;
+	if (graded.ok) {
+		elevator.ask = null;
+		sfx.success();
+	} else sfx.fail();
+}
+function dismissLesson() {
+	elevator.ask = null;
+}
+function toggleHelp() {
+	elevator.help = !elevator.help;
+	sfx.ui();
 }
 if (typeof window !== "undefined") window.__elevatorTest = {
 	begin: beginStage2,
@@ -2963,6 +4121,9 @@ function Cargo() {
 	const alarmR = (0, import_react.useRef)(null);
 	const drum = (0, import_react.useRef)(null);
 	const pick = (0, import_react.useRef)(null);
+	const drone = (0, import_react.useRef)(null);
+	const field = (0, import_react.useRef)(null);
+	const guard = (0, import_react.useRef)(null);
 	const plate = (0, import_react.useMemo)(() => plateTexture("NEWTON-1"), []);
 	const mission = (0, import_react.useMemo)(() => plateTexture("DINÂMICA"), []);
 	const screen = (0, import_react.useMemo)(() => M.emit.clone(), []);
@@ -2989,6 +4150,24 @@ function Cargo() {
 		const flash = elevator.alarm ? 1.2 + Math.sin(sim.time * 14) * 1.6 : .12;
 		if (alarmL.current) alarmL.current.intensity = flash;
 		if (alarmR.current) alarmR.current.intensity = flash;
+		const byId = (id) => elevator.aliens.find((item) => item.id === id);
+		const droneA = byId("drone");
+		const fieldA = byId("field");
+		const guardA = byId("guardian");
+		if (drone.current && droneA) {
+			drone.current.visible = !droneA.disabled && droneA.mode !== "sleep";
+			drone.current.position.set(droneA.x, .55 + Math.sin(sim.time * 3) * .05, droneA.z);
+		}
+		if (field.current && fieldA) {
+			field.current.visible = !fieldA.disabled && fieldA.mode !== "sleep";
+			field.current.position.set(fieldA.x, .7, fieldA.z);
+			const pulse = .85 + Math.sin(sim.time * 3) * .1;
+			field.current.scale.setScalar(pulse);
+		}
+		if (guard.current && guardA) {
+			guard.current.visible = elevator.goal === "guardian" && !guardA.disabled;
+			guard.current.position.set(guardA.x, .85 + Math.sin(sim.time * 1.6) * .04, guardA.z);
+		}
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
@@ -3715,630 +4894,91 @@ function Cargo() {
 			distance: 8,
 			decay: 2,
 			intensity: .55
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: drone,
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					material: M.hullDark,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+						.36,
+						.18,
+						.24
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						.08,
+						.06,
+						.1
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.04,
+						8,
+						8
+					] })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+					position: [
+						-.08,
+						.06,
+						.1
+					],
+					material: M.emit,
+					dispose: null,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+						.04,
+						8,
+						8
+					] })
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: field,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.hull,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("capsuleGeometry", { args: [
+					.16,
+					.32,
+					4,
+					8
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.emit,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.48,
+					12,
+					10
+				] })
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("group", {
+			ref: guard,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.hullDark,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("boxGeometry", { args: [
+					.62,
+					.48,
+					.4
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("mesh", {
+				material: M.emit,
+				dispose: null,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("sphereGeometry", { args: [
+					.14,
+					10,
+					8
+				] })
+			})]
 		})
 	] });
-}
-/** Work and energy. Every HUD number in stage 3 comes from these functions. */
-function finite(n, fallback = 0) {
-	return Number.isFinite(n) ? n : fallback;
-}
-/** W = F·d·cos(θ). θ in degrees. A right angle is exactly zero, not a float leftover. */
-function workOf(force, distance, thetaDeg = 0) {
-	const F = finite(force);
-	const d = finite(distance);
-	const theta = finite(thetaDeg);
-	const wrapped = (theta % 360 + 360) % 360;
-	const c = Math.abs(wrapped - 90) < 1e-6 || Math.abs(wrapped - 270) < 1e-6 ? 0 : Math.cos(theta * Math.PI / 180);
-	const w = F * d * c;
-	return Number.isFinite(w) ? w : 0;
-}
-/** Net work along a displacement. Same source as workOf, θ = 0 when Fr and d share a sign. */
-function workFromResultant(resultant, signedDistance) {
-	const Fr = finite(resultant);
-	const d = finite(signedDistance);
-	if (d === 0 || Fr === 0) return 0;
-	return workOf(Math.abs(Fr), Math.abs(d), Math.sign(Fr) === Math.sign(d) ? 0 : 180);
-}
-/** Ec = ½mv². Speed is squared, so the sign of velocity does not create negative energy. */
-function kineticEnergy(mass, speed) {
-	const m = Math.max(0, finite(mass));
-	const v = finite(speed);
-	const e = .5 * m * v * v;
-	return Number.isFinite(e) ? e : 0;
-}
-/** Epg = mgh. Negative mass, gravity or height do not produce a negative well. */
-function potentialEnergy(mass, g, height) {
-	const m = Math.max(0, finite(mass));
-	const grav = Math.max(0, finite(g));
-	const h = Math.max(0, finite(height));
-	const e = m * grav * h;
-	return Number.isFinite(e) ? e : 0;
-}
-/** Em = Ec + Epg. */
-function mechanicalEnergy(kinetic, potential) {
-	const e = finite(kinetic) + finite(potential);
-	return Number.isFinite(e) ? e : 0;
-}
-/** Energy that left the mechanical account. Never negative: a gain is not dissipation. */
-function dissipatedEnergy(initialMechanical, finalMechanical) {
-	const lost = finite(initialMechanical) - finite(finalMechanical);
-	return lost > 0 && Number.isFinite(lost) ? lost : 0;
-}
-/** W_resultante = Ec_final − Ec_inicial. */
-function workEnergyDelta(initialKinetic, finalKinetic) {
-	const w = finite(finalKinetic) - finite(initialKinetic);
-	return Number.isFinite(w) ? w : 0;
-}
-/** Relative band used by the stage-3 fall. Discrete steps are not exact. */
-var ENERGY_TOL = .18;
-/** True when mechanical energy is unchanged within a relative tolerance. */
-function mechanicallyConserved(initial, final, tol = ENERGY_TOL) {
-	const a = finite(initial);
-	const b = finite(final);
-	const scale = Math.max(1, Math.abs(a), Math.abs(b));
-	return Math.abs(a - b) <= Math.abs(tol) * scale;
-}
-/**
-* Horizontal cart. Weight is perpendicular to the rail, so its work is zero.
-* W = F·d should track ΔEc. Friction removes mechanical energy as heat.
-*/
-function stepCart(x, v, force, mass, mu, g, dt) {
-	const m = Math.max(.5, finite(mass, 1));
-	const step = Math.min(.05, Math.max(0, finite(dt)));
-	const F = finite(force);
-	const frictionMax = Math.max(0, finite(mu)) * m * Math.max(0, finite(g));
-	const speed = finite(v);
-	let friction = 0;
-	if (Math.abs(speed) > .02) friction = -Math.sign(speed) * frictionMax;
-	else if (Math.abs(F) <= frictionMax) friction = -F;
-	else friction = -Math.sign(F || 1) * frictionMax;
-	const a = (F + friction) / m;
-	let vy = speed + a * step;
-	if (Math.abs(speed) > .02 && Math.sign(vy) !== Math.sign(speed) && frictionMax > 0) vy = 0;
-	const x0 = finite(x);
-	const x1 = x0 + vy * step;
-	const heat = frictionMax * Math.abs(x1 - x0);
-	if (!Number.isFinite(x1) || !Number.isFinite(vy)) return {
-		x: x0,
-		v: 0,
-		a: 0,
-		heat: 0
-	};
-	return {
-		x: x1,
-		v: vy,
-		a,
-		heat: Number.isFinite(heat) ? heat : 0
-	};
-}
-/** Vertical drop. Up is positive. Without friction, Em stays nearly constant. */
-function stepFall(h, v, mass, g, mu, dt) {
-	const m = Math.max(0, finite(mass));
-	const grav = Math.max(0, finite(g));
-	const step = Math.min(.05, Math.max(0, finite(dt)));
-	const h0 = Math.max(0, finite(h));
-	if (m <= 0) return {
-		h: h0,
-		v: 0,
-		a: 0,
-		heat: 0,
-		ec: 0,
-		epg: potentialEnergy(0, grav, h0),
-		em: 0
-	};
-	const friction = Math.max(0, finite(mu)) * m * grav;
-	const speed = finite(v);
-	let a = -grav;
-	if (friction > 0 && Math.abs(speed) > .02) a += -Math.sign(speed) * friction / m;
-	let vy = speed + a * step;
-	let hy = h0 + vy * step;
-	if (hy < 0) {
-		hy = 0;
-		vy = 0;
-	}
-	const heat = friction * Math.abs(hy - h0);
-	const ec = kineticEnergy(m, vy);
-	const epg = potentialEnergy(m, grav, hy);
-	return {
-		h: hy,
-		v: vy,
-		a,
-		heat: Number.isFinite(heat) ? heat : 0,
-		ec,
-		epg,
-		em: mechanicalEnergy(ec, epg)
-	};
-}
-var INVULN_TIME = 1.8;
-var GUARD_STEPS = [
-	"guard-work",
-	"guard-kinetic",
-	"guard-potential",
-	"guard-save",
-	"guard-heat"
-];
-var CHECKPOINTS = [
-	{
-		id: 1,
-		x: 14.2,
-		z: -56,
-		name: "Entrada do módulo"
-	},
-	{
-		id: 2,
-		x: 17.2,
-		z: -56.8,
-		name: "Laboratório de energia"
-	},
-	{
-		id: 3,
-		x: 22.4,
-		z: -54.2,
-		name: "Câmara das rampas"
-	},
-	{
-		id: 4,
-		x: 24.4,
-		z: -56,
-		name: "Núcleo de energia"
-	}
-];
-var PICKUPS = [
-	{
-		id: "core-a",
-		kind: "core",
-		x: 18.6,
-		z: -54.4
-	},
-	{
-		id: "core-b",
-		kind: "core",
-		x: 23.5,
-		z: -55.4
-	},
-	{
-		id: "core-c",
-		kind: "core",
-		x: 21.4,
-		z: -61.1
-	},
-	{
-		id: "cell",
-		kind: "cell",
-		x: 14.9,
-		z: -53.4
-	},
-	{
-		id: "full",
-		kind: "full",
-		x: 26.4,
-		z: -53.1
-	}
-];
-function freshCrew() {
-	return {
-		lives: 3,
-		invuln: 0,
-		score: 0,
-		cores: 0,
-		checkpoint: 1,
-		over: false,
-		flash: 0,
-		source: "",
-		tries: 0,
-		solved: {},
-		picked: {}
-	};
-}
-function freshAliens() {
-	return [
-		{
-			id: "drone",
-			kind: "patrol",
-			x: 19.2,
-			z: -62.2,
-			homeX: 19.2,
-			homeZ: -62.2,
-			span: 2.4,
-			mode: "patrol",
-			t: 0,
-			wind: 0,
-			disabled: false
-		},
-		{
-			id: "field",
-			kind: "energy",
-			x: 19.4,
-			z: -61.2,
-			homeX: 19.4,
-			homeZ: -61.2,
-			span: 0,
-			mode: "patrol",
-			t: 0,
-			wind: 0,
-			disabled: false
-		},
-		{
-			id: "guardian",
-			kind: "guardian",
-			x: 25.2,
-			z: -56.8,
-			homeX: 25.2,
-			homeZ: -56.8,
-			span: 0,
-			mode: "patrol",
-			t: 0,
-			wind: 0,
-			disabled: false
-		}
-	];
-}
-function takeDamage(crew, source) {
-	const livesNow = Number.isFinite(crew.lives) ? Math.max(0, Math.min(3, crew.lives)) : 0;
-	if (crew.over || crew.invuln > 0 || livesNow <= 0) return {
-		...crew,
-		lives: livesNow,
-		applied: false
-	};
-	const lives = livesNow - 1;
-	return {
-		...crew,
-		lives,
-		invuln: INVULN_TIME,
-		over: lives <= 0,
-		score: Math.max(0, Number.isFinite(crew.score) ? crew.score - 25 : 0),
-		flash: .45,
-		source,
-		applied: true
-	};
-}
-function tickCrew(crew, dt) {
-	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
-	return {
-		...crew,
-		lives: Math.max(0, Math.min(3, crew.lives)),
-		invuln: Math.max(0, crew.invuln - step),
-		flash: Math.max(0, crew.flash - step),
-		score: Math.max(0, crew.score),
-		cores: Math.max(0, Math.min(5, crew.cores))
-	};
-}
-function heal(crew, amount) {
-	if (crew.lives >= 3 || amount <= 0) return {
-		...crew,
-		lives: Math.min(3, crew.lives),
-		gained: false
-	};
-	return {
-		...crew,
-		lives: Math.min(3, crew.lives + amount),
-		gained: true
-	};
-}
-function addCore(crew) {
-	if (crew.cores >= 5) return {
-		...crew,
-		gained: false
-	};
-	return {
-		...crew,
-		cores: crew.cores + 1,
-		score: crew.score + 150,
-		gained: true
-	};
-}
-function addScore(crew, amount) {
-	const next = crew.score + (Number.isFinite(amount) ? amount : 0);
-	return {
-		...crew,
-		score: Math.max(0, Math.min(99999, next))
-	};
-}
-function reachCheckpoint(crew, id) {
-	if (id !== 1 && id !== 2 && id !== 3 && id !== 4) return {
-		...crew,
-		fresh: false
-	};
-	if (id <= crew.checkpoint) return {
-		...crew,
-		fresh: false
-	};
-	return {
-		...crew,
-		checkpoint: id,
-		score: crew.score + 100,
-		fresh: true
-	};
-}
-function guardianEnergy(solved) {
-	const done = GUARD_STEPS.filter((id) => solved[id]).length;
-	return Math.max(0, 100 - done * 20);
-}
-function guardianAsleep(solved) {
-	return GUARD_STEPS.every((id) => Boolean(solved[id]));
-}
-function challengeOf(id) {
-	if (id === "work") {
-		const answer = workOf(50, 6, 0);
-		return {
-			id,
-			title: "Trabalho",
-			prompt: "Um alien de energia trava a plataforma. A força de 50 N acompanha 6 m de deslocamento.",
-			facts: "F = 50 N · d = 6 m · θ = 0°",
-			options: [
-				50,
-				100,
-				answer,
-				600
-			],
-			answer,
-			explain: "A força está no mesmo sentido do deslocamento. W = 50 × 6 × cos 0° = 300 J.",
-			hint: "Observe o ângulo. Se θ = 0°, cos θ = 1 e W = F·d."
-		};
-	}
-	if (id === "kinetic") {
-		const answer = kineticEnergy(10, 6);
-		return {
-			id,
-			title: "Energia cinética",
-			prompt: "O mecanismo pede a energia de uma carga de 10 kg a 6 m/s.",
-			facts: "m = 10 kg · v = 6 m/s · Ec = ½mv²",
-			options: [
-				60,
-				answer,
-				360,
-				90
-			],
-			answer,
-			explain: "Ec = ½ × 10 × 6² = 180 J. A velocidade entra ao quadrado.",
-			hint: "Eleve a velocidade ao quadrado antes de multiplicar pela metade da massa."
-		};
-	}
-	if (id === "potential") {
-		const answer = potentialEnergy(20, 9.8, 5);
-		return {
-			id,
-			title: "Energia potencial",
-			prompt: "A plataforma pede a energia para erguer 20 kg por 5 m.",
-			facts: "m = 20 kg · g = 9,8 m/s² · h = 5 m",
-			options: [
-				100,
-				490,
-				answer,
-				1960
-			],
-			answer,
-			explain: "Epg = mgh = 20 × 9,8 × 5 = 980 J. Mais alto, mais energia armazenada.",
-			hint: "Multiplique massa, gravidade e altura. Nenhum desses três pode faltar."
-		};
-	}
-	if (id === "guard-work") {
-		const answer = workOf(100, 5, 0);
-		return {
-			id,
-			title: "Guardião · trabalho",
-			prompt: "O núcleo exige 500 J. Uma força de 100 N age por 5 m, no mesmo sentido.",
-			facts: "F = 100 N · d = 5 m · θ = 0°",
-			options: [
-				20,
-				105,
-				answer,
-				250
-			],
-			answer,
-			explain: "W = 100 × 5 = 500 J. Esse trabalho é a energia que o núcleo aceita.",
-			hint: "Mesma direção e mesmo sentido: o cosseno vale 1."
-		};
-	}
-	if (id === "guard-kinetic") {
-		const answer = kineticEnergy(4, 5);
-		return {
-			id,
-			title: "Guardião · energia cinética",
-			prompt: "4 kg a 5 m/s. Qual é a energia cinética que o núcleo compara?",
-			facts: "Ec = ½mv². O sinal da velocidade não muda o resultado.",
-			options: [
-				20,
-				answer,
-				100,
-				10
-			],
-			answer,
-			explain: "Ec = ½ × 4 × 5² = 50 J. A velocidade entra ao quadrado.",
-			hint: "Quadrado da velocidade primeiro. Depois multiplique por metade da massa."
-		};
-	}
-	if (id === "guard-potential") {
-		const answer = potentialEnergy(5, 9.8, 4);
-		return {
-			id,
-			title: "Guardião · energia potencial",
-			prompt: "5 kg elevados 4 m, com g = 9,8 m/s². Qual é a energia potencial?",
-			facts: "Epg = mgh",
-			options: [
-				49,
-				98,
-				answer,
-				392
-			],
-			answer,
-			explain: "Epg = 5 × 9,8 × 4 = 196 J. Altura e massa entram juntas.",
-			hint: "Não esqueça a gravidade no meio da conta."
-		};
-	}
-	if (id === "guard-save") {
-		const answer = mechanicalEnergy(0, potentialEnergy(2, 9.81, 10));
-		return {
-			id,
-			title: "Guardião · conservação",
-			prompt: "Uma carga de 2 kg parte do repouso a 10 m. Qual é a energia mecânica?",
-			facts: "v = 0 · h = 10 m · Em = Ec + Epg",
-			options: [
-				98.1,
-				answer,
-				392.4,
-				20
-			],
-			answer,
-			explain: "No alto, Ec = 0 e Epg = 2 × 9,81 × 10 = 196,2 J. Em é essa soma.",
-			hint: "Se a velocidade é zero, a cinética é zero. Resta o mgh."
-		};
-	}
-	const lost = dissipatedEnergy(490.5, 320);
-	return {
-		id,
-		title: "Guardião · dissipação",
-		prompt: "A mecânica caiu de 490,5 J para 320 J. Quanto virou calor?",
-		facts: "Em não desaparece. A diferença foi dissipada.",
-		options: [
-			120,
-			lost,
-			490.5,
-			810.5
-		],
-		answer: lost,
-		explain: "490,5 − 320 = 170,5 J deixaram de ser energia mecânica. Viraram calor no atrito.",
-		hint: "Subtraia a energia mecânica final da inicial. O que saiu não sumiu."
-	};
-}
-function gradeChallenge(id, picked) {
-	const spec = challengeOf(id);
-	return {
-		ok: Number.isFinite(picked) && Math.abs(picked - spec.answer) < .05,
-		spec
-	};
-}
-var ALERT_DELAY = .35;
-var STRIKE = .34;
-var COOLDOWN = .7;
-var DETECT = 3.1;
-function seesAhead(alien, px) {
-	const facing = Math.cos(alien.t * .8) >= 0 ? 1 : -1;
-	const dx = px - alien.x;
-	return Math.abs(dx) < .45 || Math.sign(dx || 1) === facing;
-}
-function striking(alien) {
-	return !alien.disabled && alien.mode === "attack" && alien.wind > 0 && alien.wind <= .12;
-}
-function stepAlien(alien, px, pz, dt, asleep) {
-	const step = Math.min(.05, Math.max(0, Number.isFinite(dt) ? dt : 0));
-	const next = {
-		...alien,
-		t: alien.t + step,
-		wind: Math.max(0, (Number.isFinite(alien.wind) ? alien.wind : 0) - step)
-	};
-	if (asleep || next.disabled) {
-		next.disabled = true;
-		next.mode = "sleep";
-		next.wind = 0;
-		next.x += (next.homeX - next.x) * Math.min(1, step * 2);
-		next.z += (next.homeZ + 1.2 - next.z) * Math.min(1, step * 2);
-		return next;
-	}
-	const dist = Math.hypot(px - next.x, pz - next.z);
-	if (next.kind === "energy") {
-		next.mode = dist < 3.4 ? "alert" : "patrol";
-		return next;
-	}
-	if (next.kind === "guardian") {
-		if (dist >= 2.4) {
-			if (next.mode === "cooldown" && next.wind > 0) return next;
-			next.mode = "patrol";
-			return next;
-		}
-		if (next.mode === "cooldown") {
-			if (next.wind <= 0) {
-				next.mode = "attack";
-				next.wind = STRIKE;
-			}
-			return next;
-		}
-		if (next.mode !== "attack") {
-			next.mode = "attack";
-			next.wind = STRIKE;
-			return next;
-		}
-		if (next.wind <= 0) {
-			next.mode = "cooldown";
-			next.wind = COOLDOWN;
-		}
-		return next;
-	}
-	if (next.mode === "cooldown") {
-		if (next.wind <= 0) next.mode = "return";
-		return next;
-	}
-	if (next.mode === "attack") {
-		if (next.wind <= 0) {
-			next.mode = "cooldown";
-			next.wind = COOLDOWN;
-		}
-		return next;
-	}
-	if (next.mode === "alert") {
-		if (dist > 3.9000000000000004) {
-			next.mode = "patrol";
-			return next;
-		}
-		if (next.wind <= 0) next.mode = "chase";
-		return next;
-	}
-	if (next.mode === "chase") {
-		const len = Math.max(.001, dist);
-		next.x += (px - next.x) / len * 1.7 * step;
-		next.z += (pz - next.z) / len * 1.7 * step;
-		if (dist < .9) {
-			next.mode = "attack";
-			next.wind = STRIKE;
-		} else if (dist > 4.8) next.mode = "return";
-		return next;
-	}
-	if (next.mode === "return") {
-		next.x += (next.homeX - next.x) * Math.min(1, step * 1.4);
-		next.z += (next.homeZ - next.z) * Math.min(1, step * 1.4);
-		if (Math.hypot(next.homeX - next.x, next.homeZ - next.z) < .3) next.mode = "patrol";
-		return next;
-	}
-	next.x = next.homeX + Math.sin(next.t * .8) * next.span;
-	next.z = next.homeZ;
-	next.mode = "patrol";
-	if (dist < DETECT && seesAhead(next, px)) {
-		next.mode = "alert";
-		next.wind = ALERT_DELAY;
-	}
-	return next;
-}
-function crateZ(time) {
-	return -52.6 + Math.sin(time * .9) * 1.1;
-}
-function hazardHits(aliens, px, pz, time, shield) {
-	if (shield) return null;
-	for (const alien of aliens) {
-		if (alien.disabled || alien.mode === "sleep") continue;
-		const dist = Math.hypot(px - alien.x, pz - alien.z);
-		if (alien.kind === "patrol" && striking(alien) && dist < .9) return {
-			source: "drone de patrulha",
-			ox: alien.x,
-			oz: alien.z
-		};
-		if (alien.kind === "energy" && dist < 1.35 && Math.sin(alien.t * 3) > .55) return {
-			source: "campo do alien de energia",
-			ox: alien.x,
-			oz: alien.z
-		};
-		if (alien.kind === "guardian" && striking(alien) && dist < 1.25) return {
-			source: "guardião do núcleo",
-			ox: alien.x,
-			oz: alien.z
-		};
-	}
-	const cz = crateZ(time);
-	if (Math.hypot(px - 18.5, pz - cz) < .55) return {
-		source: "caixa em movimento",
-		ox: 18.5,
-		oz: cz
-	};
-	return null;
 }
 var HATCH = {
 	x: 15.4,
@@ -4568,7 +5208,7 @@ function beginStage3() {
 	sim.speed = 0;
 	sim.objective = "1 · O que é trabalho?";
 	vault.hint = "Caminhe até a escotilha travada.";
-	queue("Tigrão, conseguimos controlar as forças. Agora precisamos descobrir para onde vai a energia.", 4.4);
+	queue("Os invasores foram contidos no setor de carga. Aqui o problema é outro: o módulo de energia está instável.", 4.6);
 	queue("Na missão anterior, a resultante produzia aceleração. Aqui a força encontra um deslocamento.", 4.6);
 	queueAs("TIGRÃO", "Então força sozinha não basta?", 2.6);
 	queue("Exatamente. Sem deslocamento, o trabalho mecânico é zero.", 3.4);
@@ -5855,6 +6495,7 @@ function Overlay() {
 			sim.stage === 3 && sim.transit > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VaultCard, {}) : null,
 			elevator.done && elevator.finale <= 0 && snap.phase === "play" && sim.stage === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StageReport, {}) : null,
 			vault.goal === "done" && vault.finale <= 0 && snap.phase === "play" && sim.stage === 3 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VaultReport, {}) : null,
+			sim.stage === 2 && elevator.crew.over ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Stage2Down, {}) : null,
 			sim.stage === 3 && vault.crew.over ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Downed, {}) : null,
 			snap.phase === "play" && !snap.paused && !snap.mapOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Touch, {}) : null
 		]
@@ -5869,10 +6510,10 @@ function StageCard() {
 				className: "kicker",
 				children: "Missão Newton"
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { children: ["ETAPA 2", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "A FORÇA INVISÍVEL" })] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { children: ["ETAPA 2", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "INVASÃO DA ESTAÇÃO" })] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "sub",
-				children: "Nem toda força pode ser vista. Mas seus efeitos podem ser medidos."
+				children: "Peso, tração e força resultante. Os invasores chegaram. A carga só se move se você controlar as forças."
 			})
 		]
 	});
@@ -6032,6 +6673,7 @@ function PlayHud({ snap }) {
 			className: "panel prompt wrap",
 			children: elevator.hint
 		}) : null,
+		sim.stage === 2 && elevator.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LessonAsk, {}) : null,
 		sim.stage === 3 && vault.active && sim.transit <= 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "panel prompt wrap",
 			children: vault.hint
@@ -6141,39 +6783,153 @@ function relation(h) {
 }
 function ForceStrip() {
 	const h = hoistState();
-	const arrow = (n) => Math.abs(n) < .05 ? "" : n > 0 ? " ↑" : " ↓";
+	const [tick, setTick] = (0, import_react.useState)(0);
+	const arrow = (n) => Math.abs(n) < .05 ? "·" : n > 0 ? "↑" : "↓";
+	const card = h.lesson;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "panel force-strip",
+		"data-ui": true,
 		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "kicker",
+				children: [
+					card.step,
+					"/",
+					card.total,
+					" · ",
+					card.title
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: card.task }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
-				"m ",
-				br(h.mass, 0),
-				" kg · g ",
-				br(h.g, 2),
-				h.moon ? " · Lua" : ""
+				"Vidas ",
+				h.lives,
+				"/3 · ",
+				h.checkpoint,
+				h.goal === "guardian" ? ` · Guardião ${h.guard}%` : ""
 			] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
 				"P ",
 				br(h.P, 1),
-				" N · T ",
+				" N ",
+				arrow(-1),
+				" · T ",
 				br(h.T, 1),
-				" N"
+				" N ",
+				arrow(1)
 			] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
 				"Fr ",
 				br(h.Fr, 1),
-				" N",
+				" N ",
 				arrow(h.Fr),
 				" · a ",
 				br(h.a, 2),
+				" ",
 				arrow(h.a),
 				" · v ",
-				br(h.v, 2)
+				br(h.v, 2),
+				" ",
+				arrow(h.v)
 			] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "note",
 				children: h.note
-			})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note",
+				children: h.hint
+			}),
+			h.goal === "lab" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+				h.lab.up ? "✓" : "○",
+				" subir · ",
+				h.lab.balance ? "✓" : "○",
+				" equilíbrio · ",
+				h.lab.down ? "✓" : "○",
+				" descer ·",
+				" ",
+				h.lab.coast ? "✓" : "○",
+				" Fr = 0 em movimento · ",
+				h.lab.masses ? "✓" : "○",
+				" massas · ",
+				h.lab.gravity ? "✓" : "○",
+				" Lua"
+			] }) : null,
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				className: "btn ghost",
+				type: "button",
+				onClick: () => {
+					toggleHelp();
+					setTick((n) => n + 1);
+				},
+				children: h.help ? "Fechar" : "Entenda"
+			}),
+			h.help ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "note",
+				children: card.why
+			}) : null
+		]
+	});
+}
+function LessonAsk() {
+	const h = hoistState();
+	const [tick, setTick] = (0, import_react.useState)(0);
+	if (!h.ask) return null;
+	const spec = h.ask === "coast" ? {
+		q: "A carga sobe com velocidade constante. Qual é a força resultante?",
+		options: [
+			"Para cima",
+			"Para baixo",
+			"Zero"
+		]
+	} : h.ask === "brake" ? {
+		q: "A carga desce e a velocidade diminui. A aceleração aponta para onde?",
+		options: [
+			"Para cima",
+			"Para baixo",
+			"Para lugar nenhum"
+		]
+	} : {
+		q: "Na Lua, o Tigrão ficou com menos massa?",
+		options: [
+			"Sim, a massa diminuiu",
+			"Não, a massa é a mesma",
+			"O peso não muda"
+		]
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "panel sheet quiz",
+		"data-ui": true,
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "kicker",
+				children: "Pergunta rápida"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: spec.q }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "row",
+				children: [spec.options.map((option, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					className: "btn",
+					type: "button",
+					onClick: () => {
+						answerLesson(index);
+						setTick((n) => n + 1);
+					},
+					children: option
+				}, option)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					className: "btn ghost",
+					type: "button",
+					onClick: () => {
+						dismissLesson();
+						setTick((n) => n + 1);
+					},
+					children: "Depois"
+				})]
+			}),
+			h.askNote ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "log",
+				children: h.askNote
+			}) : null
 		]
 	});
 }
@@ -6266,6 +7022,45 @@ function ChallengePanel() {
 				children: vault.quizNote
 			}) : null
 		]
+	});
+}
+function Stage2Down() {
+	const spot = hoistState().checkpoint;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "modal",
+		"data-ui": true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "panel sheet",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "kicker",
+					children: "Sistema crítico"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Tigrão foi derrubado" }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "sub",
+					children: [
+						"O elevador permanece no último ponto. Checkpoint: ",
+						spot,
+						"."
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "row",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						className: "btn",
+						type: "button",
+						onClick: () => resumeStage2(),
+						children: "Recomeçar do checkpoint"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						className: "btn ghost",
+						type: "button",
+						onClick: () => restartStage2(),
+						children: "Reiniciar a etapa"
+					})]
+				})
+			]
+		})
 	});
 }
 function Downed() {
@@ -6690,7 +7485,7 @@ function MapPanel() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Mapa da missão" }),
 				sim.stage === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "sub",
-					children: "Etapa 2 · A força invisível. O setor de carga fica além do mapa da etapa 1."
+					children: "Etapa 2 · Invasão da estação. O setor de carga fica além do mapa da etapa 1."
 				}) : null,
 				sim.stage === 3 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "sub",
@@ -7944,7 +8739,7 @@ function Tigrao() {
 			sfx.scanTick();
 		}
 		if (root.current) {
-			const blink = sim.stage === 3 && vault.active && vault.crew.invuln > 0 && Math.sin(sim.time * 22) > 0;
+			const blink = (sim.stage === 3 && vault.active && vault.crew.invuln > 0 || sim.stage === 2 && elevator.crew.invuln > 0) && Math.sin(sim.time * 22) > 0;
 			root.current.visible = !blink;
 		}
 	});

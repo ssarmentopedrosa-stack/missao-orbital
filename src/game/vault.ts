@@ -256,7 +256,7 @@ export function beginStage3(): void {
   sim.speed = 0;
   sim.objective = "1 · O que é trabalho?";
   vault.hint = "Caminhe até a escotilha travada.";
-  queue("Tigrão, conseguimos controlar as forças. Agora precisamos descobrir para onde vai a energia.", 4.4);
+  queue("Os invasores foram contidos no setor de carga. Aqui o problema é outro: o módulo de energia está instável.", 4.6);
   queue("Na missão anterior, a resultante produzia aceleração. Aqui a força encontra um deslocamento.", 4.6);
   queueAs("TIGRÃO", "Então força sozinha não basta?", 2.6);
   queue("Exatamente. Sem deslocamento, o trabalho mecânico é zero.", 3.4);

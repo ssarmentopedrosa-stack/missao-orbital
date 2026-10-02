@@ -16,7 +16,7 @@ import {
   togglePause,
 } from "./sim";
 import { shotIndex } from "./layout";
-import { beginStage2, elevator, hoistState } from "./elevator";
+import { answerLesson, beginStage2, dismissLesson, elevator, hoistState, restartStage2, resumeStage2, toggleHelp } from "./elevator";
 import { ENERGY_TOL, mechanicallyConserved } from "./energy";
 import { challengeOf, CHECKPOINTS, guardianEnergy } from "./survival";
 import { beginStage3, answerChallenge, openChallenge, resumeCheckpoint, vault, vaultState } from "./vault";
@@ -49,6 +49,7 @@ export function Overlay() {
       {sim.stage === 3 && sim.transit > 0 ? <VaultCard /> : null}
       {elevator.done && elevator.finale <= 0 && snap.phase === "play" && sim.stage === 2 ? <StageReport /> : null}
       {vault.goal === "done" && vault.finale <= 0 && snap.phase === "play" && sim.stage === 3 ? <VaultReport /> : null}
+      {sim.stage === 2 && elevator.crew.over ? <Stage2Down /> : null}
       {sim.stage === 3 && vault.crew.over ? <Downed /> : null}
       {snap.phase === "play" && !snap.paused && !snap.mapOpen ? <Touch /> : null}
     </div>
@@ -61,9 +62,9 @@ function StageCard() {
       <p className="kicker">Missão Newton</p>
       <h1>
         ETAPA 2
-        <span>A FORÇA INVISÍVEL</span>
+        <span>INVASÃO DA ESTAÇÃO</span>
       </h1>
-      <p className="sub">Nem toda força pode ser vista. Mas seus efeitos podem ser medidos.</p>
+      <p className="sub">Peso, tração e força resultante. Os invasores chegaram. A carga só se move se você controlar as forças.</p>
     </section>
   );
 }
@@ -169,6 +170,7 @@ function PlayHud({ snap }: { snap: ReturnType<typeof getSnap> }) {
       </div>
       {snap.prompt && sim.stage === 1 ? <div className="panel prompt">{snap.prompt}</div> : null}
       {sim.stage === 2 && elevator.active && sim.transit <= 0 ? <div className="panel prompt wrap">{elevator.hint}</div> : null}
+      {sim.stage === 2 && elevator.active && sim.transit <= 0 ? <LessonAsk /> : null}
       {sim.stage === 3 && vault.active && sim.transit <= 0 ? <div className="panel prompt wrap">{vault.hint}</div> : null}
       {sim.stage === 3 && vault.active && sim.transit <= 0 && !vault.crew.over ? <ChallengePanel /> : null}
     </>
@@ -259,21 +261,85 @@ function relation(h: ReturnType<typeof hoistState>): string {
 
 function ForceStrip() {
   const h = hoistState();
-  const arrow = (n: number) => (Math.abs(n) < 0.05 ? "" : n > 0 ? " ↑" : " ↓");
+  const [tick, setTick] = useState(0);
+  const arrow = (n: number) => (Math.abs(n) < 0.05 ? "·" : n > 0 ? "↑" : "↓");
+  const card = h.lesson;
+  void tick;
   return (
-    <div className="panel force-strip">
+    <div className="panel force-strip" data-ui>
+      <p className="kicker">
+        {card.step}/{card.total} · {card.title}
+      </p>
+      <p>{card.task}</p>
       <p>
-        m {br(h.mass, 0)} kg · g {br(h.g, 2)}
-        {h.moon ? " · Lua" : ""}
+        Vidas {h.lives}/3 · {h.checkpoint}
+        {h.goal === "guardian" ? ` · Guardião ${h.guard}%` : ""}
       </p>
       <p>
-        P {br(h.P, 1)} N · T {br(h.T, 1)} N
+        P {br(h.P, 1)} N {arrow(-1)} · T {br(h.T, 1)} N {arrow(1)}
       </p>
       <p>
-        Fr {br(h.Fr, 1)} N{arrow(h.Fr)} · a {br(h.a, 2)}
-        {arrow(h.a)} · v {br(h.v, 2)}
+        Fr {br(h.Fr, 1)} N {arrow(h.Fr)} · a {br(h.a, 2)} {arrow(h.a)} · v {br(h.v, 2)} {arrow(h.v)}
       </p>
       <p className="note">{h.note}</p>
+      <p className="note">{h.hint}</p>
+      {h.goal === "lab" ? (
+        <p>
+          {h.lab.up ? "✓" : "○"} subir · {h.lab.balance ? "✓" : "○"} equilíbrio · {h.lab.down ? "✓" : "○"} descer ·{" "}
+          {h.lab.coast ? "✓" : "○"} Fr = 0 em movimento · {h.lab.masses ? "✓" : "○"} massas · {h.lab.gravity ? "✓" : "○"} Lua
+        </p>
+      ) : null}
+      <button className="btn ghost" type="button" onClick={() => { toggleHelp(); setTick((n) => n + 1); }}>
+        {h.help ? "Fechar" : "Entenda"}
+      </button>
+      {h.help ? <p className="note">{card.why}</p> : null}
+    </div>
+  );
+}
+
+function LessonAsk() {
+  const h = hoistState();
+  const [tick, setTick] = useState(0);
+  if (!h.ask) return null;
+  void tick;
+  const spec =
+    h.ask === "coast"
+      ? {
+          q: "A carga sobe com velocidade constante. Qual é a força resultante?",
+          options: ["Para cima", "Para baixo", "Zero"],
+        }
+      : h.ask === "brake"
+        ? {
+            q: "A carga desce e a velocidade diminui. A aceleração aponta para onde?",
+            options: ["Para cima", "Para baixo", "Para lugar nenhum"],
+          }
+        : {
+            q: "Na Lua, o Tigrão ficou com menos massa?",
+            options: ["Sim, a massa diminuiu", "Não, a massa é a mesma", "O peso não muda"],
+          };
+  return (
+    <div className="panel sheet quiz" data-ui>
+      <p className="kicker">Pergunta rápida</p>
+      <p>{spec.q}</p>
+      <div className="row">
+        {spec.options.map((option, index) => (
+          <button
+            className="btn"
+            type="button"
+            key={option}
+            onClick={() => {
+              answerLesson(index);
+              setTick((n) => n + 1);
+            }}
+          >
+            {option}
+          </button>
+        ))}
+        <button className="btn ghost" type="button" onClick={() => { dismissLesson(); setTick((n) => n + 1); }}>
+          Depois
+        </button>
+      </div>
+      {h.askNote ? <p className="log">{h.askNote}</p> : null}
     </div>
   );
 }
@@ -346,6 +412,27 @@ function ChallengePanel() {
         ))}
       </div>
       {vault.quizNote ? <p className="log">{vault.quizNote}</p> : null}
+    </div>
+  );
+}
+
+function Stage2Down() {
+  const spot = hoistState().checkpoint;
+  return (
+    <div className="modal" data-ui>
+      <div className="panel sheet">
+        <p className="kicker">Sistema crítico</p>
+        <h2>Tigrão foi derrubado</h2>
+        <p className="sub">O elevador permanece no último ponto. Checkpoint: {spot}.</p>
+        <div className="row">
+          <button className="btn" type="button" onClick={() => resumeStage2()}>
+            Recomeçar do checkpoint
+          </button>
+          <button className="btn ghost" type="button" onClick={() => restartStage2()}>
+            Reiniciar a etapa
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -672,7 +759,7 @@ function MapPanel() {
       <div className="panel sheet map-sheet">
         <p className="kicker">Navegação · Newton-1</p>
         <h2>Mapa da missão</h2>
-        {sim.stage === 2 ? <p className="sub">Etapa 2 · A força invisível. O setor de carga fica além do mapa da etapa 1.</p> : null}
+        {sim.stage === 2 ? <p className="sub">Etapa 2 · Invasão da estação. O setor de carga fica além do mapa da etapa 1.</p> : null}
         {sim.stage === 3 ? <p className="sub">Etapa 3 · O módulo de energia. Trabalho, transformação e conservação.</p> : null}
         <div className="map-layout">
           <div className="schematic" aria-hidden>

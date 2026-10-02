@@ -420,7 +420,9 @@ export function Tigrao() {
       sfx.scanTick();
     }
     if (root.current) {
-      const blink = sim.stage === 3 && vault.active && vault.crew.invuln > 0 && Math.sin(sim.time * 22) > 0;
+      const blink =
+        ((sim.stage === 3 && vault.active && vault.crew.invuln > 0) || (sim.stage === 2 && elevator.crew.invuln > 0)) &&
+        Math.sin(sim.time * 22) > 0;
       root.current.visible = !blink;
     }
   });
